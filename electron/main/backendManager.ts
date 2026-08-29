@@ -36,7 +36,10 @@ export class BackendManager {
     this.config = {
       host: '127.0.0.1',
       port: 8765,
-      timeout: 30000, // 30 seconds - Go starts much faster than Python
+      // The first packaged launch may download the pinned ONNX embedding
+      // model (~235 MB). Keep the process alive while that download completes
+      // instead of killing a healthy backend after the old 30-second window.
+      timeout: 10 * 60 * 1000,
       ...config,
     }
   }
