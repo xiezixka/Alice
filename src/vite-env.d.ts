@@ -69,14 +69,8 @@ declare global {
 }
 
 interface AliceIPC {
-  on: (
-    channel: string,
-    listener: (...args: any[]) => void
-  ) => void
-  off: (
-    channel: string,
-    listener: (...args: any[]) => void
-  ) => void
+  on: (channel: string, listener: (...args: any[]) => void) => void
+  off: (channel: string, listener: (...args: any[]) => void) => void
   removeAllListeners: (channel: string) => void
   send: (channel: string, ...args: any[]) => void
   invoke: (channel: string, ...args: any[]) => Promise<any>
@@ -93,6 +87,49 @@ interface AliceDesktopAPI {
     output?: string
     error?: string
   }>
+  listDirectoryDetailed: (dirPath: string) => Promise<{
+    success: boolean
+    entries?: Array<{
+      name: string
+      path: string
+      type: 'file' | 'directory' | 'other'
+      size: number
+      modifiedAt: string
+    }>
+    error?: string
+  }>
+  findFiles: (args: {
+    path: string
+    query?: string
+    maxResults?: number
+    maxDepth?: number
+    includeHidden?: boolean
+  }) => Promise<{ success: boolean; matches?: any[]; error?: string }>
+  applyFileOperations: (args: {
+    operations: Array<{
+      action: 'move' | 'copy' | 'rename'
+      source: string
+      destination: string
+    }>
+    dryRun?: boolean
+  }) => Promise<{
+    success: boolean
+    operationId?: string
+    operations?: any[]
+    error?: string
+  }>
+  undoFileOperations: (
+    operationId: string
+  ) => Promise<{ success: boolean; error?: string }>
+  getCapabilities: () => Promise<{
+    success?: boolean
+    platform: string
+    supportedActions: string[]
+    note: string
+  }>
+  runAction: (
+    args: Record<string, any>
+  ) => Promise<{ success: boolean; message?: string; error?: string }>
 }
 
 interface AliceCustomToolsAPI {

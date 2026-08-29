@@ -1576,9 +1576,133 @@ export function registerGoogleIPCHandlers(): void {
     )
   })
 
+  async function confirmGmailWrite(
+    event: Electron.IpcMainInvokeEvent,
+    message: string,
+    detail: string
+  ): Promise<boolean> {
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    const options = {
+      type: 'warning' as const,
+      buttons: ['取消', '确认'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+      title: '确认 Gmail 操作',
+      message,
+      detail: detail.length > 6000 ? `${detail.slice(0, 6000)}\n…` : detail,
+    }
+    const result = owner
+      ? await dialog.showMessageBox(owner, options)
+      : await dialog.showMessageBox(options)
+    return result.response === 1
+  }
+
+  ipcMain.handle('google-gmail:create-draft', async (event, args) => {
+    const to = typeof args?.to === 'string' ? args.to.trim() : ''
+    const subject = typeof args?.subject === 'string' ? args.subject.trim() : ''
+    const body = typeof args?.body === 'string' ? args.body : ''
+    if (!to || !subject || !body)
+      return { success: false, error: '收件人、主题和正文不能为空。' }
+    return withAuthenticatedClient(
+      authClient =>
+        googleGmailManager.createDraft({
+          authClient,
+          userId: args.userId,
+          to,
+          cc: args.cc,
+          bcc: args.bcc,
+          subject,
+          body,
+        }),
+      'Gmail'
+    )
+  })
+
+  ipcMain.handle('google-gmail:send-message', async (event, args) => {
+    const to = typeof args?.to === 'string' ? args.to.trim() : ''
+    const subject = typeof args?.subject === 'string' ? args.subject.trim() : ''
+    const body = typeof args?.body === 'string' ? args.body : ''
+    if (!to || !subject || !body)
+      return { success: false, error: '收件人、主题和正文不能为空。' }
+    const confirmed = await confirmGmailWrite(
+      event,
+      `即将发送邮件给 ${to}`,
+      `主题：${subject}\n\n${body}`
+    )
+    if (!confirmed)
+      return { success: false, error: 'Email send cancelled by user.' }
+    return withAuthenticatedClient(
+      authClient =>
+        googleGmailManager.sendMessage({
+          authClient,
+          userId: args.userId,
+          to,
+          cc: args.cc,
+          bcc: args.bcc,
+          subject,
+          body,
+        }),
+      'Gmail'
+    )
+  })
+
+  ipcMain.handle('google-gmail:reply-message', async (event, args) => {
+    const messageId =
+      typeof args?.messageId === 'string' ? args.messageId.trim() : ''
+    const body = typeof args?.body === 'string' ? args.body : ''
+    if (!messageId || !body)
+      return { success: false, error: '邮件 ID 和回复正文不能为空。' }
+    const confirmed = await confirmGmailWrite(event, '即将回复邮件', body)
+    if (!confirmed)
+      return { success: false, error: 'Email reply cancelled by user.' }
+    return withAuthenticatedClient(
+      authClient =>
+        googleGmailManager.replyToMessage({
+          authClient,
+          userId: args.userId,
+          messageId,
+          body,
+        }),
+      'Gmail'
+    )
+  })
+
   // Scheduler management
   ipcMain.handle('scheduler:create-task', async (event, args) => {
     try {
+      if (args?.actionType === 'command') {
+        const command =
+          typeof args.details === 'string' ? args.details.trim() : ''
+        const configured = (await loadSettings())?.approvedCommands || []
+        const commandName = command.split(/\s+/)[0]?.split(/[\\/]/).pop() || ''
+        if (!command || !configured.includes(commandName)) {
+          return {
+            success: false,
+            error: `定时命令“${commandName || '未命名'}”未在已批准命令中。请先在安全设置中批准该命令。`,
+          }
+        }
+        const owner = BrowserWindow.fromWebContents(event.sender)
+        const options = {
+          type: 'warning' as const,
+          buttons: ['取消', '确认创建'],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true,
+          title: '确认创建定时命令',
+          message: `Alice 将按计划执行：${commandName}`,
+          detail: `${command}\n\n计划：${args.cronExpression}`,
+        }
+        const confirmation = owner
+          ? await dialog.showMessageBox(owner, options)
+          : await dialog.showMessageBox(options)
+        if (confirmation.response !== 1) {
+          return {
+            success: false,
+            error: 'Scheduled command creation cancelled by user.',
+          }
+        }
+      }
       const result = await schedulerManager.createScheduledTask(
         args.name,
         args.cronExpression,

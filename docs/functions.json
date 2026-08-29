@@ -150,7 +150,118 @@
       "additionalProperties": false
     }
   },
-
+  {
+    "type": "function",
+    "name": "desktop_capabilities",
+    "description": "Returns the operating system and desktop actions available to Alice. Use this before attempting to control another application.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "desktop_action",
+    "description": "Performs a confirmed desktop action such as opening an app, focusing a window, clicking coordinates, typing text, or pressing a hotkey.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["open_app", "focus_window", "click", "type", "hotkey"]
+        },
+        "target": { "type": "string" },
+        "app": { "type": "string" },
+        "title": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "button": { "type": "string", "enum": ["left", "right"] },
+        "text": { "type": "string" },
+        "keys": {
+          "type": "string",
+          "description": "Plus-separated shortcut, e.g. CMD+L or CTRL+V."
+        }
+      },
+      "required": ["action"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "list_directory_detailed",
+    "description": "Lists files and folders with type, size, and modification time. Read-only.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": { "path": { "type": "string" } },
+      "required": ["path"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "find_files",
+    "description": "Searches a directory tree by file or folder name. The search is bounded and read-only.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" },
+        "query": { "type": "string" },
+        "maxResults": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "maxDepth": { "type": "integer", "minimum": 0, "maximum": 12 },
+        "includeHidden": { "type": "boolean" }
+      },
+      "required": ["path"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "organize_files",
+    "description": "Previews or applies structured move, copy, and rename operations. By default it only previews; set dryRun=false only after the user confirms the exact changes. Returns a reversible operation ID after execution.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": ["move", "copy", "rename"]
+              },
+              "source": { "type": "string" },
+              "destination": { "type": "string" }
+            },
+            "required": ["action", "source", "destination"],
+            "additionalProperties": false
+          }
+        },
+        "dryRun": { "type": "boolean" }
+      },
+      "required": ["operations"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "undo_file_organization",
+    "description": "Reverses a previously confirmed organize_files operation using its operation ID.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": { "operationId": { "type": "string" } },
+      "required": ["operationId"],
+      "additionalProperties": false
+    }
+  },
   {
     "type": "function",
     "name": "schedule_task",
@@ -255,6 +366,60 @@
         }
       },
       "required": ["messageId"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "create_email_draft",
+    "description": "Creates a Gmail draft. It does not send the message, so the user can review it first.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "to": {
+          "type": "string",
+          "description": "Recipient email address or comma-separated addresses."
+        },
+        "cc": { "type": "string" },
+        "bcc": { "type": "string" },
+        "subject": { "type": "string" },
+        "body": { "type": "string" }
+      },
+      "required": ["to", "subject", "body"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "reply_to_email",
+    "description": "Replies to a Gmail message after showing the recipient and content for user confirmation.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "messageId": { "type": "string" },
+        "body": { "type": "string" }
+      },
+      "required": ["messageId", "body"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "send_email",
+    "description": "Sends a Gmail message after an explicit confirmation dialog. Never use this for an unapproved or ambiguous recipient.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "to": { "type": "string" },
+        "cc": { "type": "string" },
+        "bcc": { "type": "string" },
+        "subject": { "type": "string" },
+        "body": { "type": "string" }
+      },
+      "required": ["to", "subject", "body"],
       "additionalProperties": false
     }
   },
@@ -403,6 +568,47 @@
         }
       },
       "required": ["eventId"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
+    "name": "plan_itinerary",
+    "description": "Reads calendar events and creates a conflict-free itinerary draft without writing anything to the calendar. Ask the user to review the returned suggestions before creating events.",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "calendarId": { "type": "string" },
+        "startDateTime": {
+          "type": "string",
+          "description": "ISO 8601 start of planning window."
+        },
+        "endDateTime": {
+          "type": "string",
+          "description": "ISO 8601 end of planning window."
+        },
+        "bufferMinutes": { "type": "integer", "minimum": 0, "maximum": 240 },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "durationMinutes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1440
+              },
+              "preferredStart": { "type": "string" },
+              "location": { "type": "string" }
+            },
+            "required": ["title", "durationMinutes"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["startDateTime", "endDateTime", "items"],
       "additionalProperties": false
     }
   },

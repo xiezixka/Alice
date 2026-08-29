@@ -176,6 +176,9 @@ const defaultSettings: AliceSettings = {
     'save_memory',
     'delete_memory',
     'recall_memories',
+    'desktop_capabilities',
+    'list_directory_detailed',
+    'find_files',
   ],
   assistantAvatar: 'alice',
   mcpServersConfig: '[]',
@@ -773,8 +776,7 @@ export const useSettingsStore = defineStore('settings', () => {
           PROVIDER_CONFIGS.deepseek.defaultModel
       } else if (settings.value.aiProvider === 'codex') {
         settings.value.assistantModel = PROVIDER_CONFIGS.codex.defaultModel
-        settings.value.SUMMARIZATION_MODEL =
-          PROVIDER_CONFIGS.codex.defaultModel
+        settings.value.SUMMARIZATION_MODEL = PROVIDER_CONFIGS.codex.defaultModel
       }
     }
     if (key === 'assistantReasoningEffort') {
@@ -1046,8 +1048,7 @@ export const useSettingsStore = defineStore('settings', () => {
       !currentConfigForTest.VITE_GOOGLE_API_KEY?.trim()
     ) {
       error.value = `Google is selected, but '${settingKeyToLabelMap.VITE_GOOGLE_API_KEY}' is missing.`
-      generalStore.statusMessage =
-        'Google 服务需要 Google API 密钥。'
+      generalStore.statusMessage = 'Google 服务需要 Google API 密钥。'
       isSaving.value = false
       return
     }
@@ -1114,14 +1115,13 @@ export const useSettingsStore = defineStore('settings', () => {
         const initErrorMsg =
           generalStore.statusMessage.includes('Error:') ||
           generalStore.statusMessage.includes('错误：')
-          ? generalStore.statusMessage
-          : '使用新设置重新初始化 Alice 失败。'
+            ? generalStore.statusMessage
+            : '使用新设置重新初始化 Alice 失败。'
         error.value = (error.value ? error.value + '; ' : '') + initErrorMsg
         successMessage.value = `Settings valid, but ${initErrorMsg}`
       }
     } else {
-      generalStore.statusMessage =
-        '设置校验失败，请检查 API 密钥。'
+      generalStore.statusMessage = '设置校验失败，请检查 API 密钥。'
     }
     isSaving.value = false
     setTimeout(() => {

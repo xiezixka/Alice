@@ -16,6 +16,20 @@ export interface ExecuteCommandArgs {
   command: string
 }
 
+export interface FindFilesArgs {
+  path: string
+  query?: string
+  maxResults?: number
+  maxDepth?: number
+  includeHidden?: boolean
+}
+
+export interface FileOperation {
+  action: 'move' | 'copy' | 'rename'
+  source: string
+  destination: string
+}
+
 function requireDesktopAPI() {
   if (typeof window === 'undefined' || !window.desktopAPI) {
     throw new Error(
@@ -79,6 +93,81 @@ export async function execute_command(
     } else {
       return { success: false, error: result.error }
     }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function list_directory_detailed(args: {
+  path: string
+}): Promise<FunctionResult> {
+  try {
+    const result = await requireDesktopAPI().listDirectoryDetailed(args.path)
+    return result.success
+      ? { success: true, data: result.entries || [] }
+      : { success: false, error: result.error }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function find_files(args: FindFilesArgs): Promise<FunctionResult> {
+  try {
+    const result = await requireDesktopAPI().findFiles(args)
+    return result.success
+      ? { success: true, data: result }
+      : { success: false, error: result.error }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function organize_files(args: {
+  operations: FileOperation[]
+  dryRun?: boolean
+}): Promise<FunctionResult> {
+  try {
+    const result = await requireDesktopAPI().applyFileOperations(args)
+    return result.success
+      ? { success: true, data: result }
+      : { success: false, error: result.error }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function undo_file_organization(args: {
+  operationId: string
+}): Promise<FunctionResult> {
+  try {
+    const result = await requireDesktopAPI().undoFileOperations(
+      args.operationId
+    )
+    return result.success
+      ? { success: true, data: result }
+      : { success: false, error: result.error }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function desktop_capabilities(): Promise<FunctionResult> {
+  try {
+    const result = await requireDesktopAPI().getCapabilities()
+    return { success: true, data: result }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function desktop_action(
+  args: Record<string, any>
+): Promise<FunctionResult> {
+  try {
+    const result = await requireDesktopAPI().runAction(args)
+    return result.success
+      ? { success: true, data: result }
+      : { success: false, error: result.error }
   } catch (error: any) {
     return { success: false, error: error.message }
   }

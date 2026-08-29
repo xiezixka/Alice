@@ -55,6 +55,9 @@
             </svg>
             <span>已成功连接 Google 服务。</span>
           </div>
+          <p class="text-xs text-gray-300 mb-4">
+            已包含日历读写、Gmail 阅读、草稿、回复和发送权限。若此前只授权过阅读权限，请先断开后重新连接以获取新增权限。
+          </p>
           <button
             type="button"
             @click="$emit('disconnect-google-services')"

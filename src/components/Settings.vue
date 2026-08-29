@@ -301,6 +301,10 @@ const toolDependencies: Record<string, string[]> = {
   get_unread_emails: ['GOOGLE_AUTH'],
   search_emails: ['GOOGLE_AUTH'],
   get_email_content: ['GOOGLE_AUTH'],
+  create_email_draft: ['GOOGLE_AUTH'],
+  reply_to_email: ['GOOGLE_AUTH'],
+  send_email: ['GOOGLE_AUTH'],
+  plan_itinerary: ['GOOGLE_AUTH'],
 }
 const refreshModels = async () => {
   if (isRefreshingModels.value) return
@@ -322,6 +326,8 @@ function getToolInfo(name: string): {
   const nameMap: Record<string, string> = {
     get_current_datetime: '当前日期与时间',
     open_path: '打开应用/网址',
+    desktop_capabilities: '查看桌面操作能力',
+    desktop_action: '执行桌面操作',
     manage_clipboard: '读写剪贴板',
     save_memory: '保存记忆',
     delete_memory: '删除记忆',
@@ -333,6 +339,14 @@ function getToolInfo(name: string): {
     get_unread_emails: '获取未读邮件',
     search_emails: '搜索邮件',
     get_email_content: '获取邮件内容',
+    create_email_draft: '创建邮件草稿',
+    reply_to_email: '回复邮件',
+    send_email: '发送邮件',
+    plan_itinerary: '规划日程草案',
+    list_directory_detailed: '查看文件详细信息',
+    find_files: '搜索文件',
+    organize_files: '整理文件（预览/执行）',
+    undo_file_organization: '撤销文件整理',
     search_torrents: '搜索种子',
     add_torrent_to_qb: '添加种子到 QB',
     perform_web_search: '网页搜索（Tavily）',
@@ -341,29 +355,35 @@ function getToolInfo(name: string): {
 
   const descriptionMap: Record<string, string> = {
     get_current_datetime: '允许 Alice 获取当前日期和时间',
-    open_path:
-      '允许 Alice 打开电脑上的应用、网址、文件和文件夹',
+    open_path: '允许 Alice 打开电脑上的应用、网址、文件和文件夹',
+    desktop_capabilities: '查看当前系统可用的桌面自动化动作',
+    desktop_action: '在确认后点击、输入、聚焦窗口或打开应用',
     manage_clipboard: '允许 Alice 读写电脑剪贴板',
     save_memory: '允许 Alice 保存长期记忆',
     delete_memory: '允许 Alice 删除长期记忆',
     recall_memories: '允许 Alice 召回长期记忆',
-    list_directory:
-      '允许 Alice 列出电脑上的文件和文件夹',
+    list_directory: '允许 Alice 列出电脑上的文件和文件夹',
     execute_command: '允许 Alice 在电脑上执行 Shell 命令',
     schedule_task: '允许 Alice 创建周期性任务',
     manage_scheduled_tasks: '允许 Alice 管理计划任务',
     get_calendar_events: '通过 Google 日历获取日历事件',
-    create_calendar_event:
-      '通过 Google 日历创建日历事件',
-    update_calendar_event:
-      '通过 Google 日历更新日历事件',
-    delete_calendar_event:
-      '通过 Google 日历删除日历事件',
+    create_calendar_event: '通过 Google 日历创建日历事件',
+    update_calendar_event: '通过 Google 日历更新日历事件',
+    delete_calendar_event: '通过 Google 日历删除日历事件',
     get_unread_emails: '通过 Google Gmail 获取未读邮件',
     search_emails: '通过 Google Gmail 搜索邮件',
     get_email_content: '通过 Google Gmail 获取邮件内容',
+    create_email_draft: '通过 Google Gmail 创建可供审核的草稿',
+    reply_to_email: '通过 Google Gmail 回复邮件（发送前确认）',
+    send_email: '通过 Google Gmail 发送邮件（发送前确认）',
+    plan_itinerary: '读取 Google 日历并生成不写入日历的行程草案',
+    list_directory_detailed: '读取文件类型、大小和修改时间',
+    find_files: '在授权目录中搜索文件和文件夹',
+    organize_files: '预览或确认后执行移动、复制和重命名，并支持撤销',
+    undo_file_organization: '撤销最近一次文件整理操作',
     search_torrents: '允许 Alice 搜索网络种子（需要 Jackett）',
-    add_torrent_to_qb: '允许 Alice 将种子添加到 qBittorrent（需要 qBittorrent）',
+    add_torrent_to_qb:
+      '允许 Alice 将种子添加到 qBittorrent（需要 qBittorrent）',
     browser_context: '允许 Alice 获取浏览器当前网页信息（需要浏览器扩展）',
     perform_web_search: '为不具备网页搜索能力的模型提供搜索（Tavily）',
     searxng_web_search: '为不具备网页搜索能力的模型提供搜索（SearXNG）',
@@ -373,7 +393,7 @@ function getToolInfo(name: string): {
     displayName:
       nameMap[name] ||
       name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      description: descriptionMap[name] || '暂无描述',
+    description: descriptionMap[name] || '暂无描述',
   }
 }
 

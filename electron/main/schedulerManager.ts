@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { getDBInstance } from './thoughtVectorStore'
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
+import { loadSettings } from './settingsManager'
 
 const execAsync = promisify(exec)
 
@@ -146,6 +147,15 @@ export async function scheduleTask(
 async function executeTask(task: ScheduledTask): Promise<void> {
   try {
     if (task.actionType === 'command') {
+      const command = task.details.trim()
+      const commandName = command.split(/\s+/)[0]?.split(/[\\/]/).pop() || ''
+      const approvedCommands = (await loadSettings())?.approvedCommands || []
+      if (!approvedCommands.includes(commandName)) {
+        console.warn(
+          `[SchedulerManager] Blocked unapproved scheduled command: ${commandName}`
+        )
+        return
+      }
       console.log(`[SchedulerManager] Executing command: ${task.details}`)
       const { stdout, stderr } = await execAsync(task.details)
 

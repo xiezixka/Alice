@@ -4,6 +4,12 @@ import { manage_clipboard } from './functions/clipboard'
 import {
   open_path,
   list_directory,
+  list_directory_detailed,
+  find_files,
+  organize_files,
+  undo_file_organization,
+  desktop_capabilities,
+  desktop_action,
   execute_command,
 } from './functions/filesystem'
 import {
@@ -13,8 +19,14 @@ import {
   create_calendar_event,
   update_calendar_event,
   delete_calendar_event,
+  plan_itinerary,
 } from './functions/calendar'
 import { search_torrents, add_torrent_to_qb } from './functions/torrent'
+import {
+  create_email_draft,
+  reply_to_email,
+  send_email,
+} from './functions/gmail'
 import axios from 'axios'
 
 interface FunctionResult {
@@ -739,10 +751,20 @@ const functionRegistry: {
   create_calendar_event,
   update_calendar_event,
   delete_calendar_event,
+  plan_itinerary,
   get_unread_emails,
   search_emails,
   get_email_content,
+  create_email_draft,
+  reply_to_email,
+  send_email,
   list_directory,
+  list_directory_detailed,
+  find_files,
+  organize_files,
+  undo_file_organization,
+  desktop_capabilities,
+  desktop_action,
   execute_command,
   schedule_task,
   manage_scheduled_tasks,
@@ -766,10 +788,20 @@ const functionSchemas = {
   },
   update_calendar_event: { required: ['eventId'] },
   delete_calendar_event: { required: ['eventId'] },
+  plan_itinerary: { required: ['startDateTime', 'endDateTime', 'items'] },
   get_unread_emails: { required: [] },
   search_emails: { required: ['query'] },
   get_email_content: { required: ['messageId'] },
+  create_email_draft: { required: ['to', 'subject', 'body'] },
+  reply_to_email: { required: ['messageId', 'body'] },
+  send_email: { required: ['to', 'subject', 'body'] },
   list_directory: { required: ['path'] },
+  list_directory_detailed: { required: ['path'] },
+  find_files: { required: ['path'] },
+  organize_files: { required: ['operations'] },
+  undo_file_organization: { required: ['operationId'] },
+  desktop_capabilities: { required: [] },
+  desktop_action: { required: ['action'] },
   execute_command: { required: ['command'] },
   schedule_task: { required: ['name', 'schedule', 'action_type', 'details'] },
   manage_scheduled_tasks: { required: ['action'] },

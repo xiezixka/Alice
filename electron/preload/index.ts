@@ -149,6 +149,28 @@ contextBridge.exposeInMainWorld('customAvatarsAPI', {
 contextBridge.exposeInMainWorld('desktopAPI', {
   listDirectory: (dirPath: string) =>
     aliceIPC.invoke('desktop:listDirectory', dirPath),
+  listDirectoryDetailed: (dirPath: string) =>
+    aliceIPC.invoke('desktop:listDirectoryDetailed', dirPath),
+  findFiles: (args: {
+    path: string
+    query?: string
+    maxResults?: number
+    maxDepth?: number
+    includeHidden?: boolean
+  }) => aliceIPC.invoke('desktop:findFiles', args),
+  applyFileOperations: (args: {
+    operations: Array<{
+      action: 'move' | 'copy' | 'rename'
+      source: string
+      destination: string
+    }>
+    dryRun?: boolean
+  }) => aliceIPC.invoke('desktop:applyFileOperations', args),
+  undoFileOperations: (operationId: string) =>
+    aliceIPC.invoke('desktop:undoFileOperations', { operationId }),
+  getCapabilities: () => aliceIPC.invoke('desktop:getCapabilities'),
+  runAction: (args: Record<string, any>) =>
+    aliceIPC.invoke('desktop:runAction', args),
   executeCommand: (command: string) =>
     aliceIPC.invoke('desktop:executeCommand', command),
 })
