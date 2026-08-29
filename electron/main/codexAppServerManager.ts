@@ -7,12 +7,7 @@ import readline from 'node:readline'
 import { getMainWindow } from './windowManager'
 
 type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue }
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue }
 
 interface RpcResponse {
   id?: number | string
@@ -596,7 +591,7 @@ class CodexAppServerManager {
       .split(/\s+/)
       .map(part => part.trim())
       .filter(Boolean)
-    const env = {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
       CODEX_HOME: codexHome,
       HOME: nativeHome,

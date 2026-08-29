@@ -29,7 +29,11 @@ let cachedAllowedHttpOrigins: Promise<Set<string>> | null = null
 async function getCachedAllowedHttpOrigins(): Promise<Set<string>> {
   if (!cachedAllowedHttpOrigins) {
     cachedAllowedHttpOrigins = loadSettings()
-      .then(settings => getAllowedHttpOrigins(settings))
+      .then(settings =>
+        getAllowedHttpOrigins(
+          settings as unknown as Record<string, unknown> | null
+        )
+      )
       .catch(error => {
         cachedAllowedHttpOrigins = null
         throw error
@@ -679,7 +683,11 @@ export function registerIPCHandlers(): void {
   // Settings management
   ipcMain.handle('settings:load', async () => {
     const settings = await loadSettings()
-    cachedAllowedHttpOrigins = Promise.resolve(getAllowedHttpOrigins(settings))
+    cachedAllowedHttpOrigins = Promise.resolve(
+      getAllowedHttpOrigins(
+        settings as unknown as Record<string, unknown> | null
+      )
+    )
     return settings
   })
 
@@ -689,8 +697,8 @@ export function registerIPCHandlers(): void {
       try {
         const oldSettings = await loadSettings()
         const originsRequiringApproval = getHttpOriginsRequiringApproval(
-          oldSettings,
-          settingsToSave
+          oldSettings as unknown as Record<string, unknown> | null,
+          settingsToSave as unknown as Record<string, unknown>
         )
 
         if (originsRequiringApproval.length > 0) {
@@ -725,7 +733,9 @@ export function registerIPCHandlers(): void {
 
         await saveSettings(settingsToSave)
         cachedAllowedHttpOrigins = Promise.resolve(
-          getAllowedHttpOrigins(settingsToSave)
+          getAllowedHttpOrigins(
+            settingsToSave as unknown as Record<string, unknown>
+          )
         )
         setTrayBackgroundListening(
           settingsToSave.backgroundListeningEnabled === true
