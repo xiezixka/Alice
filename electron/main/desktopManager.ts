@@ -599,22 +599,22 @@ class DesktopManager {
         const confirmation = owner
           ? await dialog.showMessageBox(owner, {
               type: 'warning',
-              buttons: ['Cancel', 'Run once'],
+              buttons: ['取消', '仅运行一次'],
               defaultId: 0,
               cancelId: 0,
               noLink: true,
-              title: 'Allow command execution?',
-              message: 'Alice wants to execute a command on this computer.',
+              title: '确认执行命令',
+              message: 'Alice 请求在这台电脑上执行一条命令。',
               detail: commandPreview,
             })
           : await dialog.showMessageBox({
               type: 'warning',
-              buttons: ['Cancel', 'Run once'],
+              buttons: ['取消', '仅运行一次'],
               defaultId: 0,
               cancelId: 0,
               noLink: true,
-              title: 'Allow command execution?',
-              message: 'Alice wants to execute a command on this computer.',
+              title: '确认执行命令',
+              message: 'Alice 请求在这台电脑上执行一条命令。',
               detail: commandPreview,
             })
 
@@ -663,12 +663,12 @@ class DesktopManager {
           : '当前 Linux 桌面会话的屏幕捕获权限'
     const options = {
       type: 'warning' as const,
-      buttons: ['Cancel', 'Allow for session'],
+      buttons: ['取消', '本次运行允许'],
       defaultId: 0,
       cancelId: 0,
       noLink: true,
-      title: 'Allow directory access?',
-      message: 'Alice wants to access this directory for the current session.',
+      title: '允许访问目录？',
+      message: 'Alice 请求在本次运行期间访问这个目录。',
       detail: normalized,
     }
     const confirmation = owner

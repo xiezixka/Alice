@@ -707,16 +707,16 @@ export function registerIPCHandlers(): void {
             .join('\n')
           const options = {
             type: 'warning' as const,
-            buttons: ['Cancel', 'Allow'],
+            buttons: ['取消', '允许连接'],
             defaultId: 0,
             cancelId: 0,
             noLink: true,
-            title: 'Allow network service?',
+            title: '允许连接网络服务？',
             message:
               originsRequiringApproval.length === 1
-                ? 'Alice wants to connect to a new network service.'
-                : 'Alice wants to connect to new network services.',
-            detail: `${detail}\n\nOnly allow services that you configured and trust.`,
+                ? 'Alice 请求连接一个新的网络服务。'
+                : 'Alice 请求连接多个新的网络服务。',
+            detail: `${detail}\n\n请只允许你配置并信任的服务。`,
           }
           const owner = BrowserWindow.fromWebContents(event.sender)
           const confirmation = owner
@@ -1060,7 +1060,7 @@ export function registerIPCHandlers(): void {
         console.error('open_path: Invalid target received:', args)
         return {
           success: false,
-          message: 'Error: No valid target path, name, or URL provided.',
+          message: '错误：未提供有效的路径、名称或网址。',
         }
       }
 
@@ -1074,7 +1074,7 @@ export function registerIPCHandlers(): void {
           await shell.openExternal(externalUrl)
           return {
             success: true,
-            message: `Successfully initiated opening URL: ${targetPath}`,
+            message: `已开始打开网址：${targetPath}`,
           }
         } else {
           if (!isTrustedLocalOpenPath(targetPath)) {
@@ -1082,29 +1082,29 @@ export function registerIPCHandlers(): void {
             const confirmation = owner
               ? await dialog.showMessageBox(owner, {
                   type: 'warning',
-                  buttons: ['Cancel', 'Open'],
+                  buttons: ['取消', '打开'],
                   defaultId: 0,
                   cancelId: 0,
                   noLink: true,
-                  title: 'Allow opening a local path?',
-                  message: 'Alice wants to open a local path or application.',
+                  title: '允许打开本地路径？',
+                  message: 'Alice 请求打开本地路径或应用程序。',
                   detail: targetPath,
                 })
               : await dialog.showMessageBox({
                   type: 'warning',
-                  buttons: ['Cancel', 'Open'],
+                  buttons: ['取消', '打开'],
                   defaultId: 0,
                   cancelId: 0,
                   noLink: true,
-                  title: 'Allow opening a local path?',
-                  message: 'Alice wants to open a local path or application.',
+                  title: '允许打开本地路径？',
+                  message: 'Alice 请求打开本地路径或应用程序。',
                   detail: targetPath,
                 })
 
             if (confirmation.response !== 1) {
               return {
                 success: false,
-                message: 'Opening the local path was denied by the user.',
+                message: '用户取消了打开本地路径。',
               }
             }
           }
@@ -1118,12 +1118,12 @@ export function registerIPCHandlers(): void {
             )
             return {
               success: false,
-              message: `Error: Could not open "${targetPath}". Reason: ${errorMessage}`,
+              message: `错误：无法打开“${targetPath}”。原因：${errorMessage}`,
             }
           } else {
             return {
               success: true,
-              message: `Successfully opened path: ${targetPath}`,
+              message: `已打开路径：${targetPath}`,
             }
           }
         }
@@ -1131,7 +1131,7 @@ export function registerIPCHandlers(): void {
         console.error(`Unexpected error opening target "${targetPath}":`, error)
         return {
           success: false,
-          message: `Error: An unexpected issue occurred while trying to open "${targetPath}". ${error.message || ''}`,
+          message: `错误：打开“${targetPath}”时发生意外问题。${error.message || ''}`,
         }
       }
     }
@@ -1147,8 +1147,7 @@ export function registerIPCHandlers(): void {
         )
         return {
           success: false,
-          message:
-            'Error: Invalid action specified. Must be "read" or "write".',
+          message: '错误：操作无效。action 必须是 read 或 write。',
         }
       }
 
@@ -1162,7 +1161,7 @@ export function registerIPCHandlers(): void {
           )
           return {
             success: true,
-            message: 'Successfully read text from clipboard.',
+            message: '已读取剪贴板文本。',
             data: clipboardText,
           }
         } else {
@@ -1174,7 +1173,7 @@ export function registerIPCHandlers(): void {
               return {
                 success: false,
                 message:
-                  'Error: Text content must be provided for the "write" action (can be an empty string to clear).',
+                  '错误：write 操作需要提供文本内容（传入空字符串可清空剪贴板）。',
               }
             }
             console.error(
@@ -1182,8 +1181,7 @@ export function registerIPCHandlers(): void {
             )
             return {
               success: false,
-              message:
-                'Error: Text content must be a string for the "write" action.',
+              message: '错误：write 操作的文本内容必须是字符串。',
             }
           }
 
@@ -1191,7 +1189,7 @@ export function registerIPCHandlers(): void {
           console.log('Clipboard write successful.')
           return {
             success: true,
-            message: 'Successfully wrote text to clipboard.',
+            message: '已写入剪贴板。',
           }
         }
       } catch (error: any) {
@@ -1201,7 +1199,7 @@ export function registerIPCHandlers(): void {
         )
         return {
           success: false,
-          message: `Error: An unexpected issue occurred during the clipboard operation. ${error.message || ''}`,
+          message: `错误：执行剪贴板操作时发生意外问题。${error.message || ''}`,
         }
       }
     }

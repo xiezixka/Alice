@@ -34,8 +34,7 @@ export function registerAuthIPCHandlers(): void {
       shell.openExternal(authUrl)
       return {
         success: true,
-        message:
-          'Please authorize in your browser. A browser window/tab has been opened.',
+        message: '请在浏览器中完成授权。浏览器窗口或标签页已打开。',
       }
     } catch (error: any) {
       console.error(
@@ -44,7 +43,7 @@ export function registerAuthIPCHandlers(): void {
       )
       return {
         success: false,
-        error: `Failed to initiate Google authentication: ${error.message}`,
+        error: `发起 Google 授权失败：${error.message}`,
       }
     }
   })
@@ -57,7 +56,7 @@ export function registerAuthIPCHandlers(): void {
   ipcMain.handle('google-calendar:disconnect', async () => {
     await googleAuthManager.clearTokens()
     stopAuthServer()
-    return { success: true, message: 'Disconnected from Google Services.' }
+    return { success: true, message: '已断开 Google 服务。' }
   })
 }
 

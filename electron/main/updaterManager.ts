@@ -11,6 +11,19 @@ const { autoUpdater } = pkg
 
 const IS_DEV = !!process.env.VITE_DEV_SERVER_URL
 
+function hasUpdateConfig(): boolean {
+  if (IS_DEV) return true
+
+  const updateConfigPath = path.join(process.resourcesPath, 'app-update.yml')
+  const available = fs.existsSync(updateConfigPath)
+  if (!available) {
+    log.info(
+      `[AutoUpdater] No app-update.yml found at ${updateConfigPath}; automatic updates are unavailable for this package.`
+    )
+  }
+  return available
+}
+
 export function initializeUpdater(): void {
   log.transports.file.level = 'info'
   autoUpdater.logger = log
@@ -152,6 +165,13 @@ function setupUpdaterIPCHandlers(): void {
     try {
       console.log('[AutoUpdater] Manual update check requested')
       log.info('[AutoUpdater] Manual update check initiated')
+      if (!hasUpdateConfig()) {
+        return {
+          success: false,
+          error:
+            '当前安装包未包含自动更新配置，请使用正式安装包或从 GitHub 下载最新版本。',
+        }
+      }
       const result = await autoUpdater.checkForUpdates()
       return { success: true, updateInfo: result?.updateInfo }
     } catch (error: any) {
@@ -205,6 +225,13 @@ export function checkForUpdates(): void {
   if (IS_DEV) {
     log.info(
       '[AutoUpdater] Skipping automatic update check in development mode'
+    )
+    return
+  }
+
+  if (!hasUpdateConfig()) {
+    log.info(
+      '[AutoUpdater] Skipping automatic update check because this package has no update configuration.'
     )
     return
   }

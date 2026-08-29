@@ -75,7 +75,7 @@ export async function deleteEvent(
       calendarId,
       eventId,
     })
-    return { success: true, data: { message: 'Event deleted successfully.' } }
+    return { success: true, data: { message: '日历事件已删除。' } }
   } catch (error: any) {
     console.error('Error deleting event:', error.message)
     return { success: false, error: error.message }
