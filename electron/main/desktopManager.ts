@@ -612,6 +612,12 @@ class DesktopManager {
   ): Promise<{ success: true } | { success: false; error: string }> {
     if (this.screenCaptureApprovedForSession) return { success: true }
 
+    const platformHint =
+      process.platform === 'darwin'
+        ? 'macOS“系统设置 > 隐私与安全性 > 屏幕录制”'
+        : process.platform === 'win32'
+          ? 'Windows 隐私设置中的屏幕捕获权限'
+          : '当前 Linux 桌面会话的屏幕捕获权限'
     const owner = BrowserWindow.fromWebContents(event.sender)
     const options = {
       type: 'warning' as const,
