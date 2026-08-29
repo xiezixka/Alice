@@ -3,10 +3,7 @@ import { getDeepSeekClient } from '../apiClients'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { createProviderModel, listModelsViaMainProcess } from './modelDiscovery'
 import { createOpenAICompatibleResponse } from './openAICompatible'
-import {
-  DEEPSEEK_OPENAI_BASE_URL,
-  DEEPSEEK_MODELS,
-} from './providerCatalog'
+import { DEEPSEEK_OPENAI_BASE_URL, DEEPSEEK_MODELS } from './providerCatalog'
 
 function createDeepSeekModel(id: string): OpenAI.Models.Model {
   return createProviderModel(id, 'deepseek')
@@ -20,11 +17,18 @@ function isAuthError(error: any): boolean {
   return error?.status === 401 || error?.status === 403
 }
 
-function filterDeepSeekTextModels(
+function filterDeepSeekSupportedModels(
   models: OpenAI.Models.Model[]
 ): OpenAI.Models.Model[] {
   const textModelIds = new Set(DEEPSEEK_MODELS.map(model => model.id))
-  return models.filter(model => textModelIds.has(model.id))
+  return models
+    .filter(model => textModelIds.has(model.id))
+    .sort((a, b) => {
+      const visionModel = 'deepseek-v4-flash-vision-exp'
+      if (a.id === visionModel) return -1
+      if (b.id === visionModel) return 1
+      return a.id.localeCompare(b.id)
+    })
 }
 
 export async function listDeepSeekModelsForConfig(
@@ -37,8 +41,10 @@ export async function listDeepSeekModelsForConfig(
       baseURL,
       providerName: 'DeepSeek',
     })
-    const textModels = filterDeepSeekTextModels(models)
-    return textModels.length > 0 ? textModels : listStaticDeepSeekTextModels()
+    const supportedModels = filterDeepSeekSupportedModels(models)
+    return supportedModels.length > 0
+      ? supportedModels
+      : listStaticDeepSeekTextModels()
   } catch (error) {
     if (isAuthError(error)) {
       throw error

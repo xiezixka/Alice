@@ -32,8 +32,8 @@ describe('DeepSeek model listing', () => {
     )
 
     expect(models.map(model => model.id)).toEqual([
-      'deepseek-v4-flash',
       'deepseek-v4-flash-vision-exp',
+      'deepseek-v4-flash',
       'deepseek-v4-pro',
     ])
     expect(request).toHaveBeenCalledWith(

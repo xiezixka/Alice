@@ -49,9 +49,9 @@ describe('providerCatalog', () => {
     expect(
       getStaticModelsForProvider('deepseek').map(model => model.id)
     ).toEqual([
+      'deepseek-v4-flash-vision-exp',
       'deepseek-v4-flash',
       'deepseek-v4-pro',
-      'deepseek-v4-flash-vision-exp',
     ])
     expect(DEEPSEEK_TEXT_MODELS[0]?.displayName).toBe('DeepSeek V4 Flash')
   })

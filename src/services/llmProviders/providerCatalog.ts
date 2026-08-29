@@ -53,8 +53,8 @@ export const DEEPSEEK_VISION_MODELS: ProviderModelDefinition[] = [
 ]
 
 export const DEEPSEEK_MODELS: ProviderModelDefinition[] = [
-  ...DEEPSEEK_TEXT_MODELS,
   ...DEEPSEEK_VISION_MODELS,
+  ...DEEPSEEK_TEXT_MODELS,
 ]
 
 export const CODEX_TEXT_MODELS: ProviderModelDefinition[] = [
