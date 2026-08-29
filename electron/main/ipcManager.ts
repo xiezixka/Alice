@@ -1552,41 +1552,100 @@ export function registerGoogleIPCHandlers(): void {
     )
   })
 
+  async function confirmCalendarWrite(
+    event: Electron.IpcMainInvokeEvent,
+    message: string,
+    detail: string
+  ): Promise<boolean> {
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    const options = {
+      type: 'warning' as const,
+      buttons: ['取消', '确认'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+      title: '确认 Google 日历操作',
+      message,
+      detail: detail.length > 6000 ? `${detail.slice(0, 6000)}\n…` : detail,
+    }
+    const result = owner
+      ? await dialog.showMessageBox(owner, options)
+      : await dialog.showMessageBox(options)
+    return result.response === 1
+  }
+
   ipcMain.handle('google-calendar:create-event', async (event, args) => {
-    return withAuthenticatedClient(
-      authClient =>
-        googleCalendarManager.createEvent(
-          authClient,
-          args.calendarId,
-          args.eventResource
-        ),
-      'Google Calendar'
-    )
+    return withAuthenticatedClient(async authClient => {
+      const resource = args?.eventResource || {}
+      const confirmed = await confirmCalendarWrite(
+        event,
+        `即将在 Google 日历创建“${resource.summary || '未命名事件'}”`,
+        [
+          `开始：${resource.start?.dateTime || resource.start?.date || '未设置'}`,
+          `结束：${resource.end?.dateTime || resource.end?.date || '未设置'}`,
+          `地点：${resource.location || '未设置'}`,
+          `说明：${resource.description || '无'}`,
+        ].join('\n')
+      )
+      if (!confirmed)
+        return {
+          success: false,
+          error: 'Google Calendar create cancelled by user.',
+        }
+      return googleCalendarManager.createEvent(
+        authClient,
+        args.calendarId,
+        resource
+      )
+    }, 'Google Calendar')
   })
 
   ipcMain.handle('google-calendar:update-event', async (event, args) => {
-    return withAuthenticatedClient(
-      authClient =>
-        googleCalendarManager.updateEvent(
-          authClient,
-          args.calendarId,
-          args.eventId,
-          args.eventResource
-        ),
-      'Google Calendar'
-    )
+    return withAuthenticatedClient(async authClient => {
+      const resource = args?.eventResource || {}
+      const confirmed = await confirmCalendarWrite(
+        event,
+        `即将修改 Google 日历事件 ${args?.eventId || '未指定'}`,
+        [
+          `标题：${resource.summary || '保持不变'}`,
+          `开始：${resource.start?.dateTime || resource.start?.date || '保持不变'}`,
+          `结束：${resource.end?.dateTime || resource.end?.date || '保持不变'}`,
+          `地点：${resource.location || '保持不变'}`,
+          `说明：${resource.description || '保持不变'}`,
+        ].join('\n')
+      )
+      if (!confirmed)
+        return {
+          success: false,
+          error: 'Google Calendar update cancelled by user.',
+        }
+      return googleCalendarManager.updateEvent(
+        authClient,
+        args.calendarId,
+        args.eventId,
+        resource
+      )
+    }, 'Google Calendar')
   })
 
   ipcMain.handle('google-calendar:delete-event', async (event, args) => {
-    return withAuthenticatedClient(
-      authClient =>
-        googleCalendarManager.deleteEvent(
-          authClient,
-          args.calendarId,
-          args.eventId
-        ),
-      'Google Calendar'
-    )
+    return withAuthenticatedClient(async authClient => {
+      const confirmed = await confirmCalendarWrite(
+        event,
+        `即将删除 Google 日历事件 ${args?.eventId || '未指定'}`,
+        '删除后需要从日历服务的回收或历史记录中恢复（如果服务支持）。'
+      )
+      if (!confirmed)
+        return {
+          success: false,
+          error: 'Google Calendar delete cancelled by user.',
+        }
+      return googleCalendarManager.deleteEvent(
+        authClient,
+        args.calendarId,
+        args.eventId
+      )
+    }, 'Google Calendar')
   })
 
   // Gmail handlers
