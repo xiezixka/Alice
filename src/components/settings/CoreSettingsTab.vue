@@ -521,6 +521,28 @@
             >
               打开麦克风设置
             </button>
+            <button
+              v-if="
+                currentSettings.assistantTools.includes(
+                  'capture_desktop_screen'
+                )
+              "
+              type="button"
+              class="btn btn-sm btn-outline w-full sm:w-auto"
+              @click="
+                openSystemPermissionSettings('screen-recording', '屏幕录制')
+              "
+            >
+              打开屏幕录制设置
+            </button>
+            <button
+              v-if="currentSettings.assistantTools.includes('desktop_action')"
+              type="button"
+              class="btn btn-sm btn-outline w-full sm:w-auto"
+              @click="openSystemPermissionSettings('accessibility', '辅助功能')"
+            >
+              打开辅助功能设置
+            </button>
           </div>
           <p v-if="microphoneCheckResult" class="text-xs text-gray-300">
             {{ microphoneCheckResult }}
@@ -667,8 +689,7 @@
             >
               <span>
                 {{ availableVoices.filter(v => v.gender !== 'male').length }}
-                条语音
-                ，覆盖 {{ Object.keys(groupedVoices).length }} 种语言
+                条语音，覆盖 {{ Object.keys(groupedVoices).length }} 种语言
               </span>
               <span
                 class="text-blue-400 cursor-pointer hover:underline"
@@ -989,7 +1010,8 @@ const checkMicrophone = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     stream.getTracks().forEach(track => track.stop())
     await updateMicrophonePermission()
-    microphoneCheckResult.value = '麦克风可用，权限已确认；检测音频流已立即关闭。'
+    microphoneCheckResult.value =
+      '麦克风可用，权限已确认；检测音频流已立即关闭。'
   } catch (error) {
     await updateMicrophonePermission()
     microphoneCheckResult.value =
@@ -1000,22 +1022,30 @@ const checkMicrophone = async () => {
   }
 }
 
-const openMicrophoneSettings = async () => {
+type SystemPermissionTarget =
+  'microphone' | 'screen-recording' | 'accessibility'
+
+const openSystemPermissionSettings = async (
+  target: SystemPermissionTarget,
+  label: string
+) => {
   try {
     if (!window.desktopAPI?.openSystemSettings) {
       microphoneCheckResult.value = '当前环境不支持直接打开系统权限设置。'
       return
     }
-    const result = await window.desktopAPI.openSystemSettings('microphone')
+    const result = await window.desktopAPI.openSystemSettings(target)
     microphoneCheckResult.value = result.success
-      ? '已打开系统麦克风权限设置；允许 Alice 后返回此处再点击“检查麦克风”。'
+      ? `已打开系统${label}权限设置；完成授权后返回此处再检查状态。`
       : `无法打开系统设置：${result.error || '未知错误'}`
   } catch (error) {
-    microphoneCheckResult.value =
-      '无法打开系统设置，请手动进入系统设置中的麦克风权限。'
-    console.warn('Failed to open microphone settings:', error)
+    microphoneCheckResult.value = `无法打开系统设置，请手动进入系统设置中的“${label}”权限。`
+    console.warn(`Failed to open ${label} settings:`, error)
   }
 }
+
+const openMicrophoneSettings = () =>
+  openSystemPermissionSettings('microphone', '麦克风')
 
 const updateServiceStatus = async () => {
   try {

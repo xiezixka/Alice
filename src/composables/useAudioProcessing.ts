@@ -8,6 +8,10 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { storeToRefs } from 'pinia'
 import eventBus from '../utils/eventBus'
 import { parseWakeWord } from './wakeWord'
+import {
+  isBlockedMicrophonePermissionStatus,
+  isMicrophonePermissionError,
+} from './microphonePermission'
 
 let ipcListenersRegistered = false
 
@@ -158,6 +162,15 @@ export function useAudioProcessing() {
     await destroyVAD()
 
     try {
+      const microphonePermission = await getMicrophonePermission()
+      if (isBlockedMicrophonePermissionStatus(microphonePermission)) {
+        stopAfterMicrophonePermissionFailure({
+          name: 'NotAllowedError',
+          message: microphonePermission,
+        })
+        return
+      }
+
       const assetPath = vadAssetBasePath.value
       console.log(
         `[VAD Manager] Attempting to load VAD with baseAssetPath: ${assetPath}`
@@ -210,6 +223,7 @@ export function useAudioProcessing() {
     } catch (error) {
       console.error('[VAD Manager] VAD initialization failed:', error)
       await destroyVAD()
+      if (stopAfterMicrophonePermissionFailure(error)) return
       setAudioState('IDLE')
       generalStore.statusMessage = '错误：麦克风/语音检测初始化失败'
       isSpeechDetected.value = false
@@ -234,6 +248,40 @@ export function useAudioProcessing() {
       isSpeechDetected.value = false
       console.log('[VAD Manager] VAD instance reference removed.')
     }
+  }
+
+  /**
+   * Read the native permission state before starting a VAD session. On
+   * macOS, a background-launched renderer can otherwise remain in LISTENING
+   * while getUserMedia is rejected, which makes the tray indicator lie about
+   * the actual microphone state. Unknown/not-determined states are allowed to
+   * continue so the browser/Electron permission prompt can do its job.
+   */
+  const getMicrophonePermission = async (): Promise<string> => {
+    try {
+      if (!window.desktopAPI?.getCapabilities) return 'unknown'
+      const capabilities = await window.desktopAPI.getCapabilities()
+      return capabilities.microphonePermission || 'unknown'
+    } catch (error) {
+      console.warn('[VAD Manager] Could not read microphone permission:', error)
+      return 'unknown'
+    }
+  }
+
+  const stopAfterMicrophonePermissionFailure = (reason?: unknown) => {
+    if (!isMicrophonePermissionError(reason)) return false
+
+    // Do not let the background watcher immediately restart a session that
+    // the OS has just rejected. The user can re-enable it after granting the
+    // permission in system settings.
+    backgroundSessionActive = false
+    if (isRecordingRequested.value) isRecordingRequested.value = false
+    setAudioState('IDLE')
+    awaitingWakeWord.value = false
+    wakeWordDetected.value = false
+    generalStore.statusMessage =
+      '麦克风权限未开启，后台唤醒已暂停。请在系统设置中允许 Alice 使用麦克风后重试。'
+    return true
   }
 
   const processAudioRecording = async (audio: Float32Array) => {

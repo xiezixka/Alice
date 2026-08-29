@@ -18,6 +18,7 @@ To activate all tools, you need to get your API credentials for each tool.
 - `desktop_capabilities`：查看当前系统支持的桌面动作。
 - `capture_desktop_screen`：在用户授权后读取当前主屏幕，作为视觉模型的临时上下文；macOS 需要“屏幕录制”权限，截图不会写入长期聊天记录。
 - `desktop_action`：在确认弹窗后打开应用、聚焦窗口、点击坐标、输入文本或发送快捷键。macOS 需要给 Alice 开启“辅助功能”权限；Linux 需要 `xdotool`。
+- 核心设置页会根据已启用的工具提供“打开屏幕录制设置”和“打开辅助功能设置”快捷入口，完成授权后再重试对应操作。
 
 ## 文件整理
 
