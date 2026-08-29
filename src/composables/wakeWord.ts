@@ -31,6 +31,13 @@ const DEFAULT_ALICE_ALIASES = [
   // Keep this narrow alias so the local wake-word path remains usable with
   // the bundled Chinese models while preserving the explicit “alice” mode.
   '爱历史',
+  // Another verified Piper -> Whisper round-trip rendered “爱丽丝” as
+  // “爱力私”. Keep the observed three-character variant narrow to avoid
+  // turning ordinary Chinese phrases into accidental wake-ups.
+  '爱力私',
+  '愛力私',
+  '爱丽私',
+  '愛麗私',
 ]
 
 /**

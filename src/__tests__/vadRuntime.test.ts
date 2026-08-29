@@ -6,6 +6,23 @@ import {
   vadStaticCopyTargets,
 } from '../../build/vadAssets'
 import { createVadOptions } from '../composables/vadRuntime'
+import { hasMeaningfulAudio } from '../utils/audioProcess'
+
+describe('audio energy gate', () => {
+  it('rejects silent and near-silent clips', () => {
+    expect(hasMeaningfulAudio(new Float32Array(16000))).toBe(false)
+    expect(hasMeaningfulAudio(new Float32Array(16000).fill(0.001))).toBe(false)
+  })
+
+  it('accepts quiet speech-like audio when it has enough energy', () => {
+    const samples = new Float32Array(16000)
+    for (let index = 0; index < samples.length; index += 1) {
+      samples[index] = Math.sin((index / 16000) * Math.PI * 2 * 220) * 0.05
+    }
+
+    expect(hasMeaningfulAudio(samples)).toBe(true)
+  })
+})
 
 describe('VAD runtime packaging', () => {
   it('ships every configured local runtime asset', () => {

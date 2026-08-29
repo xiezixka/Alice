@@ -1,6 +1,6 @@
 import { ref, watch, onUnmounted, onMounted } from 'vue'
 import * as vad from '@ricky0123/vad-web'
-import { float32ArrayToWav } from '../utils/audioProcess'
+import { float32ArrayToWav, hasMeaningfulAudio } from '../utils/audioProcess'
 import { createVadOptions } from './vadRuntime'
 import { useGeneralStore } from '../stores/generalStore'
 import { useConversationStore } from '../stores/conversationStore'
@@ -289,6 +289,13 @@ export function useAudioProcessing() {
       console.warn(
         '[Audio Processing] Processing aborted (invalid state or no audio).'
       )
+      isSpeechDetected.value = false
+      return
+    }
+
+    if (!hasMeaningfulAudio(audio)) {
+      console.log('[Audio Processing] Ignoring silent or near-silent audio.')
+      setAudioState(isRecordingRequested.value ? 'LISTENING' : 'IDLE')
       isSpeechDetected.value = false
       return
     }

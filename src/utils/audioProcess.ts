@@ -32,6 +32,35 @@ export const float32ArrayToWav = (
   return buffer
 }
 
+/**
+ * Whisper can hallucinate text for a completely silent clip.  Keep a small
+ * energy gate in front of transcription so VAD/background listening does not
+ * turn silence or near-silence into a command.  The peak fallback preserves
+ * quiet but clearly articulated speech that has a low RMS value.
+ */
+export const hasMeaningfulAudio = (
+  samples: Float32Array,
+  rmsThreshold = 0.005,
+  peakThreshold = 0.02
+): boolean => {
+  if (!samples || samples.length === 0) return false
+
+  let sumSquares = 0
+  let peak = 0
+  let finiteSamples = 0
+  for (const sample of samples) {
+    if (!Number.isFinite(sample)) continue
+    const magnitude = Math.abs(sample)
+    sumSquares += magnitude * magnitude
+    peak = Math.max(peak, magnitude)
+    finiteSamples += 1
+  }
+
+  if (finiteSamples === 0) return false
+  const rms = Math.sqrt(sumSquares / finiteSamples)
+  return rms >= rmsThreshold || peak >= peakThreshold
+}
+
 const writeString = (view: DataView, offset: number, string: string): void => {
   for (let i = 0; i < string.length; i++) {
     view.setUint8(offset + i, string.charCodeAt(i))

@@ -2,10 +2,38 @@ package whisper
 
 import (
 	"encoding/binary"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+func TestHasMeaningfulAudioRejectsSilence(t *testing.T) {
+	service := NewSTTService(&Config{VoiceThreshold: 0.02})
+
+	if service.hasMeaningfulAudio(make([]float32, 16000)) {
+		t.Fatal("silent samples should be rejected")
+	}
+	quiet := make([]float32, 16000)
+	for index := range quiet {
+		quiet[index] = 0.001
+	}
+	if service.hasMeaningfulAudio(quiet) {
+		t.Fatal("near-silent samples should be rejected")
+	}
+}
+
+func TestHasMeaningfulAudioAcceptsSpeechLikeSignal(t *testing.T) {
+	service := NewSTTService(&Config{VoiceThreshold: 0.02})
+	samples := make([]float32, 16000)
+	for index := range samples {
+		samples[index] = float32(math.Sin(float64(index)/16000*math.Pi*2*220) * 0.05)
+	}
+
+	if !service.hasMeaningfulAudio(samples) {
+		t.Fatal("speech-like samples should pass the energy gate")
+	}
+}
 
 func TestWriteWAVFileWritesValidPCMHeader(t *testing.T) {
 	tmpDir := t.TempDir()

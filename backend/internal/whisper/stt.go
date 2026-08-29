@@ -1,10 +1,12 @@
 package whisper
 
 import (
+	"archive/zip"
 	"context"
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -13,11 +15,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"archive/zip"
 
 	"alice-backend/internal/embedded"
 )
-
 
 // Config holds STT configuration
 type Config struct {
@@ -156,7 +156,44 @@ func (s *STTService) TranscribeAudioWithLanguage(ctx context.Context, audioData 
 		return "", nil
 	}
 
+	// Whisper may hallucinate a sentence for silence.  Reject clips whose
+	// energy is below the configured voice threshold before invoking the
+	// external decoder.  This is especially important for background wake-word
+	// mode, where a false transcript could be interpreted as a command.
+	if !s.hasMeaningfulAudio(samples) {
+		log.Printf("Ignoring silent or near-silent audio (%d samples)", len(samples))
+		return "", nil
+	}
+
 	return s.transcribeDirectlyWithLanguage(ctx, samples, language)
+}
+
+func (s *STTService) hasMeaningfulAudio(samples []float32) bool {
+	threshold := float64(s.config.VoiceThreshold)
+	if threshold <= 0 {
+		threshold = 0.02
+	}
+
+	var sumSquares float64
+	var peak float64
+	finiteSamples := 0
+	for _, sample := range samples {
+		if math.IsNaN(float64(sample)) || math.IsInf(float64(sample), 0) {
+			continue
+		}
+		magnitude := math.Abs(float64(sample))
+		sumSquares += magnitude * magnitude
+		if magnitude > peak {
+			peak = magnitude
+		}
+		finiteSamples++
+	}
+	if finiteSamples == 0 {
+		return false
+	}
+
+	rms := math.Sqrt(sumSquares / float64(finiteSamples))
+	return rms >= threshold/4 || peak >= threshold
 }
 
 // convertAudioToSamples converts byte audio data to float32 samples
@@ -238,11 +275,11 @@ func (s *STTService) writeWAVFile(filename string, samples []float32) error {
 // transcribeDirectlyWithLanguage performs direct transcription using whisper.cpp binary
 func (s *STTService) transcribeDirectlyWithLanguage(ctx context.Context, samples []float32, language string) (string, error) {
 	log.Printf("Direct transcription: processing %d audio samples", len(samples))
-	
+
 	if len(samples) == 0 {
 		return "", nil
 	}
-	
+
 	var whisperPath string
 	embeddedBinaryPath := s.assetManager.GetBinaryPath("whisper")
 	if s.assetManager.IsAssetAvailable(embeddedBinaryPath) {
@@ -276,10 +313,10 @@ func (s *STTService) transcribeDirectlyWithLanguage(ctx context.Context, samples
 		if downloadErr := s.downloadWhisperBinary(ctx); downloadErr != nil {
 			return "", fmt.Errorf("no whisper binary found and download failed: %w", downloadErr)
 		}
-		
+
 		possiblePaths := []string{
 			"bin/whisper-cli.exe",
-			"bin/whisper-command.exe", 
+			"bin/whisper-command.exe",
 			"bin/main.exe",
 			"bin/whisper.exe",
 		}
@@ -299,26 +336,26 @@ func (s *STTService) transcribeDirectlyWithLanguage(ctx context.Context, samples
 				break
 			}
 		}
-		
+
 		if whisperPath == "" {
 			return "", fmt.Errorf("no whisper binary found even after download attempt")
 		}
 	}
-	
+
 	tmpDir := os.TempDir()
 	inputFile := filepath.Join(tmpDir, fmt.Sprintf("whisper_direct_%d.wav", time.Now().UnixNano()))
 	outputFile := filepath.Join(tmpDir, fmt.Sprintf("whisper_direct_%d.txt", time.Now().UnixNano()))
-	
+
 	defer os.Remove(inputFile)
 	defer os.Remove(outputFile)
-	
+
 	if err := s.writeWAVFile(inputFile, samples); err != nil {
 		return "", fmt.Errorf("failed to write WAV file: %w", err)
 	}
-	
+
 	// Get model path
 	modelPath := s.assetManager.GetModelPath("whisper")
-	
+
 	// Ensure model is available, download if needed
 	if !s.assetManager.IsAssetAvailable(modelPath) {
 		log.Printf("Whisper model not available at %s, downloading...", modelPath)
@@ -326,38 +363,38 @@ func (s *STTService) transcribeDirectlyWithLanguage(ctx context.Context, samples
 			return "", fmt.Errorf("failed to download whisper model: %w", err)
 		}
 	}
-	
+
 	// whisper.cpp command arguments - build args based on binary capabilities
 	args := []string{
 		"-m", modelPath,
 		"-f", inputFile,
 	}
-	
+
 	// Check if this binary supports -otxt flag by testing with --help
 	helpCmd := exec.Command(whisperPath, "--help")
 	helpOutput, _ := helpCmd.CombinedOutput()
 	supportsOtxt := strings.Contains(string(helpOutput), "-otxt") || strings.Contains(string(helpOutput), "otxt")
-	
+
 	if supportsOtxt {
 		args = append(args, "-otxt")
 	}
-	
+
 	args = append(args, "-of", strings.TrimSuffix(outputFile, ".txt"))
-	
+
 	langToUse := language
 	if langToUse == "" {
 		langToUse = s.config.Language
 	}
-	
+
 	if langToUse != "" && langToUse != "auto" {
 		args = append(args, "-l", langToUse)
 		log.Printf("Using language parameter: %s", langToUse)
 	}
-	
+
 	log.Printf("Executing whisper: %s %v", whisperPath, args)
-	
+
 	cmd := exec.CommandContext(ctx, whisperPath, args...)
-	
+
 	// Set library path for Linux to find shared libraries
 	if runtime.GOOS == "linux" {
 		binDir := filepath.Dir(whisperPath)
@@ -375,34 +412,34 @@ func (s *STTService) transcribeDirectlyWithLanguage(ctx context.Context, samples
 		}
 		cmd.Env = append(cmd.Env, "LD_LIBRARY_PATH="+ldLibraryPath)
 	}
-	
+
 	output, err := cmd.CombinedOutput()
-	
+
 	log.Printf("Whisper command output: %s", string(output))
-	
+
 	if err != nil {
 		return "", fmt.Errorf("whisper command failed: %w (output: %s)", err, string(output))
 	}
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// The output file should be created by whisper.cpp with the specified name
 	actualOutputFile := outputFile
-	
+
 	if _, err := os.Stat(actualOutputFile); os.IsNotExist(err) {
 		return "", fmt.Errorf("whisper output file not created: %s (command output: %s)", actualOutputFile, string(output))
 	}
-	
+
 	transcription, err := os.ReadFile(actualOutputFile)
 	if err != nil {
 		return "", fmt.Errorf("failed to read transcription: %w", err)
 	}
-	
+
 	defer os.Remove(actualOutputFile)
-	
+
 	text := strings.TrimSpace(string(transcription))
 	log.Printf("Direct transcription completed: '%s'", text)
-	
+
 	return text, nil
 }
 
@@ -515,12 +552,12 @@ func (s *STTService) extractWhisperBinary(zipPath string) error {
 		requiredDLLs = []string{} // No DLLs needed on Unix
 		if runtime.GOOS == "darwin" {
 			// Required dylib files for macOS
-			requiredDylibs = []string{"libggml.dylib", "libggml-base.dylib", "libggml-blas.dylib", 
-				"libggml-cpu.dylib", "libggml-metal.dylib", "libwhisper.dylib", 
+			requiredDylibs = []string{"libggml.dylib", "libggml-base.dylib", "libggml-blas.dylib",
+				"libggml-cpu.dylib", "libggml-metal.dylib", "libwhisper.dylib",
 				"libwhisper.1.dylib", "libwhisper.1.7.6.dylib"}
 		} else if runtime.GOOS == "linux" {
 			// Required shared libraries for Linux
-			requiredDLLs = []string{"libggml.so", "libggml-base.so", "libggml-cpu.so", 
+			requiredDLLs = []string{"libggml.so", "libggml-base.so", "libggml-cpu.so",
 				"libwhisper.so", "libwhisper.so.1", "libwhisper.so.1.7.6"}
 		}
 	}
@@ -702,34 +739,34 @@ func (s *STTService) downloadFileWithHeaders(url, filepath string) error {
 // downloadWhisperModel downloads the base Whisper model
 func (s *STTService) downloadWhisperModel(ctx context.Context, modelPath string) error {
 	modelURL := "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"
-	
+
 	log.Printf("Downloading whisper model from %s", modelURL)
-	
+
 	if err := os.MkdirAll(filepath.Dir(modelPath), 0755); err != nil {
 		return fmt.Errorf("failed to create models directory: %w", err)
 	}
-	
+
 	resp, err := http.Get(modelURL)
 	if err != nil {
 		return fmt.Errorf("failed to download model: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to download model: HTTP %d", resp.StatusCode)
 	}
-	
+
 	outFile, err := os.Create(modelPath)
 	if err != nil {
 		return fmt.Errorf("failed to create model file: %w", err)
 	}
 	defer outFile.Close()
-	
+
 	_, err = io.Copy(outFile, resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to save model: %w", err)
 	}
-	
+
 	log.Printf("Successfully downloaded whisper model to: %s", modelPath)
 	return nil
 }

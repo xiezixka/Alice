@@ -65,6 +65,13 @@ describe('parseWakeWord', () => {
     })
   })
 
+  it('accepts a verified Piper-to-Whisper round-trip variant', () => {
+    expect(parseWakeWord('爱力私情打开日曆', 'alice')).toEqual({
+      hasWakeWord: true,
+      command: '情打开日曆',
+    })
+  })
+
   it('normalizes narrow Chinese homophones observed in Whisper output', () => {
     expect(parseWakeWord('艾利斯请打开日历', 'alice')).toEqual({
       hasWakeWord: true,
