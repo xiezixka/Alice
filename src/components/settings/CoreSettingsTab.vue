@@ -492,14 +492,31 @@
             <span class="font-medium">麦克风权限：</span>
             {{ microphonePermissionMessage }}
           </div>
-          <button
-            v-if="!currentSettings.backgroundListeningEnabled"
-            type="button"
-            class="btn btn-sm btn-outline btn-info w-full sm:w-auto"
-            @click="enableBackgroundWake"
-          >
-            启用后台唤醒
-          </button>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-if="!currentSettings.backgroundListeningEnabled"
+              type="button"
+              class="btn btn-sm btn-outline btn-info w-full sm:w-auto"
+              @click="enableBackgroundWake"
+            >
+              启用后台唤醒
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline w-full sm:w-auto"
+              :disabled="isCheckingMicrophone"
+              @click="checkMicrophone"
+            >
+              <span
+                v-if="isCheckingMicrophone"
+                class="loading loading-spinner loading-xs"
+              ></span>
+              {{ isCheckingMicrophone ? '正在检查麦克风…' : '检查麦克风' }}
+            </button>
+          </div>
+          <p v-if="microphoneCheckResult" class="text-xs text-gray-300">
+            {{ microphoneCheckResult }}
+          </p>
         </div>
       </div>
     </fieldset>
@@ -642,11 +659,7 @@
             >
               <span>
                 {{ availableVoices.filter(v => v.gender !== 'male').length }}
-                条语音{{
-                  availableVoices.filter(v => v.gender !== 'male').length !== 1
-                    ? 's'
-                    : ''
-                }}
+                条语音
                 ，覆盖 {{ Object.keys(groupedVoices).length }} 种语言
               </span>
               <span
@@ -865,6 +878,8 @@ const microphonePermission = ref('unknown')
 const availableVoices = ref<Voice[]>([])
 const isRefreshingVoices = ref(false)
 const isPreviewingVoice = ref(false)
+const isCheckingMicrophone = ref(false)
+const microphoneCheckResult = ref('')
 const showVoiceHelp = ref(false)
 const ragStats = ref({ documents: 0, chunks: 0 })
 const isIndexingRag = ref(false)
@@ -950,6 +965,31 @@ const enableBackgroundWake = () => {
     emit('update:setting', 'localSttWakeWord', 'alice')
   }
   emit('update:setting', 'backgroundListeningEnabled', true)
+}
+
+const checkMicrophone = async () => {
+  if (isCheckingMicrophone.value) return
+
+  isCheckingMicrophone.value = true
+  microphoneCheckResult.value = ''
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      microphoneCheckResult.value = '当前运行环境不支持麦克风检测。'
+      return
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    stream.getTracks().forEach(track => track.stop())
+    await updateMicrophonePermission()
+    microphoneCheckResult.value = '麦克风可用，权限已确认；检测音频流已立即关闭。'
+  } catch (error) {
+    await updateMicrophonePermission()
+    microphoneCheckResult.value =
+      '无法访问麦克风。请检查系统权限，并确认没有其他应用独占设备。'
+    console.warn('Microphone check failed:', error)
+  } finally {
+    isCheckingMicrophone.value = false
+  }
 }
 
 const updateServiceStatus = async () => {
@@ -1182,13 +1222,29 @@ const refreshVoices = async () => {
   if (isRefreshingVoices.value) return
 
   isRefreshingVoices.value = true
+  let lastError: unknown = null
   try {
-    await backendApi.initialize()
-    const voices = await backendApi.getAvailableVoices()
-    availableVoices.value = voices
-    console.log('Available voices loaded:', voices)
-  } catch (error) {
-    console.warn('Failed to load voices:', error)
+    // The embedded Go backend may still be starting when the settings view
+    // mounts. Retry briefly so the voice selector does not remain empty until
+    // the user manually refreshes it.
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        await backendApi.initialize()
+        if (!(await backendApi.isTTSReady())) {
+          throw new Error('TTS service is not ready')
+        }
+        const voices = await backendApi.getAvailableVoices()
+        availableVoices.value = voices
+        console.log('Available voices loaded:', voices)
+        return
+      } catch (error) {
+        lastError = error
+        if (attempt < 4) {
+          await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)))
+        }
+      }
+    }
+    console.warn('Failed to load voices after retries:', lastError)
     availableVoices.value = []
   } finally {
     isRefreshingVoices.value = false
