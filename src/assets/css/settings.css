@@ -1,3 +1,27 @@
 .input-field {
   @apply w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors;
 }
+
+/* Keep native form controls readable in the dark settings window. DaisyUI's
+ * theme variables can inherit a light text color while Chromium paints the
+ * native select/input surface white, which makes values and option lists look
+ * empty. Scope the override to settings so the compact assistant UI keeps its
+ * existing styling. */
+.settings-panel input:not([type='checkbox']):not([type='radio']),
+.settings-panel select,
+.settings-panel textarea {
+  color: #111827 !important;
+  background-color: #f9fafb !important;
+  color-scheme: light;
+}
+
+.settings-panel input:not([type='checkbox']):not([type='radio'])::placeholder,
+.settings-panel textarea::placeholder {
+  color: #6b7280 !important;
+  opacity: 1;
+}
+
+.settings-panel select option {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+}
