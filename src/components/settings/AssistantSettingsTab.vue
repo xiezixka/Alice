@@ -548,6 +548,9 @@ const desktopAgentToolPreset = [
   'find_files',
   'organize_files',
   'undo_file_organization',
+  'get_calendar_events',
+  'plan_itinerary',
+  'create_email_draft',
 ]
 
 const enableDesktopAgentTools = () => {

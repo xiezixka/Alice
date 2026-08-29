@@ -840,38 +840,50 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function getToolStatusMessage(toolName: string, args?: object): string {
     const messages: Record<string, string | ((args: any) => string)> = {
-      get_current_datetime: '🕒 Looking at the clock...',
-      open_path: '📂 Opening that for you...',
-      manage_clipboard: '📋 Working with your clipboard...',
-      search_torrents: '🧲 Looking for torrents...',
-      add_torrent_to_qb: '🚀 Starting your download...',
-      save_memory: '🧠 Got it, remembering that...',
-      recall_memories: '🧠 Let me think back...',
-      delete_memory: '🗑️ Forgetting that now...',
-      get_calendar_events: '🗓️ Fetching your schedule...',
-      create_calendar_event: '🗓️ Adding to your calendar...',
-      update_calendar_event: '🗓️ Updating your calendar...',
-      delete_calendar_event: '🗑️ Removing from your calendar...',
-      get_unread_emails: '📧 Looking for unread emails...',
-      search_emails: '📧 Searching emails...',
-      get_email_content: '📧 Reading email content...',
-      browser_context: '🌐 Looking at your browser...',
+      get_current_datetime: '🕒 正在读取当前时间…',
+      open_path: '📂 正在为你打开…',
+      manage_clipboard: '📋 正在处理剪贴板…',
+      search_torrents: '🧲 正在搜索资源…',
+      add_torrent_to_qb: '🚀 正在开始下载…',
+      save_memory: '🧠 已记住这件事…',
+      recall_memories: '🧠 正在回忆相关信息…',
+      delete_memory: '🗑️ 正在删除这条记忆…',
+      get_calendar_events: '🗓️ 正在读取你的日程…',
+      create_calendar_event: '🗓️ 正在创建日历事件…',
+      update_calendar_event: '🗓️ 正在更新日历事件…',
+      delete_calendar_event: '🗑️ 正在删除日历事件…',
+      plan_itinerary: '🧭 正在规划不冲突的行程…',
+      get_unread_emails: '📧 正在查找未读邮件…',
+      search_emails: '📧 正在搜索邮件…',
+      get_email_content: '📧 正在读取邮件内容…',
+      create_email_draft: '✍️ 正在创建邮件草稿…',
+      reply_to_email: '↩️ 正在准备邮件回复…',
+      send_email: '📨 正在准备发送邮件…',
+      browser_context: '🌐 正在读取当前浏览器页面…',
       capture_desktop_screen: '🖥️ 正在读取当前屏幕…',
+      desktop_capabilities: '🧩 正在检查桌面操作能力…',
+      desktop_action: '🖱️ 正在执行桌面操作…',
       execute_command: (args: any) =>
-        `💻 Executing: ${args?.command || 'command'}`,
-      list_directory: (args: any) => `📁 Listing: ${args?.path || 'directory'}`,
+        `💻 正在执行：${args?.command || '命令'}`,
+      list_directory: (args: any) => `📁 正在列出：${args?.path || '目录'}`,
+      list_directory_detailed: (args: any) =>
+        `📁 正在读取目录详情：${args?.path || '目录'}`,
+      find_files: (args: any) =>
+        `🔎 正在查找文件：${args?.query || '全部'}`,
+      organize_files: '🗂️ 正在整理文件（先生成预览）…',
+      undo_file_organization: '↩️ 正在撤销文件整理…',
       schedule_task: (args: any) =>
-        `⏰ Scheduling "${args?.name || 'task'}" to run ${args?.schedule || 'periodically'}...`,
+        `⏰ 正在安排“${args?.name || '任务'}”：${args?.schedule || '定期执行'}…`,
       manage_scheduled_tasks: (args: any) => {
         switch (args?.action) {
           case 'list':
-            return '📋 Checking your scheduled tasks...'
+            return '📋 正在查看已安排的任务…'
           case 'delete':
-            return '🗑️ Removing scheduled task...'
+            return '🗑️ 正在删除已安排的任务…'
           case 'toggle':
-            return '🔄 Toggling task status...'
+            return '🔄 正在切换任务状态…'
           default:
-            return '⚙️ Managing scheduled tasks...'
+            return '⚙️ 正在管理已安排的任务…'
         }
       },
     }
@@ -885,13 +897,19 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function getCompletionMessage(functionName: string): string {
     const completionMessages: Record<string, string> = {
-      open_path: "✅ Done! I've opened that for you.",
-      manage_clipboard: '✅ Clipboard operation completed successfully.',
-      execute_command: '✅ Command executed successfully.',
+      open_path: '✅ 已为你打开。',
+      manage_clipboard: '✅ 剪贴板操作已完成。',
+      execute_command: '✅ 命令已执行。',
+      desktop_action: '✅ 桌面操作已完成。',
+      organize_files: '✅ 文件整理已完成。',
+      undo_file_organization: '✅ 文件整理已撤销。',
+      create_email_draft: '✅ 邮件草稿已创建。',
+      reply_to_email: '✅ 邮件回复已发送。',
+      send_email: '✅ 邮件已发送。',
     }
 
     return (
-      completionMessages[functionName] || '✅ Action completed successfully.'
+      completionMessages[functionName] || '✅ 操作已完成。'
     )
   }
 

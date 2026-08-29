@@ -237,7 +237,7 @@ async function get_current_datetime(args: {
 
     switch (format) {
       case 'date_only':
-        result.formatted = now.toLocaleDateString('en-US', {
+        result.formatted = now.toLocaleDateString('zh-CN', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
@@ -246,7 +246,7 @@ async function get_current_datetime(args: {
         break
 
       case 'time_only':
-        result.formatted = now.toLocaleTimeString('en-US', {
+        result.formatted = now.toLocaleTimeString('zh-CN', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
@@ -259,7 +259,7 @@ async function get_current_datetime(args: {
         break
 
       default:
-        result.formatted = now.toLocaleString('en-US', {
+        result.formatted = now.toLocaleString('zh-CN', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
@@ -273,7 +273,7 @@ async function get_current_datetime(args: {
           year: now.getFullYear(),
           month: now.getMonth() + 1,
           day: now.getDate(),
-          weekday: now.toLocaleDateString('en-US', { weekday: 'long' }),
+          weekday: now.toLocaleDateString('zh-CN', { weekday: 'long' }),
         }
         result.time = {
           hour: now.getHours(),
