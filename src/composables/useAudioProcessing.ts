@@ -7,6 +7,7 @@ import { useConversationStore } from '../stores/conversationStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { storeToRefs } from 'pinia'
 import eventBus from '../utils/eventBus'
+import { parseWakeWord } from './wakeWord'
 
 let ipcListenersRegistered = false
 
@@ -235,44 +236,6 @@ export function useAudioProcessing() {
     }
   }
 
-  const checkForWakeWord = (
-    transcription: string
-  ): { hasWakeWord: boolean; command: string } => {
-    if (!isWakeWordModeEnabled()) {
-      return { hasWakeWord: true, command: transcription }
-    }
-
-    // After the wake word is heard, keep a short conversational window so the
-    // user can say “Alice” first and the actual command in the next utterance.
-    if (Date.now() < wakeSessionExpiresAt) {
-      return { hasWakeWord: true, command: transcription.trim() }
-    }
-
-    const wakeWord = settingsStore.config.localSttWakeWord.toLowerCase().trim()
-    const text = transcription.toLowerCase().trim()
-
-    if (!wakeWord) {
-      return { hasWakeWord: true, command: transcription }
-    }
-
-    const patterns = [`hey ${wakeWord}`, `ok ${wakeWord}`, `${wakeWord}`]
-
-    for (const pattern of patterns) {
-      const index = text.indexOf(pattern)
-      if (index !== -1) {
-        const afterWakeWord = transcription.slice(index + pattern.length).trim()
-        const command = afterWakeWord.replace(/^[,.\s]+/, '').trim()
-
-        return {
-          hasWakeWord: true,
-          command,
-        }
-      }
-    }
-
-    return { hasWakeWord: false, command: transcription }
-  }
-
   const processAudioRecording = async (audio: Float32Array) => {
     if (audioState.value !== 'LISTENING' || !audio || audio.length === 0) {
       console.warn(
@@ -291,7 +254,11 @@ export function useAudioProcessing() {
 
       if (transcription && transcription.trim()) {
         if (isWakeWordModeEnabled()) {
-          const { hasWakeWord, command } = checkForWakeWord(transcription)
+          const { hasWakeWord, command } = parseWakeWord(
+            transcription,
+            settingsStore.config.localSttWakeWord,
+            Date.now() < wakeSessionExpiresAt
+          )
 
           if (hasWakeWord) {
             wakeWordDetected.value = true
