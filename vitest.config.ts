@@ -10,5 +10,6 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     globals: false,
     pool: 'threads',
+    setupFiles: ['./vitest.setup.ts'],
   },
 })

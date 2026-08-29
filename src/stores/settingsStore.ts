@@ -782,6 +782,11 @@ export const useSettingsStore = defineStore('settings', () => {
       Array.isArray(value)
     ) {
       settings.value[key] = value as string[]
+    } else if (typeof value === 'boolean') {
+      // Preserve boolean settings as booleans.  Converting them to strings
+      // makes values such as "false" truthy, which can leave the microphone
+      // listener or launch-at-login enabled after the user turns it off.
+      ;(settings.value as any)[key] = value
     } else {
       ;(settings.value as any)[key] = String(value)
     }
