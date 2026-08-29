@@ -12,6 +12,27 @@ If you see Windows standard warning that the app publisher is unknown, click 'Mo
 
 Run in your terminal `xattr -cr "/Applications/Alice AI App.app"`
 
+## Building installers from source
+
+The packaged app contains native voice assets, so build each installer on the
+same operating system that will run it:
+
+```bash
+# macOS
+npm run build:mac
+
+# Windows (run in PowerShell or cmd)
+npm run build:win
+
+# Linux
+npm run build:linux
+```
+
+The commands fail fast when invoked on the wrong OS. This is deliberate: a
+cross-OS Electron build can finish while silently bundling unusable ffmpeg,
+Whisper or Piper binaries, which would break local voice monitoring or TTS on
+the target computer.
+
 # AI Provider Setup
 
 Alice supports OpenAI, OpenRouter, DeepSeek, MiniMax, Z.ai, and local LLM inference.
@@ -59,6 +80,16 @@ Alice supports OpenAI, OpenRouter, DeepSeek, MiniMax, Z.ai, and local LLM infere
 - In the same section, enable **后台语音监听**. Alice keeps the VAD microphone session alive while the window is hidden in the system tray and only sends audio for processing after the wake word is detected.
 - You can also enable **开机启动 Alice**. The next login starts Alice automatically; when background listening is enabled, the avatar starts hidden.
 - This is a transcript-based wake-word flow, not a dedicated low-power keyword engine. Alice must remain running and the operating system must grant microphone permission.
+
+Before enabling it, grant the normal desktop permissions for your platform:
+
+- **macOS**: System Settings → Privacy & Security → Microphone. If you use
+  `desktop_action`, also allow **Accessibility** for Alice.
+- **Windows**: Settings → Privacy & security → Microphone → allow desktop apps
+  to access the microphone. Desktop actions may fail when the target app is
+  running as administrator; run Alice at the same privilege level when needed.
+- **Linux**: the browser/Electron microphone permission must be allowed; mouse
+  and keyboard actions additionally require `xdotool` on X11.
 
 # Google services connection (optional)
 

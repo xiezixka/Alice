@@ -341,7 +341,8 @@ export function useAudioProcessing() {
     const canRunBackground =
       backgroundEnabled &&
       settingsStore.config.sttProvider === 'local' &&
-      settingsStore.config.localSttEnabled
+      settingsStore.config.localSttEnabled &&
+      Boolean(settingsStore.config.localSttWakeWord?.trim())
 
     if (backgroundEnabled && !canRunBackground) {
       generalStore.statusMessage =
@@ -374,6 +375,7 @@ export function useAudioProcessing() {
       () => settingsStore.config.backgroundListeningEnabled,
       () => settingsStore.config.localSttEnabled,
       () => settingsStore.config.sttProvider,
+      () => settingsStore.config.localSttWakeWord,
     ],
     syncBackgroundListening
   )

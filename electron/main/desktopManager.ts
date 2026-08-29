@@ -428,10 +428,15 @@ class DesktopManager {
           sources.find(item => item.display_id === String(primaryDisplay.id)) ||
           sources[0]
         if (!source || source.thumbnail.isEmpty()) {
+          const permissionHint =
+            process.platform === 'darwin'
+              ? '请确认 Alice 已获得 macOS“屏幕录制”权限。'
+              : process.platform === 'win32'
+                ? '请确认 Windows 隐私设置允许桌面应用捕获屏幕，并检查目标窗口是否以更高权限运行。'
+                : '请确认当前桌面会话支持屏幕捕获；Wayland 环境可能需要切换到 X11。'
           return {
             success: false,
-            error:
-              '未能读取屏幕内容。请确认 Alice 已获得 macOS“屏幕录制”权限。',
+            error: `未能读取屏幕内容。${permissionHint}`,
           }
         }
 
@@ -457,7 +462,7 @@ class DesktopManager {
           error:
             error instanceof Error
               ? `屏幕读取失败：${error.message}`
-              : '屏幕读取失败。请检查系统屏幕录制权限。',
+              : '屏幕读取失败。请检查系统屏幕捕获权限。',
         }
       }
     })
@@ -577,6 +582,12 @@ class DesktopManager {
     )
     if (isApproved) return { success: true }
     const owner = BrowserWindow.fromWebContents(event.sender)
+    const platformHint =
+      process.platform === 'darwin'
+        ? 'macOS“系统设置 > 隐私与安全性 > 屏幕录制”'
+        : process.platform === 'win32'
+          ? 'Windows 隐私设置中的屏幕捕获权限'
+          : '当前 Linux 桌面会话的屏幕捕获权限'
     const options = {
       type: 'warning' as const,
       buttons: ['Cancel', 'Allow for session'],
@@ -611,7 +622,7 @@ class DesktopManager {
       title: '允许 Alice 读取屏幕？',
       message: 'Alice 请求读取当前屏幕内容。',
       detail:
-        '截图只会作为当前请求的临时视觉上下文发送给模型，不会写入长期聊天记录。你仍可在 macOS“系统设置 > 隐私与安全性 > 屏幕录制”中随时撤销权限。',
+        `截图只会作为当前请求的临时视觉上下文发送给模型，不会写入长期聊天记录。你仍可在${platformHint}中随时撤销或调整权限。`,
     }
     const confirmation = owner
       ? await dialog.showMessageBox(owner, options)

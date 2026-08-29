@@ -195,6 +195,26 @@ $ npm run build
 
 Install the output from the `release/` directory.
 
+For a release build, use the command for the operating system you are
+currently running:
+
+```bash
+# macOS (DMG)
+npm run build:mac
+
+# Windows (NSIS installer, x64)
+npm run build:win
+
+# Linux (AppImage, x64)
+npm run build:linux
+```
+
+Each installer must be built on its native operating system. Alice bundles
+platform-specific ffmpeg, Whisper and Piper binaries for local voice listening
+and speech output; the release commands intentionally stop early on a
+different OS instead of producing an installer with broken voice features.
+GitHub Actions builds the three native installers on macOS, Windows and Linux.
+
 ## 🤝 Contributing
 
 Ideas, bug reports, feature requests - all welcome! Open an issue or PR, or drop by to share your thoughts. Your input helps shape Alice into something wonderful 💚
