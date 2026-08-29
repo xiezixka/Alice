@@ -485,6 +485,13 @@
             <span class="font-medium">后台唤醒状态：</span>
             {{ backgroundListeningReadiness.message }}
           </div>
+          <div
+            v-if="microphonePermissionMessage"
+            class="rounded-md border border-gray-700/60 bg-gray-950/40 px-3 py-2 text-xs text-gray-300"
+          >
+            <span class="font-medium">麦克风权限：</span>
+            {{ microphonePermissionMessage }}
+          </div>
           <button
             v-if="!currentSettings.backgroundListeningEnabled"
             type="button"
@@ -853,6 +860,7 @@ const serviceStatus = ref<{
   tts: { status: 'offline' },
   embeddings: { status: 'offline' },
 })
+const microphonePermission = ref('unknown')
 
 const availableVoices = ref<Voice[]>([])
 const isRefreshingVoices = ref(false)
@@ -898,6 +906,15 @@ const backgroundListeningReadiness = computed(() => {
       message: '本地语音识别服务尚未就绪，请等待模型加载完成。',
     }
   }
+  if (
+    microphonePermission.value === 'denied' ||
+    microphonePermission.value === 'restricted'
+  ) {
+    return {
+      ready: false,
+      message: '系统已拒绝 Alice 的麦克风权限，请在系统设置中允许后重试。',
+    }
+  }
   if (!props.currentSettings.backgroundListeningEnabled) {
     return {
       ready: false,
@@ -905,6 +922,23 @@ const backgroundListeningReadiness = computed(() => {
     }
   }
   return { ready: true, message: '已开启，隐藏窗口后会继续等待唤醒词。' }
+})
+
+const microphonePermissionMessage = computed(() => {
+  switch (microphonePermission.value) {
+    case 'granted':
+      return '已允许 Alice 使用麦克风。'
+    case 'denied':
+      return '已拒绝。请到系统设置的“麦克风”权限中允许 Alice。'
+    case 'restricted':
+      return '受系统策略限制，当前账户无法授予麦克风权限。'
+    case 'not-determined':
+      return '尚未授权；首次启用后台唤醒时系统会弹出授权提示。'
+    case 'unknown':
+      return '当前平台未提供可查询的授权状态，启用时将由系统决定。'
+    default:
+      return `系统状态：${microphonePermission.value}`
+  }
 })
 
 const enableBackgroundWake = () => {
@@ -941,6 +975,20 @@ const updateServiceStatus = async () => {
       tts: { status: 'offline' },
       embeddings: { status: 'offline' },
     }
+  }
+}
+
+const updateMicrophonePermission = async () => {
+  try {
+    if (!window.desktopAPI?.getCapabilities) {
+      microphonePermission.value = 'unknown'
+      return
+    }
+    const capabilities = await window.desktopAPI.getCapabilities()
+    microphonePermission.value = capabilities.microphonePermission || 'unknown'
+  } catch (error) {
+    console.warn('Failed to get microphone permission status:', error)
+    microphonePermission.value = 'unknown'
   }
 }
 
@@ -1159,7 +1207,11 @@ const onVoiceChange = async () => {
 
 onMounted(async () => {
   updateServiceStatus()
-  statusInterval = setInterval(updateServiceStatus, 10000) // Check every 10 seconds
+  updateMicrophonePermission()
+  statusInterval = setInterval(() => {
+    updateServiceStatus()
+    updateMicrophonePermission()
+  }, 10000) // Check every 10 seconds
 
   // Load voices if local TTS is selected
   if (props.currentSettings.ttsProvider === 'local') {

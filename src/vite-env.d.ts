@@ -125,6 +125,7 @@ interface AliceDesktopAPI {
     success?: boolean
     platform: string
     supportedActions: string[]
+    microphonePermission?: string
     screenCapture?: {
       supported: boolean
       permission: string

@@ -727,9 +727,14 @@ class DesktopManager {
       platform === 'darwin'
         ? systemPreferences.getMediaAccessStatus('screen')
         : 'not-applicable'
+    const microphonePermission =
+      platform === 'darwin'
+        ? systemPreferences.getMediaAccessStatus('microphone')
+        : 'unknown'
     return {
       platform,
       osVersion: os.release(),
+      microphonePermission,
       supportedActions: ['open_app', 'focus_window', 'click', 'type', 'hotkey'],
       screenCapture: {
         supported:
