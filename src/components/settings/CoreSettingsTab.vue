@@ -959,6 +959,13 @@ const backgroundListeningReadiness = computed(() => {
       message: '系统已拒绝 Alice 的麦克风权限，请在系统设置中允许后重试。',
     }
   }
+  if (microphonePermission.value === 'not-determined') {
+    return {
+      ready: false,
+      message:
+        '尚未完成麦克风授权，请点击“检查麦克风”并允许 Alice 使用麦克风。',
+    }
+  }
   if (!props.currentSettings.backgroundListeningEnabled) {
     return {
       ready: false,
