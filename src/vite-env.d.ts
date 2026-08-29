@@ -132,6 +132,9 @@ interface AliceDesktopAPI {
     }
     note: string
   }>
+  openSystemSettings: (
+    target: 'microphone' | 'screen-recording' | 'accessibility'
+  ) => Promise<{ success: boolean; target?: string; error?: string }>
   captureScreen: () => Promise<{
     success: boolean
     data?: {

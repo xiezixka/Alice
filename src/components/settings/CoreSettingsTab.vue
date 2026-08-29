@@ -513,6 +513,14 @@
               ></span>
               {{ isCheckingMicrophone ? '正在检查麦克风…' : '检查麦克风' }}
             </button>
+            <button
+              v-if="microphonePermission !== 'granted'"
+              type="button"
+              class="btn btn-sm btn-outline w-full sm:w-auto"
+              @click="openMicrophoneSettings"
+            >
+              打开麦克风设置
+            </button>
           </div>
           <p v-if="microphoneCheckResult" class="text-xs text-gray-300">
             {{ microphoneCheckResult }}
@@ -989,6 +997,23 @@ const checkMicrophone = async () => {
     console.warn('Microphone check failed:', error)
   } finally {
     isCheckingMicrophone.value = false
+  }
+}
+
+const openMicrophoneSettings = async () => {
+  try {
+    if (!window.desktopAPI?.openSystemSettings) {
+      microphoneCheckResult.value = '当前环境不支持直接打开系统权限设置。'
+      return
+    }
+    const result = await window.desktopAPI.openSystemSettings('microphone')
+    microphoneCheckResult.value = result.success
+      ? '已打开系统麦克风权限设置；允许 Alice 后返回此处再点击“检查麦克风”。'
+      : `无法打开系统设置：${result.error || '未知错误'}`
+  } catch (error) {
+    microphoneCheckResult.value =
+      '无法打开系统设置，请手动进入系统设置中的麦克风权限。'
+    console.warn('Failed to open microphone settings:', error)
   }
 }
 

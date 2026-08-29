@@ -30,6 +30,8 @@ type FileOperation = {
   destination: string
 }
 
+type SystemSettingsTarget = 'microphone' | 'screen-recording' | 'accessibility'
+
 type AppliedFileOperation = FileOperation & { completedAt: string }
 
 class DesktopManager {
@@ -65,6 +67,7 @@ class DesktopManager {
       'desktop:applyFileOperations',
       'desktop:undoFileOperations',
       'desktop:getCapabilities',
+      'desktop:openSystemSettings',
       'desktop:captureScreen',
       'desktop:runAction',
       'desktop:executeCommand',
@@ -401,6 +404,62 @@ class DesktopManager {
 
     ipcMain.handle('desktop:getCapabilities', async () =>
       this.getCapabilities()
+    )
+
+    ipcMain.handle(
+      'desktop:openSystemSettings',
+      async (_event, target: unknown) => {
+        try {
+          if (
+            target !== 'microphone' &&
+            target !== 'screen-recording' &&
+            target !== 'accessibility'
+          ) {
+            return { success: false, error: '不支持的系统权限设置项。' }
+          }
+
+          const targetUrls: Record<
+            NodeJS.Platform,
+            Partial<Record<SystemSettingsTarget, string>>
+          > = {
+            darwin: {
+              microphone:
+                'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
+              'screen-recording':
+                'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture',
+              accessibility:
+                'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility',
+            },
+            win32: {
+              microphone: 'ms-settings:privacy-microphone',
+              'screen-recording': 'ms-settings:privacy',
+              accessibility: 'ms-settings:easeofaccess-mouse',
+            },
+            linux: {},
+            android: {},
+            aix: {},
+            freebsd: {},
+            haiku: {},
+            openbsd: {},
+            sunos: {},
+          }
+          const url = targetUrls[process.platform]?.[target]
+          if (!url) {
+            return {
+              success: false,
+              error: '当前平台没有可直接打开的系统权限设置页面。',
+            }
+          }
+
+          await shell.openExternal(url)
+          return { success: true, target }
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          }
+        }
+      }
     )
 
     ipcMain.handle('desktop:captureScreen', async event => {

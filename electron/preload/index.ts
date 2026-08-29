@@ -169,6 +169,9 @@ contextBridge.exposeInMainWorld('desktopAPI', {
   undoFileOperations: (operationId: string) =>
     aliceIPC.invoke('desktop:undoFileOperations', { operationId }),
   getCapabilities: () => aliceIPC.invoke('desktop:getCapabilities'),
+  openSystemSettings: (
+    target: 'microphone' | 'screen-recording' | 'accessibility'
+  ) => aliceIPC.invoke('desktop:openSystemSettings', target),
   captureScreen: () => aliceIPC.invoke('desktop:captureScreen'),
   runAction: (args: Record<string, any>) =>
     aliceIPC.invoke('desktop:runAction', args),
