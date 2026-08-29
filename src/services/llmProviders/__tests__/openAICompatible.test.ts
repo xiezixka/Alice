@@ -200,7 +200,7 @@ describe('createOpenAICompatibleResponse', () => {
 
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-v4-flash-vision-exp',
         thinking: { type: 'disabled' },
       }),
       expect.any(Object)

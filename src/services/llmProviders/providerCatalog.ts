@@ -101,7 +101,7 @@ export const PROVIDER_CONFIGS: Record<AIProviderKey, ProviderConfig> = {
   },
   deepseek: {
     displayName: 'DeepSeek',
-    defaultModel: 'deepseek-v4-flash',
+    defaultModel: 'deepseek-v4-flash-vision-exp',
     nativeWebSearch: false,
   },
   codex: {

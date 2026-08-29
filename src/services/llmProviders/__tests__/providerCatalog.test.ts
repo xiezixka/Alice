@@ -58,7 +58,7 @@ describe('providerCatalog', () => {
 
   it('falls back to the DeepSeek default for old model aliases', () => {
     expect(getSafeProviderModel('deepseek', 'deepseek-chat')).toBe(
-      'deepseek-v4-flash'
+      'deepseek-v4-flash-vision-exp'
     )
     expect(getSafeProviderModel('deepseek', 'deepseek-v4-pro')).toBe(
       'deepseek-v4-pro'
