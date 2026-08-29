@@ -28,6 +28,10 @@
                 (audioState === 'IDLE' || audioState === 'LISTENING'),
               'avatar-video-speaking':
                 isBuiltInAvatar && audioState === 'SPEAKING',
+              'avatar-video-thinking':
+                isBuiltInAvatar &&
+                (audioState === 'PROCESSING_AUDIO' ||
+                  audioState === 'WAITING_FOR_RESPONSE'),
               'h-[200px]': isMinimized,
               'h-[480px]': !isMinimized && isElectron,
               'h-[430px]': !isElectron,
@@ -41,8 +45,9 @@
             playsinline
           ></video>
           <img
-            v-if="isBuiltInAvatar && (audioState === 'IDLE' || audioState === 'LISTENING')"
+            v-if="isBuiltInAvatar && audioState !== 'SPEAKING'"
             class="avatar-blink-layer"
+            :class="{ 'is-blinking': isBlinking }"
             :src="avatarBlinkImage"
             alt=""
             aria-hidden="true"
@@ -124,6 +129,9 @@ const isBuiltInAvatar = computed(
 )
 
 let isProcessingRequest = false
+let blinkTimer: ReturnType<typeof setTimeout> | null = null
+let blinkEndTimer: ReturnType<typeof setTimeout> | null = null
+const isBlinking = vueRef(false)
 
 const avatarRingStyle = computed<CSSProperties>(() => {
   const style: CSSProperties = {
@@ -137,6 +145,59 @@ const avatarRingStyle = computed<CSSProperties>(() => {
   }
   return style
 })
+
+const clearBlinkTimers = () => {
+  if (blinkTimer) {
+    clearTimeout(blinkTimer)
+    blinkTimer = null
+  }
+  if (blinkEndTimer) {
+    clearTimeout(blinkEndTimer)
+    blinkEndTimer = null
+  }
+  isBlinking.value = false
+}
+
+const scheduleBlink = () => {
+  if (blinkTimer) clearTimeout(blinkTimer)
+
+  // A natural blink is irregular rather than a fixed CSS loop. Keep the
+  // interval long enough to avoid distracting the user, with occasional
+  // shorter pauses that make the avatar feel less mechanical.
+  const delay = 3200 + Math.random() * 6800
+  blinkTimer = setTimeout(() => {
+    blinkTimer = null
+    isBlinking.value = true
+
+    const duration = 105 + Math.random() * 95
+    blinkEndTimer = setTimeout(() => {
+      blinkEndTimer = null
+      isBlinking.value = false
+
+      // Real people occasionally double-blink. Do this infrequently and use
+      // a short pause so it reads as one natural gesture, not a loop.
+      if (Math.random() < 0.16) {
+        blinkTimer = setTimeout(
+          () => {
+            blinkTimer = null
+            isBlinking.value = true
+            blinkEndTimer = setTimeout(
+              () => {
+                blinkEndTimer = null
+                isBlinking.value = false
+                scheduleBlink()
+              },
+              90 + Math.random() * 70
+            )
+          },
+          90 + Math.random() * 130
+        )
+      } else {
+        scheduleBlink()
+      }
+    }, duration)
+  }, delay)
+}
 
 onMounted(async () => {
   audioPlayer.value = audioPlayerElement.value
@@ -155,6 +216,7 @@ onMounted(async () => {
   eventBus.on('processing-complete', handleProcessingComplete)
   eventBus.on('mute-playback-toggle', handleToggleTTS)
   eventBus.on('take-screenshot', handleTakeScreenshot)
+  scheduleBlink()
 })
 
 onUnmounted(() => {
@@ -162,6 +224,7 @@ onUnmounted(() => {
     cleanupScreenshotListeners()
   }
   aiVideo.value = null
+  clearBlinkTimers()
   eventBus.off('processing-complete', handleProcessingComplete)
   eventBus.off('mute-playback-toggle', handleToggleTTS)
   eventBus.off('take-screenshot', handleTakeScreenshot)
@@ -410,6 +473,11 @@ const processRequest = async (
   transform-origin: 50% 62%;
 }
 
+.avatar-video-thinking {
+  animation: avatar-thinking 4.6s ease-in-out infinite;
+  transform-origin: 50% 62%;
+}
+
 .avatar-blink-layer {
   position: absolute;
   inset: 0;
@@ -420,7 +488,12 @@ const processRequest = async (
   border-radius: inherit;
   pointer-events: none;
   opacity: 0;
-  animation: avatar-natural-blink 8.6s ease-in-out infinite;
+  transition: opacity 72ms ease-in-out;
+}
+
+.avatar-blink-layer.is-blinking {
+  opacity: 1;
+  transition-duration: 84ms;
 }
 
 @keyframes avatar-breathe {
@@ -443,35 +516,29 @@ const processRequest = async (
   }
 }
 
-/* A short asymmetric eyelid transition, with a longer pause between blinks. */
-@keyframes avatar-natural-blink {
+@keyframes avatar-thinking {
   0%,
-  86% {
-    opacity: 0;
-  }
-  87.2% {
-    opacity: 0.12;
-  }
-  88.1% {
-    opacity: 0.72;
-  }
-  89% {
-    opacity: 1;
-  }
-  89.8% {
-    opacity: 0.38;
-  }
-  90.8%,
   100% {
-    opacity: 0;
+    transform: rotate(0deg) scale(1);
+  }
+  32% {
+    transform: rotate(-1.15deg) scale(1.004);
+  }
+  58% {
+    transform: rotate(-0.35deg) scale(1.006);
+  }
+  78% {
+    transform: rotate(0.65deg) scale(1.003);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .avatar-video-standby,
   .avatar-video-speaking,
+  .avatar-video-thinking,
   .avatar-blink-layer {
     animation: none;
+    transition: none;
   }
 }
 </style>
