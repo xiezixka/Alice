@@ -125,6 +125,7 @@ import {
   validateExternalOpenUrl,
   validateHttpBridgeUrl,
 } from './securityBoundaries'
+import { setTrayBackgroundListening } from './trayManager'
 
 const USER_DATA_PATH = app.getPath('userData')
 const GENERATED_IMAGES_DIR_NAME = 'generated_images'
@@ -179,8 +180,23 @@ export function registerIPCHandlers(): void {
     }
   })
 
-  ipcMain.on('close-app', () => {
-    app.quit()
+  ipcMain.on('close-app', event => {
+    void (async () => {
+      const settings = await loadSettings()
+      if (settings?.backgroundListeningEnabled === true) {
+        const owner = BrowserWindow.fromWebContents(event.sender)
+        owner?.hide()
+        owner?.webContents.send('show-notification', {
+          type: 'info',
+          message: 'Alice 已隐藏到系统托盘，仍在等待唤醒词。可从托盘菜单退出。',
+        })
+        return
+      }
+      app.quit()
+    })().catch(error => {
+      console.error('[IPC close-app] Failed to apply background mode:', error)
+      app.quit()
+    })
   })
 
   // Thought vector operations
@@ -711,6 +727,22 @@ export function registerIPCHandlers(): void {
         cachedAllowedHttpOrigins = Promise.resolve(
           getAllowedHttpOrigins(settingsToSave)
         )
+        setTrayBackgroundListening(
+          settingsToSave.backgroundListeningEnabled === true
+        )
+        if (typeof app.setLoginItemSettings === 'function') {
+          try {
+            app.setLoginItemSettings({
+              openAtLogin: settingsToSave.launchAtLogin === true,
+              args: ['--alice-background'],
+            })
+          } catch (error) {
+            console.warn(
+              '[Main IPC settings:save] Could not configure launch at login:',
+              error
+            )
+          }
+        }
 
         // Handle hotkey changes
         if (

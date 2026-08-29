@@ -1,8 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h3 class="text-xl font-semibold mb-4 text-blue-400">
-      核心 API 配置
-    </h3>
+    <h3 class="text-xl font-semibold mb-4 text-blue-400">核心 API 配置</h3>
     <fieldset
       class="fieldset bg-gray-900/90 border-blue-500/50 rounded-box w-full border p-4"
     >
@@ -51,9 +49,7 @@
             currentSettings.sttProvider === 'local'
           "
         >
-          <label for="stt-language" class="block mb-1 text-sm"
-            >语言 *</label
-          >
+          <label for="stt-language" class="block mb-1 text-sm">语言 *</label>
           <select
             id="stt-language"
             v-model="currentSettings.localSttLanguage"
@@ -135,12 +131,12 @@
             class="input focus:outline-none w-full"
             placeholder="http://localhost:11434"
           />
-          <p class="text-xs text-gray-400 mt-1">
-            Ollama 服务运行的地址。
-          </p>
+          <p class="text-xs text-gray-400 mt-1">Ollama 服务运行的地址。</p>
         </div>
         <div v-if="currentSettings.aiProvider === 'zai'">
-          <label for="zai-key" class="block mb-1 text-sm">Z.ai API 密钥 *</label>
+          <label for="zai-key" class="block mb-1 text-sm"
+            >Z.ai API 密钥 *</label
+          >
           <input
             id="zai-key"
             type="password"
@@ -293,7 +289,8 @@
               </div>
             </div>
             <p class="text-xs text-gray-400 mt-1">
-              使用你的 ChatGPT Codex 订阅进行聊天推理。只有在使用 OpenAI 语音识别、语音播报或向量功能时才需要 OpenAI API 密钥。
+              使用你的 ChatGPT Codex 订阅进行聊天推理。只有在使用 OpenAI
+              语音识别、语音播报或向量功能时才需要 OpenAI API 密钥。
             </p>
           </div>
         </div>
@@ -308,9 +305,7 @@
             class="input focus:outline-none w-full"
             placeholder="http://localhost:1234"
           />
-          <p class="text-xs text-gray-400 mt-1">
-            LM Studio 服务运行的地址。
-          </p>
+          <p class="text-xs text-gray-400 mt-1">LM Studio 服务运行的地址。</p>
         </div>
         <div v-if="currentSettings.sttProvider === 'groq'">
           <label for="groq-key" class="block mb-1 text-sm"
@@ -379,9 +374,7 @@
                 e => $emit('update:setting', 'localSttModel', getTargetValue(e))
               "
             >
-              <option value="whisper-tiny.en">
-                Tiny（仅英语，最快）
-              </option>
+              <option value="whisper-tiny.en">Tiny（仅英语，最快）</option>
               <option value="whisper-base">Base（多语言）</option>
               <option value="whisper-small">Small（更高准确率）</option>
               <option value="whisper-medium">Medium（高准确率）</option>
@@ -430,6 +423,56 @@
             <p class="text-xs text-gray-400 mt-1">
               说出此词即可激活录音；使用简单、常见的词语可提升识别效果。
             </p>
+          </div>
+        </div>
+        <div
+          class="col-span-full rounded-lg border border-cyan-500/30 bg-cyan-950/20 p-3 space-y-3"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <label
+                for="background-listening"
+                class="block text-sm font-medium"
+              >
+                后台语音监听
+              </label>
+              <p class="text-xs text-gray-400 mt-1">
+                隐藏窗口后仍保留麦克风监听，只在识别到唤醒词时处理指令。需要“本地语音识别”和“启用唤醒词”，可从系统托盘退出
+                Alice。
+              </p>
+            </div>
+            <input
+              id="background-listening"
+              type="checkbox"
+              class="toggle toggle-info mt-1 shrink-0"
+              :checked="currentSettings.backgroundListeningEnabled"
+              :disabled="
+                currentSettings.sttProvider !== 'local' ||
+                !currentSettings.localSttEnabled ||
+                !currentSettings.localSttWakeWord?.trim()
+              "
+              @change="e => emitCheckboxChange('backgroundListeningEnabled', e)"
+            />
+          </div>
+          <div
+            class="flex items-start justify-between gap-4 border-t border-gray-700/60 pt-3"
+          >
+            <div>
+              <label for="launch-at-login" class="block text-sm font-medium">
+                开机启动 Alice
+              </label>
+              <p class="text-xs text-gray-400 mt-1">
+                登录 macOS 或 Windows 后自动启动。若同时开启后台监听，Alice
+                会直接隐藏到托盘等待唤醒词。
+              </p>
+            </div>
+            <input
+              id="launch-at-login"
+              type="checkbox"
+              class="toggle toggle-info mt-1 shrink-0"
+              :checked="currentSettings.launchAtLogin"
+              @change="e => emitCheckboxChange('launchAtLogin', e)"
+            />
           </div>
         </div>
       </div>
@@ -488,7 +531,9 @@
           </select>
         </div>
         <div v-if="currentSettings.ttsProvider === 'google'">
-          <label for="google-tts-voice" class="block mb-1 text-sm">Google 语音</label>
+          <label for="google-tts-voice" class="block mb-1 text-sm"
+            >Google 语音</label
+          >
           <select
             id="google-tts-voice"
             v-model="currentSettings.googleTtsVoice"
@@ -509,7 +554,9 @@
           </select>
         </div>
         <div v-if="currentSettings.ttsProvider === 'local'">
-          <label for="local-tts-voice" class="block mb-1 text-sm">本地语音</label>
+          <label for="local-tts-voice" class="block mb-1 text-sm"
+            >本地语音</label
+          >
           <div class="space-y-3">
             <div class="flex gap-2 items-center">
               <select
@@ -519,11 +566,7 @@
                 @change="onVoiceChange"
               >
                 <option v-if="availableVoices.length === 0" disabled value="">
-                  {{
-                    isRefreshingVoices
-                      ? '正在加载语音…'
-                      : '暂无可用语音'
-                  }}
+                  {{ isRefreshingVoices ? '正在加载语音…' : '暂无可用语音' }}
                 </option>
                 <optgroup
                   v-for="(voices, language) in groupedVoices"
@@ -613,7 +656,9 @@
                 </div>
               </div>
               <p class="text-base-content/60 mt-2">
-                💡 <strong>提示：</strong>语音模型首次使用时会自动下载。更高质量的语音效果更好，但需要更多存储空间。
+                💡
+                <strong>提示：</strong
+                >语音模型首次使用时会自动下载。更高质量的语音效果更好，但需要更多存储空间。
               </p>
             </div>
           </div>
@@ -647,7 +692,8 @@
             <option value="local">本地（多语言 E5）</option>
           </select>
           <p class="text-xs text-gray-400 mt-1">
-            可选择云端 OpenAI 向量或本地多语言 E5 向量。已有文本会保留；模型变更时会重新构建本地向量。
+            可选择云端 OpenAI 向量或本地多语言 E5
+            向量。已有文本会保留；模型变更时会重新构建本地向量。
           </p>
         </div>
       </div>
@@ -661,9 +707,7 @@
       <div class="grid grid-cols-1 gap-4 p-2">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label for="rag-enabled" class="block mb-1 text-sm"
-              >启用 RAG</label
-            >
+            <label for="rag-enabled" class="block mb-1 text-sm">启用 RAG</label>
             <select
               id="rag-enabled"
               v-model="currentSettings.ragEnabled"
@@ -810,6 +854,10 @@ const {
 
 const getTargetValue = (event: Event): string => {
   return (event.target as HTMLInputElement | HTMLSelectElement).value
+}
+
+const emitCheckboxChange = (key: keyof AliceSettings, event: Event): void => {
+  emit('update:setting', key, (event.target as HTMLInputElement).checked)
 }
 
 const updateServiceStatus = async () => {

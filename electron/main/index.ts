@@ -4,7 +4,7 @@ process.env.ELECTRON_DISABLE_GPU = '1'
 process.env.LIBGL_ALWAYS_SOFTWARE = '1'
 process.env.GALLIUM_DRIVER = 'llvmpipe'
 
-import { app, session, BrowserWindow } from 'electron'
+import { app, session } from 'electron'
 
 app.disableHardwareAcceleration()
 
@@ -31,7 +31,9 @@ import {
   cleanupWindows,
   registerCustomProtocol,
   getMainWindow,
+  focusMainWindow,
 } from './windowManager'
+import { createTray, destroyTray } from './trayManager'
 import { getCustomAvatarsRootPath } from './customAvatarsManager'
 import { registerIPCHandlers, registerGoogleIPCHandlers } from './ipcManager'
 import {
@@ -67,6 +69,7 @@ const GENERATED_IMAGES_FULL_PATH = path.join(USER_DATA_PATH, 'generated_images')
 
 let isHandlingQuit = false
 let wss: any | null = null
+const isBackgroundLaunch = process.argv.includes('--alice-background')
 // Use global variables to persist across hot reloads
 if (!global.aliceAppState) {
   global.aliceAppState = {
@@ -92,6 +95,22 @@ console.log(
 
 function isBrowserContextToolEnabled(settings: any): boolean {
   return settings?.assistantTools?.includes('browser_context') || false
+}
+
+function configureLaunchAtLogin(enabled: boolean): void {
+  if (typeof app.setLoginItemSettings !== 'function') return
+
+  try {
+    app.setLoginItemSettings({
+      openAtLogin: enabled,
+      args: ['--alice-background'],
+    })
+    console.log(
+      `[Main Index] Launch at login ${enabled ? 'enabled' : 'disabled'}`
+    )
+  } catch (error) {
+    console.warn('[Main Index] Could not configure launch at login:', error)
+  }
 }
 
 // CPU optimization for worker threads
@@ -385,6 +404,7 @@ app.whenReady().then(async () => {
   registerCustomProtocol(GENERATED_IMAGES_FULL_PATH, getCustomAvatarsRootPath())
 
   const initialSettings = await loadSettings()
+  configureLaunchAtLogin(initialSettings?.launchAtLogin === true)
   if (initialSettings) {
     registerMicrophoneToggleHotkey(initialSettings.microphoneToggleHotkey)
     registerMutePlaybackHotkey(initialSettings.mutePlaybackHotkey)
@@ -430,8 +450,12 @@ app.whenReady().then(async () => {
     )
   }
 
-  await createMainWindow()
+  const showMainWindow = !(
+    isBackgroundLaunch && initialSettings?.backgroundListeningEnabled === true
+  )
+  await createMainWindow(showMainWindow)
   await createOverlayWindow()
+  createTray(initialSettings?.backgroundListeningEnabled === true)
   checkForUpdates()
 
   try {
@@ -501,6 +525,7 @@ app.on('before-quit', async event => {
   stopCodexAppServer()
   shutdownScheduler()
   stopWebSocketServer()
+  destroyTray()
   console.log('[Main Index] Before quit: Performing cleanup...')
   event.preventDefault()
 
@@ -534,15 +559,13 @@ app.on('second-instance', (event, commandLine, workingDirectory) => {
   const win = getMainWindow()
   if (win) {
     if (win.isMinimized()) win.restore()
+    win.show()
     win.focus()
   }
 })
 
 app.on('activate', () => {
-  const allWindows = BrowserWindow.getAllWindows()
-  if (allWindows.length) {
-    allWindows[0].focus()
-  } else {
+  if (!focusMainWindow()) {
     createMainWindow()
   }
 })

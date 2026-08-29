@@ -26,7 +26,7 @@ export interface AppSettings {
   VITE_MINIMAX_API_KEY?: string
   VITE_DEEPSEEK_API_KEY?: string
   VITE_GROQ_API_KEY?: string
-  sttProvider?: 'openai' | 'groq' | 'transformers'
+  sttProvider?: 'openai' | 'groq' | 'google' | 'local' | 'transformers'
   aiProvider?:
     | 'openai'
     | 'openrouter'
@@ -44,6 +44,12 @@ export interface AppSettings {
   transformersEnableFallback?: boolean
   transformersWakeWordEnabled?: boolean
   transformersWakeWord?: string
+  localSttModel?: string
+  localSttLanguage?: string
+  localSttEnabled?: boolean
+  localSttWakeWord?: string
+  backgroundListeningEnabled?: boolean
+  launchAtLogin?: boolean
 
   ollamaBaseUrl?: string
   lmStudioBaseUrl?: string

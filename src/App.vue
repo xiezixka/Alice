@@ -67,7 +67,11 @@ const showOnboarding = computed(() => {
   if (!settingsStore.initialLoadAttempted) {
     return false
   }
-  return route.hash !== '#settings' && route.hash !== '#overlay' && !settingsStore.settings.onboardingCompleted
+  return (
+    route.hash !== '#settings' &&
+    route.hash !== '#overlay' &&
+    !settingsStore.settings.onboardingCompleted
+  )
 })
 
 const updateAvailable = ref(false)
@@ -88,6 +92,12 @@ const handleContextAction = async (data: any) => {
   }
 }
 
+const handleShowNotification = (data: { message?: string }) => {
+  if (data?.message) {
+    generalStore.statusMessage = data.message
+  }
+}
+
 onMounted(async () => {
   await settingsStore.loadSettings()
 
@@ -101,8 +111,14 @@ onMounted(async () => {
       handleContextAction(data)
     })
 
+    window.aliceIPC.on('show-notification', handleShowNotification)
+
     window.aliceIPC.on('settings-changed', async data => {
-      if (data.type === 'settings-saved' && data.success && data.validationComplete) {
+      if (
+        data.type === 'settings-saved' &&
+        data.success &&
+        data.validationComplete
+      ) {
         try {
           generalStore.statusMessage = '正在应用新设置…'
           const isProduction = await window.aliceIPC.invoke('app:is-packaged')
@@ -131,6 +147,7 @@ onUnmounted(() => {
     window.aliceIPC.removeAllListeners('kokoro-tts-progress')
     window.aliceIPC.removeAllListeners('local-embedding-progress')
     window.aliceIPC.removeAllListeners('settings-changed')
+    window.aliceIPC.removeAllListeners('show-notification')
   }
 })
 </script>

@@ -53,6 +53,13 @@ Alice supports OpenAI, OpenRouter, DeepSeek, MiniMax, Z.ai, and local LLM infere
 - Go to [Groq cloud console](https://console.groq.com/home) and set up your account
 - Get your API key from [API keys](https://console.groq.com/keys) section and paste it in settings
 
+# Background voice listening (optional)
+
+- Select **本地（Go 后端）** as the STT provider and enable **启用唤醒词**.
+- In the same section, enable **后台语音监听**. Alice keeps the VAD microphone session alive while the window is hidden in the system tray and only sends audio for processing after the wake word is detected.
+- You can also enable **开机启动 Alice**. The next login starts Alice automatically; when background listening is enabled, the avatar starts hidden.
+- This is a transcript-based wake-word flow, not a dedicated low-power keyword engine. Alice must remain running and the operating system must grant microphone permission.
+
 # Google services connection (optional)
 
 - In settings, click 'Connect to Google Services', authorize your Google account to connect to Alice

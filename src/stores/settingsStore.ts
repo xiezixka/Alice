@@ -44,6 +44,10 @@ export interface AliceSettings {
   localSttLanguage: string
   localSttEnabled: boolean
   localSttWakeWord: string
+  /** Keep the microphone/VAD session alive while Alice is hidden in the tray. */
+  backgroundListeningEnabled: boolean
+  /** Start Alice when the current user logs in to macOS/Windows. */
+  launchAtLogin: boolean
 
   ollamaBaseUrl: string
   lmStudioBaseUrl: string
@@ -155,6 +159,8 @@ const defaultSettings: AliceSettings = {
   localSttLanguage: 'zh',
   localSttEnabled: false,
   localSttWakeWord: 'alice',
+  backgroundListeningEnabled: false,
+  launchAtLogin: false,
 
   ollamaBaseUrl: 'http://localhost:11434',
   lmStudioBaseUrl: 'http://localhost:1234',
@@ -233,6 +239,8 @@ const settingKeyToLabelMap: Record<keyof AliceSettings, string> = {
   localSttLanguage: '语言',
   localSttEnabled: '启用唤醒词',
   localSttWakeWord: '唤醒词',
+  backgroundListeningEnabled: '后台语音监听',
+  launchAtLogin: '开机启动 Alice',
 
   ollamaBaseUrl: 'Ollama 基础地址',
   lmStudioBaseUrl: 'LM Studio 基础地址',
@@ -400,6 +408,18 @@ export const useSettingsStore = defineStore('settings', () => {
     if (!Array.isArray(validated.ragPaths)) {
       validated.ragPaths = []
       migrated = true
+    }
+
+    // New desktop-lifecycle flags were introduced after older settings files
+    // shipped. Keep malformed legacy values from being treated as truthy.
+    for (const key of [
+      'backgroundListeningEnabled',
+      'launchAtLogin',
+    ] as const) {
+      if (typeof validated[key] !== 'boolean') {
+        validated[key] = defaultSettings[key]
+        migrated = true
+      }
     }
 
     if (!Number.isFinite(validated.ragTopK) || validated.ragTopK < 1) {
@@ -872,6 +892,8 @@ export const useSettingsStore = defineStore('settings', () => {
         localSttLanguage: settings.value.localSttLanguage,
         localSttEnabled: settings.value.localSttEnabled,
         localSttWakeWord: settings.value.localSttWakeWord,
+        backgroundListeningEnabled: settings.value.backgroundListeningEnabled,
+        launchAtLogin: settings.value.launchAtLogin,
 
         ollamaBaseUrl: settings.value.ollamaBaseUrl,
         lmStudioBaseUrl: settings.value.lmStudioBaseUrl,

@@ -28,6 +28,33 @@ export function useAudioProcessing() {
   const isSpeechDetected = ref(false)
   const vadAssetBasePath = ref<string>('./')
   let ownsIpcListeners = false
+  let backgroundSessionActive = false
+  let wakeSessionExpiresAt = 0
+  let wakeSessionResetTimer: ReturnType<typeof setTimeout> | null = null
+
+  const isWakeWordModeEnabled = () =>
+    settingsStore.config.sttProvider === 'local' &&
+    settingsStore.config.localSttEnabled &&
+    Boolean(settingsStore.config.localSttWakeWord?.trim())
+
+  const resetWakeSession = () => {
+    wakeSessionExpiresAt = 0
+    wakeSessionResetTimer = null
+    if (isRecordingRequested.value && isWakeWordModeEnabled()) {
+      awaitingWakeWord.value = true
+      wakeWordDetected.value = false
+      if (audioState.value === 'LISTENING') {
+        generalStore.statusMessage = '等待唤醒词…'
+      }
+    }
+  }
+
+  const scheduleWakeSessionReset = () => {
+    if (wakeSessionResetTimer) {
+      clearTimeout(wakeSessionResetTimer)
+    }
+    wakeSessionResetTimer = setTimeout(resetWakeSession, 8000)
+  }
 
   const handleGlobalMicToggle = () => {
     toggleRecordingRequest()
@@ -96,6 +123,11 @@ export function useAudioProcessing() {
       ipcListenersRegistered = true
       ownsIpcListeners = true
     }
+
+    // A background session is deliberately opt-in. It starts only after the
+    // renderer has resolved its production VAD assets and the persisted
+    // settings are available.
+    syncBackgroundListening()
   })
 
   const initializeVAD = async () => {
@@ -206,12 +238,14 @@ export function useAudioProcessing() {
   const checkForWakeWord = (
     transcription: string
   ): { hasWakeWord: boolean; command: string } => {
-    if (
-      !settingsStore.config.localSttEnabled ||
-      !settingsStore.config.localSttWakeWord ||
-      settingsStore.config.sttProvider !== 'local'
-    ) {
+    if (!isWakeWordModeEnabled()) {
       return { hasWakeWord: true, command: transcription }
+    }
+
+    // After the wake word is heard, keep a short conversational window so the
+    // user can say “Alice” first and the actual command in the next utterance.
+    if (Date.now() < wakeSessionExpiresAt) {
+      return { hasWakeWord: true, command: transcription.trim() }
     }
 
     const wakeWord = settingsStore.config.localSttWakeWord.toLowerCase().trim()
@@ -231,7 +265,7 @@ export function useAudioProcessing() {
 
         return {
           hasWakeWord: true,
-          command: command || transcription,
+          command,
         }
       }
     }
@@ -256,19 +290,32 @@ export function useAudioProcessing() {
         await conversationStore.transcribeAudioMessage(wavBuffer)
 
       if (transcription && transcription.trim()) {
-        if (
-          settingsStore.config.localSttEnabled &&
-          settingsStore.config.sttProvider === 'local'
-        ) {
+        if (isWakeWordModeEnabled()) {
           const { hasWakeWord, command } = checkForWakeWord(transcription)
 
           if (hasWakeWord) {
-            generalStore.recognizedText = command
-            eventBus.emit('processing-complete', command)
+            wakeWordDetected.value = true
+            awaitingWakeWord.value = false
+            wakeSessionExpiresAt = Date.now() + 8000
+            scheduleWakeSessionReset()
+
+            if (command) {
+              generalStore.recognizedText = command
+              eventBus.emit('processing-complete', command)
+            } else {
+              // Do not send the wake word itself to the assistant as a user
+              // command. Keep listening for the follow-up instruction.
+              generalStore.statusMessage = '已唤醒，请说出指令'
+              setAudioState('LISTENING')
+              generalStore.statusMessage = '已唤醒，请说出指令'
+              isSpeechDetected.value = false
+            }
           } else {
             console.log(
               '[Audio Processing] Wake word not detected, continuing to listen'
             )
+            awaitingWakeWord.value = true
+            wakeWordDetected.value = false
             setAudioState(isRecordingRequested.value ? 'LISTENING' : 'IDLE')
             isSpeechDetected.value = false
           }
@@ -298,10 +345,7 @@ export function useAudioProcessing() {
       }
       if (audioState.value === 'IDLE' || audioState.value === 'CONFIG') {
         setAudioState('LISTENING')
-        if (
-          settingsStore.config.localSttEnabled &&
-          settingsStore.config.sttProvider === 'local'
-        ) {
+        if (isWakeWordModeEnabled()) {
           awaitingWakeWord.value = true
           wakeWordDetected.value = false
         } else {
@@ -317,11 +361,73 @@ export function useAudioProcessing() {
 
       awaitingWakeWord.value = false
       wakeWordDetected.value = false
+      wakeSessionExpiresAt = 0
+      if (wakeSessionResetTimer) {
+        clearTimeout(wakeSessionResetTimer)
+        wakeSessionResetTimer = null
+      }
     }
   })
 
+  const syncBackgroundListening = () => {
+    const backgroundEnabled = settingsStore.config.backgroundListeningEnabled
+    const canRunBackground =
+      backgroundEnabled &&
+      settingsStore.config.sttProvider === 'local' &&
+      settingsStore.config.localSttEnabled
+
+    if (backgroundEnabled && !canRunBackground) {
+      generalStore.statusMessage =
+        '后台监听需要本地语音识别和唤醒词，请先完成语音设置'
+    }
+
+    if (canRunBackground) {
+      if (!isRecordingRequested.value) {
+        backgroundSessionActive = true
+        isRecordingRequested.value = true
+        generalStore.statusMessage = '后台监听已开启，等待唤醒词…'
+      } else if (!backgroundSessionActive) {
+        // A manually started microphone session becomes a managed background
+        // session as soon as the user enables the setting.
+        backgroundSessionActive = true
+      }
+      return
+    }
+
+    if (backgroundSessionActive) {
+      backgroundSessionActive = false
+      if (isRecordingRequested.value) {
+        isRecordingRequested.value = false
+      }
+    }
+  }
+
+  watch(
+    [
+      () => settingsStore.config.backgroundListeningEnabled,
+      () => settingsStore.config.localSttEnabled,
+      () => settingsStore.config.sttProvider,
+    ],
+    syncBackgroundListening
+  )
+
   const toggleRecordingRequest = () => {
     isRecordingRequested.value = !isRecordingRequested.value
+    if (
+      !isRecordingRequested.value &&
+      backgroundSessionActive &&
+      settingsStore.config.backgroundListeningEnabled
+    ) {
+      // Let the user pause an active background session from the avatar or the
+      // global hotkey without silently re-enabling it on the next tick.
+      backgroundSessionActive = false
+      generalStore.statusMessage = '后台监听已暂停，点击麦克风可恢复'
+    } else if (
+      isRecordingRequested.value &&
+      settingsStore.config.backgroundListeningEnabled
+    ) {
+      backgroundSessionActive = true
+    }
     console.log(
       `Recording request toggled via UI: ${isRecordingRequested.value}`
     )
@@ -329,6 +435,10 @@ export function useAudioProcessing() {
 
   onUnmounted(() => {
     destroyVAD()
+    if (wakeSessionResetTimer) {
+      clearTimeout(wakeSessionResetTimer)
+      wakeSessionResetTimer = null
+    }
     if (window.aliceIPC && ownsIpcListeners) {
       window.aliceIPC.off('global-hotkey-mic-toggle', handleGlobalMicToggle)
       window.aliceIPC.off(

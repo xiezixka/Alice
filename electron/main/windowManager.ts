@@ -91,7 +91,7 @@ export function getSettingsWindow(): BrowserWindow | null {
   return settingsWindow
 }
 
-export async function createMainWindow(): Promise<BrowserWindow> {
+export async function createMainWindow(show = true): Promise<BrowserWindow> {
   win = new BrowserWindow({
     title: 'Alice',
     icon: path.join(getVitePublic(), 'app_logo.png'),
@@ -102,6 +102,8 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     resizable: true,
     alwaysOnTop: true,
     hasShadow: false,
+    show,
+    paintWhenInitiallyHidden: !show,
     webPreferences: {
       preload: getPreloadPath(),
       sandbox: true,

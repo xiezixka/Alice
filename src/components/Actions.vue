@@ -105,11 +105,11 @@
           class="dropdown-content menu bg-base-200 bg-opacity-80 rounded-box z-[1] w-36 p-2 shadow"
         >
           <li>
-            <a @click="!isConfigState ? openSettingsWindow() : null"
-              >设置</a
-            >
+            <a @click="!isConfigState ? openSettingsWindow() : null">设置</a>
           </li>
-          <li><a @click="closeWindow">关闭应用</a></li>
+          <li>
+            <a @click="closeWindow">{{ closeActionLabel }}</a>
+          </li>
         </ul>
       </div>
     </div>
@@ -119,6 +119,7 @@
 <script setup lang="ts">
 import { computed, defineProps, nextTick, ref, watch, onMounted } from 'vue'
 import { useGeneralStore, AudioState } from '../stores/generalStore'
+import { useSettingsStore } from '../stores/settingsStore'
 import { storeToRefs } from 'pinia'
 import {
   micIcon,
@@ -150,6 +151,7 @@ const props = defineProps({
 const emit = defineEmits(['takeScreenShot', 'togglePlaying', 'toggleRecording'])
 
 const generalStore = useGeneralStore()
+const settingsStore = useSettingsStore()
 const {
   isMinimized,
   statusMessage,
@@ -217,10 +219,12 @@ const micIconSrc = computed(() => {
 })
 
 const micAriaLabel = computed(() => {
-  return isRecordingRequested.value
-    ? 'Stop Microphone'
-    : 'Start Microphone'
+  return isRecordingRequested.value ? 'Stop Microphone' : 'Start Microphone'
 })
+
+const closeActionLabel = computed(() =>
+  settingsStore.config.backgroundListeningEnabled ? '隐藏到后台' : '关闭应用'
+)
 
 const closeWindow = () => {
   if (props.isElectron) {
