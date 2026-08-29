@@ -4,7 +4,34 @@ export interface WakeWordMatch {
 }
 
 const WAKE_WORD_BOUNDARY = /[A-Za-z0-9]/
-const DEFAULT_ALICE_ALIASES = ['alice', '爱丽丝', '艾丽丝', '阿丽丝', '艾莉丝']
+const DEFAULT_ALICE_ALIASES = [
+  'alice',
+  '爱丽丝',
+  '艾丽丝',
+  '阿丽丝',
+  '艾莉丝',
+  // Whisper/Piper may emit traditional Chinese even when the UI language
+  // is simplified Chinese. Keep both forms so a spoken wake word is not
+  // dropped solely because of script variation.
+  '愛麗絲',
+  '艾麗絲',
+  '阿麗絲',
+  '艾莉絲',
+  // Mixed-script variants are also common in ASR output.
+  '爱丽斯',
+  '愛麗斯',
+  '爱麗丝',
+  '爱麗斯',
+  '艾丽斯',
+  '艾麗斯',
+  '阿丽斯',
+  '阿麗斯',
+  '艾莉斯',
+  // A verified Piper -> Whisper sample rendered “艾莉斯” as “爱历史”.
+  // Keep this narrow alias so the local wake-word path remains usable with
+  // the bundled Chinese models while preserving the explicit “alice” mode.
+  '爱历史',
+]
 
 function normalizeForMatching(value: string): string {
   return value.normalize('NFKC').toLocaleLowerCase().replace(/\s+/g, ' ').trim()

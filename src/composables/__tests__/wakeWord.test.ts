@@ -30,6 +30,27 @@ describe('parseWakeWord', () => {
     })
   })
 
+  it('accepts traditional Chinese aliases emitted by some STT models', () => {
+    expect(parseWakeWord('愛麗絲請告訴我今天的安排', 'alice')).toEqual({
+      hasWakeWord: true,
+      command: '請告訴我今天的安排',
+    })
+  })
+
+  it('accepts mixed-script aliases emitted by ASR', () => {
+    expect(parseWakeWord('艾莉斯請告訴我今天的安排', 'alice')).toEqual({
+      hasWakeWord: true,
+      command: '請告訴我今天的安排',
+    })
+  })
+
+  it('accepts a verified Whisper homophone for Alice', () => {
+    expect(parseWakeWord('爱历史请告诉我今天的安排', 'alice')).toEqual({
+      hasWakeWord: true,
+      command: '请告诉我今天的安排',
+    })
+  })
+
   it('does not match a wake word embedded in an ASCII word', () => {
     expect(parseWakeWord('malice 打开日历', 'alice')).toEqual({
       hasWakeWord: false,
