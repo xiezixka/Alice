@@ -19,6 +19,17 @@ describe('parseWakeWord', () => {
     })
   })
 
+  it('accepts common Mandarin aliases for Alice', () => {
+    expect(parseWakeWord('爱丽丝，打开日历', 'alice')).toEqual({
+      hasWakeWord: true,
+      command: '打开日历',
+    })
+    expect(parseWakeWord('艾丽丝帮我整理文件', 'alice')).toEqual({
+      hasWakeWord: true,
+      command: '帮我整理文件',
+    })
+  })
+
   it('does not match a wake word embedded in an ASCII word', () => {
     expect(parseWakeWord('malice 打开日历', 'alice')).toEqual({
       hasWakeWord: false,

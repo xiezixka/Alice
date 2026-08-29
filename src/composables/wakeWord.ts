@@ -4,6 +4,7 @@ export interface WakeWordMatch {
 }
 
 const WAKE_WORD_BOUNDARY = /[A-Za-z0-9]/
+const DEFAULT_ALICE_ALIASES = ['alice', '爱丽丝', '艾丽丝', '阿丽丝', '艾莉丝']
 
 function normalizeForMatching(value: string): string {
   return value.normalize('NFKC').toLocaleLowerCase().replace(/\s+/g, ' ').trim()
@@ -47,11 +48,15 @@ export function parseWakeWord(
     return { hasWakeWord: true, command: cleanCommand(original) }
   }
 
-  const candidates = [
-    `hey ${normalizedWakeWord}`,
-    `ok ${normalizedWakeWord}`,
-    normalizedWakeWord,
-  ]
+  const wakeWordAliases =
+    normalizedWakeWord === 'alice'
+      ? DEFAULT_ALICE_ALIASES
+      : [normalizedWakeWord]
+  const candidates = wakeWordAliases.flatMap(alias => [
+    `hey ${alias}`,
+    `ok ${alias}`,
+    alias,
+  ])
 
   for (const candidate of candidates) {
     let searchFrom = 0
