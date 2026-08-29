@@ -451,7 +451,14 @@ class DesktopManager {
             }
           }
 
-          await shell.openExternal(url)
+          // macOS's System Settings deep links are handled more reliably by
+          // the `open` command when the settings app is already running;
+          // shell.openExternal can focus the app without changing panes.
+          if (process.platform === 'darwin') {
+            await execFileAsync('open', [url])
+          } else {
+            await shell.openExternal(url)
+          }
           return { success: true, target }
         } catch (error) {
           return {
