@@ -14,6 +14,11 @@ import path from 'node:path'
 import os from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { isPathWithinRoot } from './securityBoundaries'
+import {
+  buildAppleScriptHotkey,
+  buildWindowsSendKeys,
+  buildXdotoolHotkey,
+} from './desktopHotkeys'
 
 const execFileAsync = promisify(execFile)
 
@@ -418,9 +423,11 @@ class DesktopManager {
             return { success: false, error: '不支持的系统权限设置项。' }
           }
 
-          const targetUrls: Record<
-            NodeJS.Platform,
-            Partial<Record<SystemSettingsTarget, string>>
+          const targetUrls: Partial<
+            Record<
+              NodeJS.Platform,
+              Partial<Record<SystemSettingsTarget, string>>
+            >
           > = {
             darwin: {
               microphone:
@@ -693,8 +700,7 @@ class DesktopManager {
       noLink: true,
       title: '允许 Alice 读取屏幕？',
       message: 'Alice 请求读取当前屏幕内容。',
-      detail:
-        `截图只会作为当前请求的临时视觉上下文发送给模型，不会写入长期聊天记录。你仍可在${platformHint}中随时撤销或调整权限。`,
+      detail: `截图只会作为当前请求的临时视觉上下文发送给模型，不会写入长期聊天记录。你仍可在${platformHint}中随时撤销或调整权限。`,
     }
     const confirmation = owner
       ? await dialog.showMessageBox(owner, options)
@@ -858,7 +864,7 @@ class DesktopManager {
       } else if (action.action === 'type') {
         script = `tell application "System Events" to keystroke "${this.escapeAppleScript(action.text)}"`
       } else if (action.action === 'hotkey') {
-        script = this.appleScriptHotkey(action.keys)
+        script = buildAppleScriptHotkey(action.keys)
       }
       if (!script) throw new Error('Unable to build macOS desktop action.')
       await execFileAsync('osascript', ['-e', script])
@@ -884,7 +890,7 @@ class DesktopManager {
       action.action === 'type'
         ? ['type', action.text]
         : action.action === 'hotkey'
-          ? ['key', action.keys]
+          ? ['key', buildXdotoolHotkey(action.keys)]
           : [
               'mousemove',
               `${action.x}`,
@@ -903,33 +909,6 @@ class DesktopManager {
     return value.replace(/'/g, "''")
   }
 
-  private appleScriptHotkey(rawKeys: string): string {
-    const parts = rawKeys
-      .toLowerCase()
-      .split(/[+\s]+/)
-      .filter(Boolean)
-    const modifiers = parts
-      .slice(0, -1)
-      .map(
-        key =>
-          (
-            ({
-              cmd: 'command down',
-              command: 'command down',
-              ctrl: 'control down',
-              control: 'control down',
-              alt: 'option down',
-              option: 'option down',
-              shift: 'shift down',
-            }) as Record<string, string>
-          )[key]
-      )
-      .filter(Boolean)
-    const key = parts[parts.length - 1] || ''
-    const using = modifiers.length ? ` using {${modifiers.join(', ')}}` : ''
-    return `tell application "System Events" to keystroke "${this.escapeAppleScript(key)}"${using}`
-  }
-
   private windowsPowerShellAction(action: DesktopAction): string {
     if (action.action === 'focus_window') {
       const value = this.escapePowerShell(action.app || action.title || '')
@@ -942,27 +921,7 @@ class DesktopManager {
       return `$ws = New-Object -ComObject WScript.Shell; $ws.SendKeys('${value}')`
     }
     if (action.action === 'hotkey') {
-      const parts = action.keys
-        .split('+')
-        .map((part: string) => part.trim().toLowerCase())
-        .filter(Boolean)
-      const key = parts.pop() || ''
-      const prefix = parts
-        .map(
-          part =>
-            (
-              ({
-                ctrl: '^',
-                control: '^',
-                alt: '%',
-                option: '%',
-                shift: '+',
-              }) as Record<string, string>
-            )[part] || ''
-        )
-        .join('')
-      const keyToken = key.length === 1 ? key : `{${key.toUpperCase()}}`
-      const value = this.escapePowerShell(`${prefix}${keyToken}`)
+      const value = this.escapePowerShell(buildWindowsSendKeys(action.keys))
       return `$ws = New-Object -ComObject WScript.Shell; $ws.SendKeys('${value}')`
     }
     if (action.action === 'click') {
