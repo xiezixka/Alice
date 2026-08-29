@@ -1,8 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h3 class="text-xl font-semibold mb-4 text-purple-400">
-      集成与 API
-    </h3>
+    <h3 class="text-xl font-semibold mb-4 text-purple-400">集成与 API</h3>
 
     <fieldset
       class="fieldset bg-gray-900/90 border-purple-500/50 rounded-box w-full border p-4"
@@ -21,11 +19,7 @@
             class="btn btn-info btn-active"
             :disabled="googleAuthStatus.isLoading"
           >
-            {{
-              googleAuthStatus.isLoading
-                ? '连接中…'
-                : '连接 Google 服务'
-            }}
+            {{ googleAuthStatus.isLoading ? '连接中…' : '连接 Google 服务' }}
           </button>
         </div>
         <div
@@ -56,7 +50,8 @@
             <span>已成功连接 Google 服务。</span>
           </div>
           <p class="text-xs text-gray-300 mb-4">
-            已包含日历读写、Gmail 阅读、草稿、回复和发送权限。若此前只授权过阅读权限，请先断开后重新连接以获取新增权限。
+            已包含日历读写、Gmail
+            阅读、草稿、回复和发送权限。若此前只授权过阅读权限，请先断开后重新连接以获取新增权限。
           </p>
           <button
             type="button"
@@ -120,7 +115,7 @@
       <legend class="fieldset-legend">
         可选工具 API
         <a
-          href="https://github.com/pmbstyle/Alice/blob/main/docs/toolsInstructions.md"
+          href="https://github.com/xiezixka/Alice/blob/main/docs/toolsInstructions.md"
           target="_blank"
           class="ml-2"
         >
@@ -155,7 +150,9 @@
           />
         </div>
         <div>
-          <label for="qb-url" class="block mb-1 text-sm">qBittorrent 地址</label>
+          <label for="qb-url" class="block mb-1 text-sm"
+            >qBittorrent 地址</label
+          >
           <input
             id="qb-url"
             type="text"
@@ -242,7 +239,8 @@
             </div>
           </div>
           <p class="text-xs text-gray-400 mt-1">
-            使用自己的 SearXNG 实例可获得更好的隐私保护。API 密钥可选，大多数自托管实例不需要。
+            使用自己的 SearXNG 实例可获得更好的隐私保护。API
+            密钥可选，大多数自托管实例不需要。
             <a
               href="https://docs.searxng.org"
               target="_blank"

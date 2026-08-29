@@ -98,4 +98,4 @@ Before enabling it, grant the normal desktop permissions for your platform:
 
 - In settings, click 'Connect to Google Services', authorize your Google account to connect to Alice
 
-Continue with [tools](https://github.com/pmbstyle/Alice/blob/main/docs/toolsInstructions.md) setup if not done during previous steps (optional).
+Continue with [tools](https://github.com/xiezixka/Alice/blob/main/docs/toolsInstructions.md) setup if not done during previous steps (optional).

@@ -1,6 +1,6 @@
 # Alice
 
-<img src="https://img.shields.io/github/license/pmbstyle/alice"> <img src="https://img.shields.io/github/v/release/pmbstyle/alice"> <img src="https://img.shields.io/github/downloads/pmbstyle/Alice/total">
+<img src="https://img.shields.io/github/license/xiezixka/alice"> <img src="https://img.shields.io/github/v/release/xiezixka/alice"> <img src="https://img.shields.io/github/downloads/xiezixka/Alice/total">
 
 Say "Hi" to Alice 👋, your open-source AI companion designed to live on your desktop.
 
@@ -100,7 +100,7 @@ Fully customizable settings interface:
 
 ### 🔨 Custom Tools
 
-Alice supports [custom tools](https://github.com/pmbstyle/Alice/blob/main/docs/custom-tools.md) that are defined in JSON and backed by local scripts.
+Alice supports [custom tools](https://github.com/xiezixka/Alice/blob/main/docs/custom-tools.md) that are defined in JSON and backed by local scripts.
 
 1. Open _Settings → Customization → Custom tools_
 2. Upload or drop your script (writes to `custom-tool-scripts/`)
@@ -109,7 +109,7 @@ Alice supports [custom tools](https://github.com/pmbstyle/Alice/blob/main/docs/c
 
 ### 🎭 Custom Avatars
 
-Swap Alice's appearance with [your own](https://github.com/pmbstyle/Alice/blob/main/docs/custom-avatars.md) video loops:
+Swap Alice's appearance with [your own](https://github.com/xiezixka/Alice/blob/main/docs/custom-avatars.md) video loops:
 
 1. Create a folder under `user-customization/custom-avatars/<AvatarName>/`.
 2. Drop `speaking.mp4`, `thinking.mp4`, and `standby.mp4` into that folder (all required).
@@ -117,20 +117,20 @@ Swap Alice's appearance with [your own](https://github.com/pmbstyle/Alice/blob/m
 
 ## 🚀 Download
 
-👉 **[Download the latest release](https://github.com/pmbstyle/Alice/releases/latest)**
+👉 **[Download the latest release](https://github.com/xiezixka/Alice/releases/latest)**
 
 <!-- STABLE_DOWNLOADS -->
 
 | Platform                       | Download                                                                                                                                |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **Windows**                    | [Alice-AI-App-Windows-1.5.0-Setup.exe](https://github.com/pmbstyle/Alice/releases/download/v1.5.0/Alice-AI-App-Windows-1.5.0-Setup.exe) |
-| **macOS**                      | [Alice-AI-App-Mac-1.5.0-Installer.dmg](https://github.com/pmbstyle/Alice/releases/download/v1.5.0/Alice-AI-App-Mac-1.5.0-Installer.dmg) |
-| **Linux**                      | [Alice-AI-App-Linux-1.5.0.AppImage](https://github.com/pmbstyle/Alice/releases/download/v1.5.0/Alice-AI-App-Linux-1.5.0.AppImage)       |
+| **Windows**                    | [Alice-AI-App-Windows-1.5.0-Setup.exe](https://github.com/xiezixka/Alice/releases/download/v1.5.0/Alice-AI-App-Windows-1.5.0-Setup.exe) |
+| **macOS**                      | [Alice-AI-App-Mac-1.5.0-Installer.dmg](https://github.com/xiezixka/Alice/releases/download/v1.5.0/Alice-AI-App-Mac-1.5.0-Installer.dmg) |
+| **Linux**                      | [Alice-AI-App-Linux-1.5.0.AppImage](https://github.com/xiezixka/Alice/releases/download/v1.5.0/Alice-AI-App-Linux-1.5.0.AppImage)       |
 | **ArchLinux**(community build) | [AUR Package](https://aur.archlinux.org/packages/alice-ai-app-bin)                                                                      |
 
 <!-- STABLE_DOWNLOADS_END -->
 
-Follow the [Setup Instructions](https://github.com/pmbstyle/Alice/blob/main/docs/setupInstructions.md) to configure your API keys and environment.
+Follow the [Setup Instructions](https://github.com/xiezixka/Alice/blob/main/docs/setupInstructions.md) to configure your API keys and environment.
 
 ## 🛠️ Technologies Used
 
@@ -156,7 +156,7 @@ Other tools:
 
 ```bash
 # 1. Clone the repo
-$ git clone https://github.com/pmbstyle/Alice.git
+$ git clone https://github.com/xiezixka/Alice.git
 
 # 2. Install dependencies
 $ npm install
@@ -164,7 +164,7 @@ $ npm install
 # 3. Set up your .env file (see .env.example for reference)
 ```
 
-Follow [setup instructions](https://github.com/pmbstyle/Alice/blob/main/docs/setupInstructions.md) to obtain required API credentials.
+Follow [setup instructions](https://github.com/xiezixka/Alice/blob/main/docs/setupInstructions.md) to obtain required API credentials.
 
 ```bash
 # 4. Download ONNX Runtime and the pinned multi-lang Memory/RAG model

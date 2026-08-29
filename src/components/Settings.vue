@@ -183,21 +183,22 @@
           >Alice
           <a
             :href="
-              'https://github.com/pmbstyle/Alice/releases/tag/v' + appVersion
+              'https://github.com/xiezixka/Alice/releases/tag/v' + appVersion
             "
             target="_blank"
             class="link link-hover"
             >v{{ appVersion }}</a
-          >。由</span
+          >
+          ·</span
         >
         <img :src="heartIcon" class="size-3 inline-block ml-1" />
         <span
-          >制作，
+          >二次开发维护：
           <a
-            href="https://github.com/pmbstyle"
+            href="https://github.com/xiezixka/Alice"
             target="_blank"
             class="link link-hover"
-            >pmbstyle</a
+            >xiezixka/Alice</a
           >
         </span>
       </div>
