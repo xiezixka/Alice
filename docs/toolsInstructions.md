@@ -30,6 +30,7 @@ To activate all tools, you need to get your API credentials for each tool.
 
 - `create_email_draft`：创建草稿，不会发送。
 - `reply_to_email`、`send_email`：发送前会显示确认弹窗；Google 连接需要重新授权 `gmail.compose` 和 `gmail.send` 权限。
+- “助手配置 → 启用邮件工具”会一次加入未读邮件、搜索、读取和 Gmail 回复工具；回复仍需在弹窗中核对并确认。
 - 微信、QQ、Slack 等聊天应用目前通过 `capture_desktop_screen` + `desktop_action` 辅助操作；这要求聊天窗口已打开、模型支持视觉输入，并且每次发送前都要确认收件人和正文。
 - `plan_itinerary`：读取 Google 日历并生成避开冲突的时间草案，不会自动写入日历。
 

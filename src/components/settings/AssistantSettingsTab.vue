@@ -388,6 +388,26 @@
               </button>
             </div>
             <div
+              class="mb-3 flex flex-col gap-2 rounded-md border border-violet-500/30 bg-violet-950/20 p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p class="text-sm font-semibold text-violet-100">
+                  邮件读取与回复
+                </p>
+                <p class="text-xs text-gray-300 mt-1">
+                  启用后可查找、读取 Gmail
+                  邮件并准备回复；实际回复前仍会弹窗核对并确认，不会静默发送。
+                </p>
+              </div>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline btn-secondary shrink-0"
+                @click="enableEmailReplyTools"
+              >
+                启用邮件工具
+              </button>
+            </div>
+            <div
               v-if="availableTools.length === 0"
               class="text-xs text-gray-400"
             >
@@ -553,12 +573,25 @@ const desktopAgentToolPreset = [
   'create_email_draft',
 ]
 
+const emailReplyToolPreset = [
+  'get_unread_emails',
+  'search_emails',
+  'get_email_content',
+  'reply_to_email',
+]
+
 const enableDesktopAgentTools = () => {
   props.currentSettings.assistantTools = Array.from(
     new Set([
       ...props.currentSettings.assistantTools,
       ...desktopAgentToolPreset,
     ])
+  )
+}
+
+const enableEmailReplyTools = () => {
+  props.currentSettings.assistantTools = Array.from(
+    new Set([...props.currentSettings.assistantTools, ...emailReplyToolPreset])
   )
 }
 
