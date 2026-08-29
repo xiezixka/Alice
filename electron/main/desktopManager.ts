@@ -858,9 +858,11 @@ class DesktopManager {
         else if (action.title)
           script = `tell application "System Events" to set frontmost of first process whose name is "${this.escapeAppleScript(action.title)}" to true`
       } else if (action.action === 'click') {
-        const button =
-          action.button === 'right' ? 'right mouse button' : 'left mouse button'
-        script = `tell application "System Events" to ${button} at {${action.x}, ${action.y}}`
+        // System Events exposes click and right click as verbs.  Phrases such
+        // as "left mouse button at …" look plausible but fail AppleScript
+        // compilation, which made coordinate clicks unusable on macOS.
+        const clickVerb = action.button === 'right' ? 'right click' : 'click'
+        script = `tell application "System Events" to ${clickVerb} at {${action.x}, ${action.y}}`
       } else if (action.action === 'type') {
         script = `tell application "System Events" to keystroke "${this.escapeAppleScript(action.text)}"`
       } else if (action.action === 'hotkey') {
