@@ -44,6 +44,7 @@ export const INVOKE_CHANNELS = new Set([
   'desktop:applyFileOperations',
   'desktop:undoFileOperations',
   'desktop:getCapabilities',
+  'desktop:requestMicrophoneAccess',
   'desktop:openSystemSettings',
   'desktop:captureScreen',
   'desktop:runAction',

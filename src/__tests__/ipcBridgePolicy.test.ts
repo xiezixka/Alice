@@ -10,6 +10,7 @@ describe('renderer IPC bridge policy', () => {
     expect(isAllowedInvokeChannel('memory:get')).toBe(true)
     expect(isAllowedInvokeChannel('unknown:channel')).toBe(false)
     expect(isAllowedInvokeChannel('desktop:listDirectory')).toBe(true)
+    expect(isAllowedInvokeChannel('desktop:requestMicrophoneAccess')).toBe(true)
     expect(isAllowedInvokeChannel('desktop:executeCommand')).toBe(true)
     expect(isAllowedSendChannel('restart-and-install-update')).toBe(true)
     expect(isAllowedSendChannel('desktop:executeCommand')).toBe(false)

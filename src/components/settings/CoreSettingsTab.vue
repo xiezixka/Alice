@@ -1016,6 +1016,24 @@ const enableBackgroundWake = () => {
   emit('update:setting', 'backgroundListeningEnabled', true)
 }
 
+const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error('操作超时，请检查系统权限提示。')),
+      timeoutMs
+    )
+    promise.then(
+      value => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      error => {
+        clearTimeout(timer)
+        reject(error)
+      }
+    )
+  })
+
 const checkMicrophone = async () => {
   if (isCheckingMicrophone.value) return
 
@@ -1027,15 +1045,33 @@ const checkMicrophone = async () => {
       return
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    if (window.desktopAPI?.requestMicrophoneAccess) {
+      const access = await withTimeout(
+        window.desktopAPI.requestMicrophoneAccess(),
+        45_000
+      )
+      microphonePermission.value = access.permission || 'unknown'
+      if (!access.success) {
+        microphoneCheckResult.value =
+          access.error || '系统未允许 Alice 使用麦克风。'
+        return
+      }
+    }
+
+    const stream = await withTimeout(
+      navigator.mediaDevices.getUserMedia({ audio: true }),
+      15_000
+    )
     stream.getTracks().forEach(track => track.stop())
     await updateMicrophonePermission()
     microphoneCheckResult.value =
       '麦克风可用，权限已确认；检测音频流已立即关闭。'
   } catch (error) {
     await updateMicrophonePermission()
-    microphoneCheckResult.value =
-      '无法访问麦克风。请检查系统权限，并确认没有其他应用独占设备。'
+    const errorMessage = error instanceof Error ? error.message : ''
+    microphoneCheckResult.value = errorMessage.includes('超时')
+      ? `${errorMessage} 如果没有看到系统提示，请点击“打开麦克风设置”后允许 Alice。`
+      : '无法访问麦克风。请检查系统权限，并确认没有其他应用独占设备。'
     console.warn('Microphone check failed:', error)
   } finally {
     isCheckingMicrophone.value = false

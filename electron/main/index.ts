@@ -364,6 +364,9 @@ export function restartWebSocketServer() {
 
 app.on('ready', () => {
   console.log(`[Main Index ${initId}] App 'ready' event fired`)
+  session.defaultSession.setPermissionCheckHandler(
+    (_webContents, permission) => permission === 'media'
+  )
   session.defaultSession.setPermissionRequestHandler(
     (webContents, permission, callback) => {
       if (permission === 'media') {

@@ -37,6 +37,13 @@ type FileOperation = {
 
 type SystemSettingsTarget = 'microphone' | 'screen-recording' | 'accessibility'
 
+type MicrophoneAccessResult = {
+  success: boolean
+  permission: string
+  requested: boolean
+  error?: string
+}
+
 type AppliedFileOperation = FileOperation & { completedAt: string }
 
 class DesktopManager {
@@ -47,6 +54,7 @@ class DesktopManager {
     string,
     AppliedFileOperation[]
   >()
+  private microphoneAccessRequest: Promise<MicrophoneAccessResult> | null = null
 
   constructor() {
     if (DesktopManager.instance) {
@@ -72,6 +80,7 @@ class DesktopManager {
       'desktop:applyFileOperations',
       'desktop:undoFileOperations',
       'desktop:getCapabilities',
+      'desktop:requestMicrophoneAccess',
       'desktop:openSystemSettings',
       'desktop:captureScreen',
       'desktop:runAction',
@@ -404,6 +413,10 @@ class DesktopManager {
 
     ipcMain.handle('desktop:getCapabilities', async () =>
       this.getCapabilities()
+    )
+
+    ipcMain.handle('desktop:requestMicrophoneAccess', async () =>
+      this.requestMicrophoneAccess()
     )
 
     ipcMain.handle(
@@ -821,6 +834,71 @@ class DesktopManager {
             ? '点击和输入通过 Windows PowerShell 执行，部分应用可能需要以相同权限级别运行。'
             : 'Linux 需要安装并启用 xdotool；应用级语义控件尚未统一。',
     }
+  }
+
+  private requestMicrophoneAccess(): Promise<MicrophoneAccessResult> {
+    if (this.microphoneAccessRequest) return this.microphoneAccessRequest
+
+    this.microphoneAccessRequest = (async () => {
+      if (process.platform !== 'darwin') {
+        return {
+          success: true,
+          permission: 'unknown',
+          requested: false,
+        }
+      }
+
+      const currentPermission =
+        systemPreferences.getMediaAccessStatus('microphone')
+      if (currentPermission === 'granted') {
+        return {
+          success: true,
+          permission: currentPermission,
+          requested: false,
+        }
+      }
+      if (
+        currentPermission === 'denied' ||
+        currentPermission === 'restricted'
+      ) {
+        return {
+          success: false,
+          permission: currentPermission,
+          requested: false,
+          error: '系统已拒绝 Alice 的麦克风权限，请在系统设置中允许后重试。',
+        }
+      }
+
+      try {
+        const granted = await systemPreferences.askForMediaAccess('microphone')
+        const permission = systemPreferences.getMediaAccessStatus('microphone')
+        const success = granted || permission === 'granted'
+        return {
+          success,
+          permission,
+          requested: true,
+          ...(success
+            ? {}
+            : {
+                error:
+                  '麦克风授权未完成，请在系统设置中允许 Alice 使用麦克风。',
+              }),
+        }
+      } catch (error) {
+        const permission = systemPreferences.getMediaAccessStatus('microphone')
+        return {
+          success: false,
+          permission,
+          requested: true,
+          error:
+            error instanceof Error ? error.message : '无法请求麦克风权限。',
+        }
+      }
+    })().finally(() => {
+      this.microphoneAccessRequest = null
+    })
+
+    return this.microphoneAccessRequest
   }
 
   private async executeDesktopAction(
