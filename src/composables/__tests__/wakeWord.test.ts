@@ -51,8 +51,26 @@ describe('parseWakeWord', () => {
     })
   })
 
+  it('normalizes narrow Chinese homophones observed in Whisper output', () => {
+    expect(parseWakeWord('艾利斯请打开日历', 'alice')).toEqual({
+      hasWakeWord: true,
+      command: '请打开日历',
+    })
+    expect(parseWakeWord('爱历师请打开日历', 'alice')).toEqual({
+      hasWakeWord: true,
+      command: '请打开日历',
+    })
+  })
+
   it('does not match a wake word embedded in an ASCII word', () => {
     expect(parseWakeWord('malice 打开日历', 'alice')).toEqual({
+      hasWakeWord: false,
+      command: '',
+    })
+  })
+
+  it('does not treat a normal two-character Chinese phrase as Alice', () => {
+    expect(parseWakeWord('爱情请打开日历', 'alice')).toEqual({
       hasWakeWord: false,
       command: '',
     })

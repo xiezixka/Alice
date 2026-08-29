@@ -33,6 +33,19 @@ const DEFAULT_ALICE_ALIASES = [
   '爱历史',
 ]
 
+/**
+ * Whisper sometimes substitutes homophonic Chinese characters for the
+ * three-syllable name. Keep the fuzzy matching deliberately narrow: it only
+ * applies when the configured wake word is Alice and only maps characters
+ * observed in the bundled Chinese STT model's output.
+ */
+function normalizeAliceChinese(value: string): string {
+  return value
+    .replace(/[愛艾埃阿]/gu, '爱')
+    .replace(/[麗丽利莉历歷]/gu, '丽')
+    .replace(/[絲丝斯师師思]/gu, '丝')
+}
+
 function normalizeForMatching(value: string): string {
   return value.normalize('NFKC').toLocaleLowerCase().replace(/\s+/g, ' ').trim()
 }
@@ -77,8 +90,12 @@ export function parseWakeWord(
 
   const wakeWordAliases =
     normalizedWakeWord === 'alice'
-      ? DEFAULT_ALICE_ALIASES
+      ? Array.from(new Set(DEFAULT_ALICE_ALIASES.map(normalizeAliceChinese)))
       : [normalizedWakeWord]
+  const transcriptForMatching =
+    normalizedWakeWord === 'alice'
+      ? normalizeAliceChinese(normalizedTranscript)
+      : normalizedTranscript
   const candidates = wakeWordAliases.flatMap(alias => [
     `hey ${alias}`,
     `ok ${alias}`,
@@ -87,14 +104,14 @@ export function parseWakeWord(
 
   for (const candidate of candidates) {
     let searchFrom = 0
-    while (searchFrom < normalizedTranscript.length) {
-      const index = normalizedTranscript.indexOf(candidate, searchFrom)
+    while (searchFrom < transcriptForMatching.length) {
+      const index = transcriptForMatching.indexOf(candidate, searchFrom)
       if (index === -1) break
 
       const end = index + candidate.length
       if (
-        isBoundary(normalizedTranscript[index - 1]) &&
-        isBoundary(normalizedTranscript[end])
+        isBoundary(transcriptForMatching[index - 1]) &&
+        isBoundary(transcriptForMatching[end])
       ) {
         // Candidate and original text have the same character positions for
         // the common ASCII wake words. For full-width input, use the
