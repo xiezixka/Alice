@@ -83,7 +83,7 @@ class DesktopManager {
     ipcMain.handle('desktop:listDirectory', async (event, dirPath) => {
       try {
         if (typeof dirPath !== 'string' || dirPath.trim().length === 0) {
-          return { success: false, error: 'A directory path is required.' }
+          return { success: false, error: '需要提供目录路径。' }
         }
 
         const requestedPath = await fs.realpath(dirPath.trim())
@@ -91,7 +91,7 @@ class DesktopManager {
         if (!stat.isDirectory()) {
           return {
             success: false,
-            error: 'The requested path is not a directory.',
+            error: '指定路径不是目录。',
           }
         }
 
@@ -111,14 +111,14 @@ class DesktopManager {
     ipcMain.handle('desktop:listDirectoryDetailed', async (event, dirPath) => {
       try {
         if (typeof dirPath !== 'string' || dirPath.trim().length === 0) {
-          return { success: false, error: 'A directory path is required.' }
+          return { success: false, error: '需要提供目录路径。' }
         }
         const requestedPath = await fs.realpath(dirPath.trim())
         const stat = await fs.stat(requestedPath)
         if (!stat.isDirectory()) {
           return {
             success: false,
-            error: 'The requested path is not a directory.',
+            error: '指定路径不是目录。',
           }
         }
         const access = await this.ensureDirectoryApproved(requestedPath, event)
@@ -153,12 +153,11 @@ class DesktopManager {
     ipcMain.handle('desktop:findFiles', async (event, args) => {
       try {
         const root = typeof args?.path === 'string' ? args.path.trim() : ''
-        if (!root)
-          return { success: false, error: 'A root directory path is required.' }
+        if (!root) return { success: false, error: '需要提供根目录路径。' }
         const requestedPath = await fs.realpath(root)
         const stat = await fs.stat(requestedPath)
         if (!stat.isDirectory())
-          return { success: false, error: 'The root path is not a directory.' }
+          return { success: false, error: '根路径不是目录。' }
         const access = await this.ensureDirectoryApproved(requestedPath, event)
         if (!access.success) return access
 
@@ -230,13 +229,13 @@ class DesktopManager {
         if (!operations.length)
           return {
             success: false,
-            error: 'At least one file operation is required.',
+            error: '至少需要一项文件操作。',
           }
         for (const operation of operations) {
           const sourcePath = await fs.realpath(operation.source)
           const sourceStat = await fs.stat(sourcePath)
           if (!sourceStat.isFile() && !sourceStat.isDirectory())
-            throw new Error(`Unsupported source: ${sourcePath}`)
+            throw new Error(`不支持的源路径：${sourcePath}`)
           const destination = path.resolve(operation.destination)
           const sourceAccess = await this.ensureDirectoryApproved(
             path.dirname(sourcePath),
@@ -292,13 +291,11 @@ class DesktopManager {
                 detail.length > 8000 ? `${detail.slice(0, 8000)}\n…` : detail,
             })
         if (confirmation.response !== 1)
-          return { success: false, error: 'File operations cancelled by user.' }
+          return { success: false, error: '用户取消了文件整理。' }
 
         for (const operation of preview) {
           if (await this.pathExists(operation.destination)) {
-            throw new Error(
-              `Destination already exists: ${operation.destination}`
-            )
+            throw new Error(`目标路径已存在：${operation.destination}`)
           }
           if (operation.action === 'copy') {
             await fs.cp(operation.source, operation.destination, {
@@ -359,7 +356,7 @@ class DesktopManager {
         if (!operations)
           return {
             success: false,
-            error: 'Operation not found or already undone.',
+            error: '找不到该操作，或操作已经撤销。',
           }
         const owner = BrowserWindow.fromWebContents(event.sender)
         const confirmation = owner
@@ -382,7 +379,7 @@ class DesktopManager {
               message: '确认撤销上一次文件整理操作吗？',
             })
         if (confirmation.response !== 1)
-          return { success: false, error: 'Undo cancelled by user.' }
+          return { success: false, error: '用户取消了撤销操作。' }
         for (const operation of [...operations].reverse()) {
           if (operation.action === 'copy') {
             await fs.rm(operation.destination, {
@@ -391,9 +388,7 @@ class DesktopManager {
             })
           } else {
             if (await this.pathExists(operation.source))
-              throw new Error(
-                `Cannot undo because source exists: ${operation.source}`
-              )
+              throw new Error(`无法撤销，因为源路径已存在：${operation.source}`)
             await fs.rename(operation.destination, operation.source)
           }
         }
@@ -568,7 +563,7 @@ class DesktopManager {
                 '桌面操作可能影响当前应用中的内容，请确认目标窗口和输入内容。',
             })
         if (confirmation.response !== 1)
-          return { success: false, error: 'Desktop action cancelled by user.' }
+          return { success: false, error: '用户取消了桌面操作。' }
         const result = await this.executeDesktopAction(action)
         return { success: true, action: action.action, ...result }
       } catch (error) {
@@ -583,11 +578,11 @@ class DesktopManager {
       'desktop:executeCommand',
       async (event, command: unknown) => {
         if (typeof command !== 'string' || command.trim().length === 0) {
-          return { success: false, error: 'A command is required.' }
+          return { success: false, error: '需要提供要执行的命令。' }
         }
 
         if (command.length > 16_000) {
-          return { success: false, error: 'Command is too long.' }
+          return { success: false, error: '命令长度超过限制。' }
         }
 
         const commandPreview =
@@ -619,7 +614,7 @@ class DesktopManager {
             })
 
         if (confirmation.response !== 1) {
-          return { success: false, error: 'Command execution denied by user.' }
+          return { success: false, error: '用户拒绝执行命令。' }
         }
 
         return new Promise(resolve => {
@@ -675,7 +670,7 @@ class DesktopManager {
       ? await dialog.showMessageBox(owner, options)
       : await dialog.showMessageBox(options)
     if (confirmation.response !== 1)
-      return { success: false, error: 'Directory access denied by user.' }
+      return { success: false, error: '用户拒绝访问该目录。' }
     this.approvedDirectoryRoots.add(normalized)
     return { success: true }
   }
@@ -726,17 +721,17 @@ class DesktopManager {
 
   private validateFileOperations(input: unknown): FileOperation[] {
     if (!Array.isArray(input) || input.length > 100)
-      throw new Error('operations must be an array with at most 100 items.')
+      throw new Error('operations 必须是最多包含 100 项的数组。')
     return input.map((item: any) => {
       if (!['move', 'copy', 'rename'].includes(item?.action))
-        throw new Error('Unsupported file operation.')
+        throw new Error('不支持的文件操作。')
       if (
         typeof item?.source !== 'string' ||
         typeof item?.destination !== 'string'
       )
-        throw new Error('Each file operation needs source and destination.')
+        throw new Error('每项文件操作都需要源路径和目标路径。')
       if (!path.isAbsolute(item.source) || !path.isAbsolute(item.destination))
-        throw new Error('File operation paths must be absolute.')
+        throw new Error('文件操作路径必须使用绝对路径。')
       return {
         action: item.action,
         source: item.source,
@@ -781,7 +776,7 @@ class DesktopManager {
       args.keys.trim()
     )
       return { action, keys: args.keys.trim() }
-    throw new Error('Invalid desktop action arguments.')
+    throw new Error('桌面操作参数无效。')
   }
 
   private describeAction(action: DesktopAction): string {
@@ -868,7 +863,7 @@ class DesktopManager {
       } else if (action.action === 'hotkey') {
         script = buildAppleScriptHotkey(action.keys)
       }
-      if (!script) throw new Error('Unable to build macOS desktop action.')
+      if (!script) throw new Error('无法构造 macOS 桌面操作。')
       await execFileAsync('osascript', ['-e', script])
       return { message: 'macOS 桌面操作已执行。' }
     }
@@ -930,7 +925,7 @@ class DesktopManager {
       const button = action.button === 'right' ? '0x0008' : '0x0002'
       return `Add-Type -TypeDefinition @'\nusing System; using System.Runtime.InteropServices; public static class AliceMouse { [DllImport("user32.dll")] public static extern bool SetCursorPos(int X,int Y); [DllImport("user32.dll")] public static extern void mouse_event(uint flags,uint dx,uint dy,uint data,UIntPtr extra); }\n'@; [AliceMouse]::SetCursorPos(${action.x},${action.y}); [AliceMouse]::mouse_event(${button},0,0,0,[UIntPtr]::Zero); [AliceMouse]::mouse_event(${action.button === 'right' ? '0x0010' : '0x0004'},0,0,0,[UIntPtr]::Zero)`
     }
-    throw new Error('Unsupported Windows desktop action.')
+    throw new Error('不支持的 Windows 桌面操作。')
   }
 }
 
