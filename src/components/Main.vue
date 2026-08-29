@@ -23,6 +23,11 @@
           <video
             class="max-w-screen-md rounded-full"
             :class="{
+              'avatar-video-standby':
+                isBuiltInAvatar &&
+                (audioState === 'IDLE' || audioState === 'LISTENING'),
+              'avatar-video-speaking':
+                isBuiltInAvatar && audioState === 'SPEAKING',
               'h-[200px]': isMinimized,
               'h-[480px]': !isMinimized && isElectron,
               'h-[430px]': !isElectron,
@@ -35,6 +40,13 @@
             autoplay
             playsinline
           ></video>
+          <img
+            v-if="isBuiltInAvatar && (audioState === 'IDLE' || audioState === 'LISTENING')"
+            class="avatar-blink-layer"
+            :src="avatarBlinkImage"
+            alt=""
+            aria-hidden="true"
+          />
           <Actions
             @takeScreenShot="handleTakeScreenshot"
             @togglePlaying="handleToggleTTS"
@@ -58,6 +70,7 @@ import Actions from './Actions.vue'
 import Sidebar from './Sidebar.vue'
 
 import { useGeneralStore } from '../stores/generalStore'
+import { useCustomAvatarsStore } from '../stores/customAvatarsStore'
 import { useConversationStore } from '../stores/conversationStore'
 import {
   indexMessageForThoughts,
@@ -68,6 +81,7 @@ import { useAudioProcessing } from '../composables/useAudioProcessing'
 import { useAudioPlayback } from '../composables/useAudioPlayback'
 import { useScreenshot } from '../composables/useScreenshot'
 import eventBus from '../utils/eventBus'
+import avatarBlinkImage from '../assets/images/avatar-cn-blink.png'
 
 const audioProcessing = useAudioProcessing()
 const { toggleRecordingRequest } = audioProcessing
@@ -81,6 +95,7 @@ const {
 } = useScreenshot()
 
 const generalStore = useGeneralStore()
+const customAvatarsStore = useCustomAvatarsStore()
 const conversationStore = useConversationStore()
 
 const {
@@ -102,6 +117,11 @@ const isElectron =
   typeof window !== 'undefined' && Boolean((window as any).electron)
 const audioPlayerElement = vueRef<HTMLAudioElement | null>(null)
 const aiVideoElement = vueRef<HTMLVideoElement | null>(null)
+
+const isBuiltInAvatar = computed(
+  () =>
+    customAvatarsStore.activeAvatar.id === customAvatarsStore.builtInAvatar.id
+)
 
 let isProcessingRequest = false
 
@@ -378,5 +398,80 @@ const processRequest = async (
 <style scoped lang="postcss">
 .avatar-ring {
   transition: ring-color 0.3s ease-in-out;
+}
+
+.avatar-video-standby {
+  animation: avatar-breathe 6.5s ease-in-out infinite;
+  transform-origin: 50% 62%;
+}
+
+.avatar-video-speaking {
+  animation: avatar-speaking 1.15s ease-in-out infinite;
+  transform-origin: 50% 62%;
+}
+
+.avatar-blink-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  animation: avatar-natural-blink 8.6s ease-in-out infinite;
+}
+
+@keyframes avatar-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.006);
+  }
+}
+
+@keyframes avatar-speaking {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.009);
+  }
+}
+
+/* A short asymmetric eyelid transition, with a longer pause between blinks. */
+@keyframes avatar-natural-blink {
+  0%,
+  86% {
+    opacity: 0;
+  }
+  87.2% {
+    opacity: 0.12;
+  }
+  88.1% {
+    opacity: 0.72;
+  }
+  89% {
+    opacity: 1;
+  }
+  89.8% {
+    opacity: 0.38;
+  }
+  90.8%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-video-standby,
+  .avatar-video-speaking,
+  .avatar-blink-layer {
+    animation: none;
+  }
 }
 </style>
