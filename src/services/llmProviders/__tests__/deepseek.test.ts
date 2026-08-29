@@ -7,7 +7,7 @@ describe('DeepSeek model listing', () => {
     delete (globalThis as any).window
   })
 
-  it('uses the Electron HTTP bridge and filters to supported text models', async () => {
+  it('uses the Electron HTTP bridge and filters to supported DeepSeek models', async () => {
     const request = vi.fn().mockResolvedValue({
       success: true,
       status: 200,
@@ -15,6 +15,7 @@ describe('DeepSeek model listing', () => {
         data: [
           { id: 'deepseek-v4-flash' },
           { id: 'deepseek-v4-pro' },
+          { id: 'deepseek-v4-flash-vision-exp' },
           { id: 'unrelated-model' },
         ],
       },
@@ -32,6 +33,7 @@ describe('DeepSeek model listing', () => {
 
     expect(models.map(model => model.id)).toEqual([
       'deepseek-v4-flash',
+      'deepseek-v4-flash-vision-exp',
       'deepseek-v4-pro',
     ])
     expect(request).toHaveBeenCalledWith(

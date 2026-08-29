@@ -14,6 +14,8 @@ export interface CustomAvatar {
   source: AvatarSource
   stateVideos: AvatarStateVideos
   previewVideo: string
+  /** Optional static image used while a state video is loading or unavailable. */
+  fallbackImage?: string
 }
 
 export interface CustomAvatarsSnapshot {

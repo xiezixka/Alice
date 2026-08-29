@@ -49,7 +49,11 @@ describe('providerCatalog', () => {
   it('exposes DeepSeek text models with current API model ids', () => {
     expect(
       getStaticModelsForProvider('deepseek').map(model => model.id)
-    ).toEqual(['deepseek-v4-flash', 'deepseek-v4-pro'])
+    ).toEqual([
+      'deepseek-v4-flash',
+      'deepseek-v4-pro',
+      'deepseek-v4-flash-vision-exp',
+    ])
     expect(DEEPSEEK_TEXT_MODELS[0]?.displayName).toBe('DeepSeek V4 Flash')
   })
 
@@ -60,6 +64,9 @@ describe('providerCatalog', () => {
     expect(getSafeProviderModel('deepseek', 'deepseek-v4-pro')).toBe(
       'deepseek-v4-pro'
     )
+    expect(
+      getSafeProviderModel('deepseek', 'deepseek-v4-flash-vision-exp')
+    ).toBe('deepseek-v4-flash-vision-exp')
   })
 
   it('exposes Codex subscription models with safe fallbacks', () => {

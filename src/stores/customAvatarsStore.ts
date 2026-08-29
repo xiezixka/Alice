@@ -4,6 +4,7 @@ import type { CustomAvatar, CustomAvatarsSnapshot } from '../../types/customAvat
 import videoSpeaking from '../assets/videos/speaking.mp4'
 import videoStandby from '../assets/videos/standby.mp4'
 import videoThinking from '../assets/videos/thinking.mp4'
+import avatarFallbackImage from '../assets/images/avatar-cn.png'
 import { useSettingsStore } from './settingsStore'
 
 interface OperationResult<T> {
@@ -23,6 +24,7 @@ const builtInAvatar: CustomAvatar = {
     thinking: videoThinking,
   },
   previewVideo: videoStandby,
+  fallbackImage: avatarFallbackImage,
 }
 
 export const useCustomAvatarsStore = defineStore('customAvatars', () => {

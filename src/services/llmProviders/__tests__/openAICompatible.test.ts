@@ -207,6 +207,46 @@ describe('createOpenAICompatibleResponse', () => {
     )
   })
 
+  it('preserves image parts for DeepSeek vision chat completions', async () => {
+    const settingsStore = useSettingsStore()
+    settingsStore.updateSetting('aiProvider', 'deepseek')
+    settingsStore.updateSetting(
+      'assistantModel',
+      'deepseek-v4-flash-vision-exp'
+    )
+
+    const create = vi.fn().mockResolvedValue({ choices: [] })
+    const client = {
+      chat: {
+        completions: {
+          create,
+        },
+      },
+    }
+
+    await createOpenAICompatibleResponse(
+      'deepseek',
+      () => client as any,
+      [
+        {
+          role: 'user',
+          content: [
+            { type: 'input_text', text: '请描述这张图片' },
+            { type: 'input_image', image_url: 'data:image/png;base64,abc' },
+          ],
+        } as any,
+      ],
+      false
+    )
+
+    const request = create.mock.calls[0][0]
+    expect(request.model).toBe('deepseek-v4-flash-vision-exp')
+    expect(request.messages[0].content).toEqual([
+      { type: 'text', text: '请描述这张图片' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,abc' } },
+    ])
+  })
+
   it('does not send system-role messages to MiniMax continuations', async () => {
     const settingsStore = useSettingsStore()
     settingsStore.updateSetting('aiProvider', 'minimax')

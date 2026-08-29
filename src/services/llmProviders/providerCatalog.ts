@@ -42,6 +42,18 @@ export const DEEPSEEK_TEXT_MODELS: ProviderModelDefinition[] = [
   { id: 'deepseek-v4-pro', displayName: 'DeepSeek V4 Pro' },
 ]
 
+export const DEEPSEEK_VISION_MODELS: ProviderModelDefinition[] = [
+  {
+    id: 'deepseek-v4-flash-vision-exp',
+    displayName: 'DeepSeek V4 Flash Vision（实验版）',
+  },
+]
+
+export const DEEPSEEK_MODELS: ProviderModelDefinition[] = [
+  ...DEEPSEEK_TEXT_MODELS,
+  ...DEEPSEEK_VISION_MODELS,
+]
+
 export const CODEX_TEXT_MODELS: ProviderModelDefinition[] = [
   { id: 'gpt-5.4', displayName: 'GPT-5.4' },
   { id: 'gpt-5.2-codex', displayName: 'GPT-5.2 Codex' },
@@ -123,7 +135,7 @@ export function getStaticModelsForProvider(
     return MINIMAX_TEXT_MODELS
   }
   if (provider === 'deepseek') {
-    return DEEPSEEK_TEXT_MODELS
+    return DEEPSEEK_MODELS
   }
   if (provider === 'codex') {
     return CODEX_TEXT_MODELS

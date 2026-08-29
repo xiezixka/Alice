@@ -19,12 +19,40 @@ function convertResponsesInputToChatMessages(
     .map((item: any) => {
       if (item.role === 'user') {
         if (Array.isArray(item.content)) {
-          const textParts = item.content
-            .filter(
-              (part: any) => part.type === 'input_text' && part.text?.trim()
-            )
+          const contentParts = item.content
+            .map((part: any) => {
+              if (part.type === 'input_text' && part.text?.trim()) {
+                return { type: 'text', text: part.text.trim() }
+              }
+
+              if (part.type === 'input_image' && part.image_url) {
+                return {
+                  type: 'image_url',
+                  image_url:
+                    typeof part.image_url === 'string'
+                      ? { url: part.image_url }
+                      : part.image_url,
+                }
+              }
+
+              return null
+            })
+            .filter(Boolean)
+
+          const hasImagePart = contentParts.some(
+            (part: any) => part.type === 'image_url'
+          )
+          const textParts = contentParts
+            .filter((part: any) => part.type === 'text')
             .map((part: any) => part.text)
             .join(' ')
+
+          if (hasImagePart) {
+            return {
+              role: 'user',
+              content: contentParts,
+            }
+          }
 
           return {
             role: 'user',
@@ -111,6 +139,9 @@ function convertResponsesInputToChatMessages(
     .filter((message: any) => {
       if (message.role === 'assistant' && message.tool_calls?.length) {
         return true
+      }
+      if (Array.isArray(message.content)) {
+        return message.content.length > 0
       }
       return typeof message.content === 'string' && message.content.trim()
     })

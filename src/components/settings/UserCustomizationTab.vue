@@ -12,7 +12,14 @@
           <div
             class="avatar-ring w-[180px] h-[180px] ring-2 ring-blue-400 flex items-center justify-center rounded-full from-slate-900 to-slate-800 flex-shrink-0"
           >
+            <img
+              v-if="selectedAvatar.fallbackImage"
+              class="rounded-full w-[180px] h-[180px] object-cover"
+              :src="selectedAvatar.fallbackImage"
+              alt="助手头像"
+            />
             <video
+              v-else
               ref="avatarPreviewVideo"
               class="rounded-full w-[180px] h-[180px] object-cover"
               :src="previewVideoSource"

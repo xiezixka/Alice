@@ -41,7 +41,9 @@ export const useGeneralStore = defineStore('general', () => {
   const takingScreenShot = ref<boolean>(false)
   const audioPlayer = ref<HTMLAudioElement | null>(null)
   const aiVideo = ref<HTMLVideoElement | null>(null)
-  const avatarFallbackImage = ref<string | null>(null)
+  const avatarFallbackImage = ref<string | null>(
+    customAvatarsStore.activeAvatar.fallbackImage || null
+  )
   const mediaReadyStateThreshold =
     typeof HTMLMediaElement !== 'undefined'
       ? HTMLMediaElement.HAVE_CURRENT_DATA
@@ -190,6 +192,8 @@ export const useGeneralStore = defineStore('general', () => {
   watch(
     () => customAvatarsStore.activeAvatarId,
     () => {
+      avatarFallbackImage.value =
+        customAvatarsStore.activeAvatar.fallbackImage || null
       syncVideoSource(audioState.value)
     }
   )

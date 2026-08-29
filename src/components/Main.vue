@@ -29,6 +29,7 @@
             }"
             ref="aiVideoElement"
             :src="videoSource"
+            :poster="avatarFallbackImage || undefined"
             loop
             muted
             autoplay

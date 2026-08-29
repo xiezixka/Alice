@@ -5,7 +5,7 @@ import { createProviderModel, listModelsViaMainProcess } from './modelDiscovery'
 import { createOpenAICompatibleResponse } from './openAICompatible'
 import {
   DEEPSEEK_OPENAI_BASE_URL,
-  DEEPSEEK_TEXT_MODELS,
+  DEEPSEEK_MODELS,
 } from './providerCatalog'
 
 function createDeepSeekModel(id: string): OpenAI.Models.Model {
@@ -13,7 +13,7 @@ function createDeepSeekModel(id: string): OpenAI.Models.Model {
 }
 
 function listStaticDeepSeekTextModels(): OpenAI.Models.Model[] {
-  return DEEPSEEK_TEXT_MODELS.map(model => createDeepSeekModel(model.id))
+  return DEEPSEEK_MODELS.map(model => createDeepSeekModel(model.id))
 }
 
 function isAuthError(error: any): boolean {
@@ -23,7 +23,7 @@ function isAuthError(error: any): boolean {
 function filterDeepSeekTextModels(
   models: OpenAI.Models.Model[]
 ): OpenAI.Models.Model[] {
-  const textModelIds = new Set(DEEPSEEK_TEXT_MODELS.map(model => model.id))
+  const textModelIds = new Set(DEEPSEEK_MODELS.map(model => model.id))
   return models.filter(model => textModelIds.has(model.id))
 }
 
