@@ -474,6 +474,17 @@
               @change="e => emitCheckboxChange('launchAtLogin', e)"
             />
           </div>
+          <div
+            class="rounded-md border border-gray-700/60 bg-gray-950/40 px-3 py-2 text-xs"
+            :class="
+              backgroundListeningReadiness.ready
+                ? 'text-green-300'
+                : 'text-amber-300'
+            "
+          >
+            <span class="font-medium">后台唤醒状态：</span>
+            {{ backgroundListeningReadiness.message }}
+          </div>
         </div>
       </div>
     </fieldset>
@@ -859,6 +870,34 @@ const getTargetValue = (event: Event): string => {
 const emitCheckboxChange = (key: keyof AliceSettings, event: Event): void => {
   emit('update:setting', key, (event.target as HTMLInputElement).checked)
 }
+
+const backgroundListeningReadiness = computed(() => {
+  if (props.currentSettings.sttProvider !== 'local') {
+    return {
+      ready: false,
+      message: '请将语音识别切换为“本地（Go 后端）”。',
+    }
+  }
+  if (!props.currentSettings.localSttEnabled) {
+    return { ready: false, message: '请先启用唤醒词。' }
+  }
+  if (!props.currentSettings.localSttWakeWord?.trim()) {
+    return { ready: false, message: '请设置唤醒词。' }
+  }
+  if (serviceStatus.value.stt.status !== 'ready') {
+    return {
+      ready: false,
+      message: '本地语音识别服务尚未就绪，请等待模型加载完成。',
+    }
+  }
+  if (!props.currentSettings.backgroundListeningEnabled) {
+    return {
+      ready: false,
+      message: '前置条件已满足，开启上方开关即可后台监听。',
+    }
+  }
+  return { ready: true, message: '已开启，隐藏窗口后会继续等待唤醒词。' }
+})
 
 const updateServiceStatus = async () => {
   try {
