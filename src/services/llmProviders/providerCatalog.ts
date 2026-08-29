@@ -8,7 +8,10 @@ export type AIProviderKey =
   | 'deepseek'
   | 'codex'
 
-export type ChatCompletionsProviderKey = Exclude<AIProviderKey, 'openai' | 'codex'>
+export type ChatCompletionsProviderKey = Exclude<
+  AIProviderKey,
+  'openai' | 'codex'
+>
 
 export interface ProviderConfig {
   displayName: string
@@ -176,5 +179,25 @@ export function isChatCompletionsProvider(
 ): provider is ChatCompletionsProviderKey {
   return CHAT_COMPLETIONS_PROVIDERS.includes(
     provider as ChatCompletionsProviderKey
+  )
+}
+
+/**
+ * Conservative model capability check used to avoid exposing screenshot tools
+ * to text-only models. Provider APIs can add new vision models at any time, so
+ * known naming conventions are accepted in addition to the built-in catalog.
+ */
+export function isVisionCapableModel(provider: string, model: string): boolean {
+  const normalized = model.trim().toLowerCase()
+  if (!normalized) return false
+
+  if (provider === 'deepseek') {
+    return DEEPSEEK_VISION_MODELS.some(
+      definition => definition.id.toLowerCase() === normalized
+    )
+  }
+
+  return /(vision|[-_.]vl\b|llava|moondream|gemma-?3|gpt-4o|gpt-4\.1|gpt-5|gemini|claude-3|claude-4)/i.test(
+    normalized
   )
 }

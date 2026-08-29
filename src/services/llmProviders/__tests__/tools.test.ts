@@ -58,4 +58,33 @@ describe('buildToolsForProvider', () => {
       expect.objectContaining({ name: 'perform_web_search' })
     )
   })
+
+  it('does not expose screen capture to a text-only model', async () => {
+    const settingsStore = useSettingsStore()
+    settingsStore.updateSetting('aiProvider', 'deepseek')
+    settingsStore.updateSetting('assistantModel', 'deepseek-v4-flash')
+    settingsStore.updateSetting('assistantTools', ['capture_desktop_screen'])
+
+    const { buildToolsForProvider } = await import('../tools')
+    const tools = await buildToolsForProvider()
+    expect(
+      tools.some((tool: any) => tool.name === 'capture_desktop_screen')
+    ).toBe(false)
+  })
+
+  it('exposes screen capture to the DeepSeek vision model', async () => {
+    const settingsStore = useSettingsStore()
+    settingsStore.updateSetting('aiProvider', 'deepseek')
+    settingsStore.updateSetting(
+      'assistantModel',
+      'deepseek-v4-flash-vision-exp'
+    )
+    settingsStore.updateSetting('assistantTools', ['capture_desktop_screen'])
+
+    const { buildToolsForProvider } = await import('../tools')
+    const tools = await buildToolsForProvider()
+    expect(
+      tools.some((tool: any) => tool.name === 'capture_desktop_screen')
+    ).toBe(true)
+  })
 })

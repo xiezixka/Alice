@@ -6,6 +6,7 @@ import {
   ZAI_CODING_MODELS,
   getSafeProviderModel,
   getStaticModelsForProvider,
+  isVisionCapableModel,
 } from '../providerCatalog'
 
 describe('providerCatalog', () => {
@@ -41,9 +42,7 @@ describe('providerCatalog', () => {
 
   it('falls back to the MiniMax default for non-MiniMax model ids', () => {
     expect(getSafeProviderModel('minimax', 'gpt-4o-mini')).toBe('MiniMax-M3')
-    expect(getSafeProviderModel('minimax', 'MiniMax-M2.5')).toBe(
-      'MiniMax-M2.5'
-    )
+    expect(getSafeProviderModel('minimax', 'MiniMax-M2.5')).toBe('MiniMax-M2.5')
   })
 
   it('exposes DeepSeek text models with current API model ids', () => {
@@ -69,6 +68,13 @@ describe('providerCatalog', () => {
     ).toBe('deepseek-v4-flash-vision-exp')
   })
 
+  it('recognizes only the DeepSeek vision model for DeepSeek screenshots', () => {
+    expect(
+      isVisionCapableModel('deepseek', 'deepseek-v4-flash-vision-exp')
+    ).toBe(true)
+    expect(isVisionCapableModel('deepseek', 'deepseek-v4-flash')).toBe(false)
+  })
+
   it('exposes Codex subscription models with safe fallbacks', () => {
     expect(getStaticModelsForProvider('codex').map(model => model.id)).toEqual([
       'gpt-5.4',
@@ -82,11 +88,7 @@ describe('providerCatalog', () => {
     ])
     expect(CODEX_TEXT_MODELS[0]?.displayName).toBe('GPT-5.4')
     expect(getSafeProviderModel('codex', 'gpt-4o-mini')).toBe('gpt-5.4')
-    expect(getSafeProviderModel('codex', 'gpt-5.4-mini')).toBe(
-      'gpt-5.4-mini'
-    )
-    expect(getSafeProviderModel('codex', 'gpt-5.1-codex')).toBe(
-      'gpt-5.1-codex'
-    )
+    expect(getSafeProviderModel('codex', 'gpt-5.4-mini')).toBe('gpt-5.4-mini')
+    expect(getSafeProviderModel('codex', 'gpt-5.1-codex')).toBe('gpt-5.1-codex')
   })
 })

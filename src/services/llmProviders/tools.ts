@@ -4,7 +4,7 @@ import {
   PREDEFINED_OPENAI_TOOLS,
   type ApiRequestBodyFunctionTool,
 } from '../../utils/assistantTools'
-import { PROVIDER_CONFIGS } from './providerCatalog'
+import { isVisionCapableModel, PROVIDER_CONFIGS } from './providerCatalog'
 
 const OPENAI_IMAGE_GENERATION_MODEL = 'gpt-image-2'
 
@@ -14,6 +14,12 @@ export async function buildToolsForProvider(): Promise<any[]> {
 
   if (settings.assistantTools && settings.assistantTools.length > 0) {
     for (const toolName of settings.assistantTools) {
+      if (
+        toolName === 'capture_desktop_screen' &&
+        !isVisionCapableModel(settings.aiProvider, settings.assistantModel)
+      ) {
+        continue
+      }
       const toolDefinition = PREDEFINED_OPENAI_TOOLS.find(
         (tool: ApiRequestBodyFunctionTool) => tool.name === toolName
       )

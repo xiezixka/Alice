@@ -1,8 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h3 class="text-xl font-semibold mb-4 text-green-400">
-      助手配置
-    </h3>
+    <h3 class="text-xl font-semibold mb-4 text-green-400">助手配置</h3>
 
     <fieldset
       class="fieldset bg-gray-900/90 border-green-500/50 rounded-box w-full border p-4"
@@ -82,6 +80,24 @@
             {{ getProviderDisplayName(currentSettings.aiProvider) }}
             API 密钥/配置需要先校验（保存并测试）才能加载模型。
           </p>
+          <div
+            v-if="
+              currentSettings.assistantTools.includes(
+                'capture_desktop_screen'
+              ) &&
+              !isVisionCapableModel(
+                currentSettings.aiProvider,
+                currentSettings.assistantModel
+              )
+            "
+            class="alert alert-warning mt-3 text-xs"
+          >
+            <span>
+              当前模型不支持视觉输入，Alice
+              不会把“读取当前屏幕”发送给它。请切换到 DeepSeek V4 Flash Vision
+              实验版或其他视觉模型。
+            </span>
+          </div>
         </div>
 
         <div>
@@ -167,9 +183,7 @@
               for="assistant-temperature"
               class="block mb-1 text-sm flex items-center"
             >
-              助手温度（{{
-                currentSettings.assistantTemperature.toFixed(1)
-              }}）
+              助手温度（{{ currentSettings.assistantTemperature.toFixed(1) }}）
               <div
                 class="tooltip tooltip-right"
                 data-tip="控制 AI 回复的随机性。数值越高（如 0.8）越有创意，数值越低（如 0.2）越稳定。"
@@ -483,6 +497,7 @@ import type { AliceSettings } from '../../stores/settingsStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { useCustomToolsStore } from '../../stores/customToolsStore'
 import { infoIcon } from '../../utils/assetsImport'
+import { isVisionCapableModel } from '../../services/llmProviders/providerCatalog'
 
 interface Tool {
   name: string
