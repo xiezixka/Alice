@@ -18,6 +18,7 @@ import (
 
 // Embed all platform-specific binaries and data files
 // This will be empty initially but will work when assets are added
+//
 //go:embed assets/.gitkeep
 var EmbeddedAssets embed.FS
 
@@ -43,7 +44,7 @@ func GetPlatformInfo() *PlatformInfo {
 		OS:           runtime.GOOS,
 		Arch:         runtime.GOARCH,
 		WhisperModel: "whisper-base.bin",
-		PiperVoices:  []string{"en_US-amy-medium", "en_US-hfc_female-medium", "en_US-kristin-medium"},
+		PiperVoices:  []string{"zh_CN-huayan-medium", "en_US-amy-medium", "en_US-hfc_female-medium", "en_US-kristin-medium"},
 	}
 
 	switch runtime.GOOS {
@@ -96,13 +97,13 @@ func GetProductionBaseDirectory() string {
 	// Check if we're in an Electron app bundle structure
 	// In production Electron apps, the backend executable is in:
 	// - Windows: resources/backend/alice-backend.exe
-	// - macOS: Resources/backend/alice-backend  
+	// - macOS: Resources/backend/alice-backend
 	// - Linux: resources/backend/alice-backend
-	
+
 	// Check for Electron resources structure
 	parentDir := filepath.Dir(exeDir)
-	if filepath.Base(exeDir) == "backend" && 
-	   (filepath.Base(parentDir) == "resources" || filepath.Base(parentDir) == "Resources") {
+	if filepath.Base(exeDir) == "backend" &&
+		(filepath.Base(parentDir) == "resources" || filepath.Base(parentDir) == "Resources") {
 		// We're in Electron production bundle - check if directory is writable
 		testFile := filepath.Join(exeDir, ".write_test")
 		if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
@@ -126,7 +127,7 @@ func GetProductionBaseDirectory() string {
 
 	// Check for typical development structure (resources/backend/)
 	if strings.Contains(exeDir, "resources/backend") || strings.Contains(exeDir, "resources\\backend") {
-		log.Printf("Detected development environment, using exe directory as base: %s", exeDir)  
+		log.Printf("Detected development environment, using exe directory as base: %s", exeDir)
 		return exeDir
 	}
 
@@ -146,9 +147,9 @@ func NewAssetManager(baseDir string) *AssetManager {
 // EnsureAssets extracts all required assets for the current platform
 func (am *AssetManager) EnsureAssets(ctx context.Context) error {
 	info := GetPlatformInfo()
-	
+
 	log.Printf("Ensuring assets for platform: %s/%s", info.OS, info.Arch)
-	
+
 	// Create base directories
 	if err := os.MkdirAll(filepath.Join(am.baseDir, "bin"), 0755); err != nil {
 		return fmt.Errorf("failed to create bin directory: %w", err)
@@ -187,15 +188,15 @@ func (am *AssetManager) EnsureAssets(ctx context.Context) error {
 func (am *AssetManager) extractWhisperAssets(ctx context.Context, info *PlatformInfo) error {
 	archiveName := fmt.Sprintf("whisper_%s_%s.zip", info.OS, info.Arch)
 	archivePath := fmt.Sprintf("assets/whisper/%s", archiveName)
-	
+
 	log.Printf("Checking for Whisper assets: %s", archivePath)
-	
+
 	// Check if embedded archive exists
 	if _, err := EmbeddedAssets.Open(archivePath); err != nil {
 		log.Printf("No embedded whisper archive found for platform %s/%s - will use download fallback", info.OS, info.Arch)
 		return fmt.Errorf("whisper archive not embedded for platform %s/%s", info.OS, info.Arch)
 	}
-	
+
 	log.Printf("Extracting embedded Whisper assets from: %s", archivePath)
 	// Extract archive to bin directory
 	binDir := filepath.Join(am.baseDir, "bin")
@@ -218,16 +219,16 @@ func (am *AssetManager) extractPiperAssets(ctx context.Context, info *PlatformIn
 		archiveName = fmt.Sprintf("piper_linux_%s.tar.gz", info.Arch)
 		isZip = false
 	}
-	
+
 	archivePath := fmt.Sprintf("assets/piper/%s", archiveName)
 	log.Printf("Checking for Piper assets: %s", archivePath)
-	
+
 	// Check if embedded archive exists
 	if _, err := EmbeddedAssets.Open(archivePath); err != nil {
 		log.Printf("No embedded piper archive found for platform %s/%s - will use download fallback", info.OS, info.Arch)
 		return fmt.Errorf("piper archive not embedded for platform %s/%s", info.OS, info.Arch)
 	}
-	
+
 	log.Printf("Extracting embedded Piper assets from: %s", archivePath)
 	binDir := filepath.Join(am.baseDir, "bin")
 	if isZip {
@@ -240,7 +241,7 @@ func (am *AssetManager) extractPiperAssets(ctx context.Context, info *PlatformIn
 // extractVoiceModels extracts voice model files
 func (am *AssetManager) extractVoiceModels(ctx context.Context, info *PlatformInfo) error {
 	modelsDir := filepath.Join(am.baseDir, "models")
-	
+
 	// Extract Whisper model
 	whisperModelPath := fmt.Sprintf("assets/models/%s", info.WhisperModel)
 	if _, err := EmbeddedAssets.Open(whisperModelPath); err == nil {
@@ -253,17 +254,17 @@ func (am *AssetManager) extractVoiceModels(ctx context.Context, info *PlatformIn
 	} else {
 		log.Printf("No embedded Whisper model found - will use download fallback")
 	}
-	
+
 	// Extract Piper voice models
 	piperModelsDir := filepath.Join(modelsDir, "piper")
 	if err := os.MkdirAll(piperModelsDir, 0755); err != nil {
 		return fmt.Errorf("failed to create piper models directory: %w", err)
 	}
-	
+
 	for _, voice := range info.PiperVoices {
 		onnxPath := fmt.Sprintf("assets/models/piper/%s.onnx", voice)
 		jsonPath := fmt.Sprintf("assets/models/piper/%s.onnx.json", voice)
-		
+
 		if _, err := EmbeddedAssets.Open(onnxPath); err == nil {
 			targetPath := filepath.Join(piperModelsDir, fmt.Sprintf("%s.onnx", voice))
 			if err := am.extractEmbeddedFile(onnxPath, targetPath); err != nil {
@@ -272,7 +273,7 @@ func (am *AssetManager) extractVoiceModels(ctx context.Context, info *PlatformIn
 				log.Printf("Extracted voice model: %s", targetPath)
 			}
 		}
-		
+
 		if _, err := EmbeddedAssets.Open(jsonPath); err == nil {
 			targetPath := filepath.Join(piperModelsDir, fmt.Sprintf("%s.onnx.json", voice))
 			if err := am.extractEmbeddedFile(jsonPath, targetPath); err != nil {
@@ -282,7 +283,7 @@ func (am *AssetManager) extractVoiceModels(ctx context.Context, info *PlatformIn
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -292,13 +293,13 @@ func (am *AssetManager) extractEmbeddedZip(archivePath, targetDir string) error 
 	if err != nil {
 		return fmt.Errorf("failed to read embedded archive: %w", err)
 	}
-	
+
 	// Create a zip reader from the embedded data
 	reader, err := zip.NewReader(strings.NewReader(string(archiveData)), int64(len(archiveData)))
 	if err != nil {
 		return fmt.Errorf("failed to create zip reader: %w", err)
 	}
-	
+
 	return am.extractZipFiles(reader, targetDir)
 }
 
@@ -308,17 +309,17 @@ func (am *AssetManager) extractEmbeddedTarGz(archivePath, targetDir string) erro
 	if err != nil {
 		return fmt.Errorf("failed to read embedded archive: %w", err)
 	}
-	
+
 	// Create gzip reader
 	gzReader, err := gzip.NewReader(strings.NewReader(string(archiveData)))
 	if err != nil {
 		return fmt.Errorf("failed to create gzip reader: %w", err)
 	}
 	defer gzReader.Close()
-	
+
 	// Create tar reader
 	tarReader := tar.NewReader(gzReader)
-	
+
 	return am.extractTarFiles(tarReader, targetDir)
 }
 
@@ -328,11 +329,11 @@ func (am *AssetManager) extractEmbeddedFile(embeddedPath, targetPath string) err
 	if err != nil {
 		return fmt.Errorf("failed to read embedded file: %w", err)
 	}
-	
+
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 		return fmt.Errorf("failed to create target directory: %w", err)
 	}
-	
+
 	return os.WriteFile(targetPath, data, 0644)
 }
 
@@ -350,40 +351,40 @@ func (am *AssetManager) extractZipFiles(reader *zip.Reader, targetDir string) er
 func (am *AssetManager) extractZipFile(file *zip.File, targetDir string) error {
 	// Determine target path, handling nested directories
 	targetPath := filepath.Join(targetDir, file.Name)
-	
+
 	// Handle directory entries
 	if file.FileInfo().IsDir() {
 		return os.MkdirAll(targetPath, file.FileInfo().Mode())
 	}
-	
+
 	// Create target directory
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
-	
+
 	// Extract file
 	rc, err := file.Open()
 	if err != nil {
 		return fmt.Errorf("failed to open file in archive: %w", err)
 	}
 	defer rc.Close()
-	
+
 	outFile, err := os.Create(targetPath)
 	if err != nil {
 		return fmt.Errorf("failed to create target file: %w", err)
 	}
 	defer outFile.Close()
-	
+
 	_, err = io.Copy(outFile, rc)
 	if err != nil {
 		return fmt.Errorf("failed to copy file data: %w", err)
 	}
-	
+
 	// Set permissions
 	if err := os.Chmod(targetPath, file.FileInfo().Mode()); err != nil {
 		log.Printf("Warning: Failed to set permissions for %s: %v", targetPath, err)
 	}
-	
+
 	return nil
 }
 
@@ -397,7 +398,7 @@ func (am *AssetManager) extractTarFiles(reader *tar.Reader, targetDir string) er
 		if err != nil {
 			return fmt.Errorf("failed to read tar header: %w", err)
 		}
-		
+
 		if err := am.extractTarFile(reader, header, targetDir); err != nil {
 			log.Printf("Warning: Failed to extract %s: %v", header.Name, err)
 		}
@@ -408,7 +409,7 @@ func (am *AssetManager) extractTarFiles(reader *tar.Reader, targetDir string) er
 // extractTarFile extracts a single file from TAR
 func (am *AssetManager) extractTarFile(reader *tar.Reader, header *tar.Header, targetDir string) error {
 	targetPath := filepath.Join(targetDir, header.Name)
-	
+
 	switch header.Typeflag {
 	case tar.TypeDir:
 		return os.MkdirAll(targetPath, os.FileMode(header.Mode))
@@ -417,25 +418,25 @@ func (am *AssetManager) extractTarFile(reader *tar.Reader, header *tar.Header, t
 		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 			return fmt.Errorf("failed to create directory: %w", err)
 		}
-		
+
 		// Extract file
 		outFile, err := os.Create(targetPath)
 		if err != nil {
 			return fmt.Errorf("failed to create target file: %w", err)
 		}
 		defer outFile.Close()
-		
+
 		_, err = io.Copy(outFile, reader)
 		if err != nil {
 			return fmt.Errorf("failed to copy file data: %w", err)
 		}
-		
+
 		// Set permissions
 		if err := os.Chmod(targetPath, os.FileMode(header.Mode)); err != nil {
 			log.Printf("Warning: Failed to set permissions for %s: %v", targetPath, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -448,13 +449,13 @@ func (am *AssetManager) GetAssetPath(assetName string) (string, bool) {
 // GetBinaryPath returns the path to a platform-specific binary
 func (am *AssetManager) GetBinaryPath(binaryName string) string {
 	info := GetPlatformInfo()
-	
+
 	// Ensure bin directory exists
 	binDir := filepath.Join(am.baseDir, "bin")
 	if err := os.MkdirAll(binDir, 0755); err != nil {
 		log.Printf("Warning: Failed to create bin directory: %v", err)
 	}
-	
+
 	switch binaryName {
 	case "whisper":
 		return filepath.Join(binDir, info.WhisperPath)
@@ -472,7 +473,7 @@ func (am *AssetManager) GetModelPath(modelName string) string {
 	if err := os.MkdirAll(modelsDir, 0755); err != nil {
 		log.Printf("Warning: Failed to create models directory: %v", err)
 	}
-	
+
 	switch modelName {
 	case "whisper":
 		return filepath.Join(modelsDir, "whisper-base.bin")
@@ -501,11 +502,11 @@ func (am *AssetManager) GetChecksum(filePath string) (string, error) {
 		return "", err
 	}
 	defer file.Close()
-	
+
 	hash := md5.New()
 	if _, err := io.Copy(hash, file); err != nil {
 		return "", err
 	}
-	
+
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }

@@ -196,7 +196,7 @@ const defaultSettings: AliceSettings = {
   ttsProvider: 'openai',
   ttsVoice: 'nova',
   googleTtsVoice: 'en-US-Journey-F',
-  localTtsVoice: 'en_US-amy-medium',
+  localTtsVoice: 'zh_CN-huayan-medium',
   embeddingProvider: 'openai',
   ragEnabled: false,
   ragPaths: [],

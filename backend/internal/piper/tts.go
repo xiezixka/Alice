@@ -69,7 +69,7 @@ func NewTTSService(config *Config) *TTSService {
 	return &TTSService{
 		config:       config,
 		voices:       make(map[string]*Voice),
-		defaultVoice: "en_US-amy-medium",
+		defaultVoice: "zh_CN-huayan-medium",
 		assetManager: assetManager,
 		info: &ServiceInfo{
 			Name:        "Piper TTS",
@@ -352,7 +352,7 @@ func (s *TTSService) Synthesize(ctx context.Context, text string, voice string) 
 	if voice == "" {
 		voice = s.config.Voice
 		if voice == "" {
-			voice = "en_US-amy-medium" // Default voice
+			voice = "zh_CN-huayan-medium" // Default voice
 		}
 	}
 

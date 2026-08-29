@@ -47,7 +47,7 @@ func (h *Handler) SynthesizeSpeech(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Voice == "" {
-		req.Voice = "en-US-amy-medium"
+		req.Voice = "zh_CN-huayan-medium"
 	}
 
 	audioData, err := ttsService.Synthesize(r.Context(), req.Text, req.Voice)

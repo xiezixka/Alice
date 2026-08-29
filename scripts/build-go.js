@@ -918,6 +918,13 @@ async function downloadRequiredVoiceModels() {
   // Required voice models (as defined in backend Go code)
   const requiredVoices = [
     {
+      name: 'zh_CN-huayan-medium',
+      modelUrl:
+        'https://huggingface.co/rhasspy/piper-voices/resolve/main/zh/zh_CN/huayan/medium/zh_CN-huayan-medium.onnx',
+      configUrl:
+        'https://huggingface.co/rhasspy/piper-voices/resolve/main/zh/zh_CN/huayan/medium/zh_CN-huayan-medium.onnx.json',
+    },
+    {
       name: 'en_US-amy-medium',
       modelUrl:
         'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium/en_US-amy-medium.onnx',

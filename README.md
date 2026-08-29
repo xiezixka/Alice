@@ -26,7 +26,7 @@ While the OpenAI cloud API is preferred and provides the best user experience, A
 ### 🗣️ Voice Interaction
 
 - Fast, VAD-powered voice recognition (via `gpt-4o-transcribe`, `google-tts-voice` or `whisper-large-v3`)
-- Natural-sounding responses with OpenAI/Google TTS and optional support for local multilingual text-to-speech via Piper TTS
+- Natural-sounding responses with OpenAI/Google TTS and optional support for local multilingual text-to-speech via Piper TTS (the Chinese build defaults to the female `zh_CN-huayan-medium` voice)
 - Interruptible speech and streaming response cancellation for smoother flow
 
 ### 🧠 Memory & Context
