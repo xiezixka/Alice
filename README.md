@@ -7,6 +7,14 @@ Say "Hi" to Alice 👋, your open-source AI companion designed to live on your d
 Alice brings together voice interaction, intelligent context awareness, powerful tooling, and a friendly personality to assist you with everything from daily tasks to deeper creative work.
 Alice is more than a chatbot; she’s built to feel present, responsive, emotionally engaging, and deeply useful.
 
+## 中文版桌面智能体
+
+这是面向中文用户的 Alice 二次开发版本：默认使用简体中文、中文女声和中文唤醒词，支持 macOS、Windows 和 Linux 桌面端。它可以在用户授权后读取屏幕、操作应用、整理文件、规划日程，并通过 Google 日历/Gmail 或已打开的聊天应用协助处理消息。
+
+语音链路可以完全在本机运行：VAD 负责检测说话，Go 后端的 Whisper 负责语音转文字，Piper 负责中文语音播报。后台唤醒是显式开关：开启“后台语音监听”并授权麦克风后，Alice 隐藏到系统托盘仍会等待唤醒词；未开启时不会占用麦克风。
+
+桌面写操作默认需要逐次确认。文件整理先生成预览，执行后提供撤销 ID；屏幕截图只作为当前视觉请求的临时上下文，不写入长期聊天记录。微信、QQ、Slack 等没有内置账号接口时，只能操作已经打开且由用户确认的窗口，不会声称能在后台读取或发送消息。
+
 ## Quick showcase
 
 <p align="center">
@@ -25,7 +33,7 @@ While the OpenAI cloud API is preferred and provides the best user experience, A
 
 ### 🗣️ Voice Interaction
 
-- Fast, VAD-powered voice recognition (via `gpt-4o-transcribe`, `google-tts-voice` or `whisper-large-v3`)
+- Fast, VAD-powered voice recognition via cloud STT or the bundled local Go/Whisper backend
 - Natural-sounding responses with OpenAI/Google TTS and optional support for local multilingual text-to-speech via Piper TTS (the Chinese build defaults to the female `zh_CN-huayan-medium` voice)
 - Interruptible speech and streaming response cancellation for smoother flow
 
@@ -73,10 +81,20 @@ Alice can interact with your local system with user-approved permissions:
 
 With the local STT model, you can set a **wake-up word** (like "Hey, Siri").
 
-- Alice will always listen, but only process requests when the wake word is spoken.
+- When **后台语音监听** is enabled, Alice keeps the local VAD session active while hidden in the system tray, but only processes requests after the wake word is spoken.
 - Default mode is **auto language detection**, but you can also select a specific language in settings.
 - In **Core Settings**, enable **后台语音监听** to keep VAD active while the avatar is hidden in the system tray. This requires local STT + wake word mode; closing the avatar hides it instead of quitting, and **退出 Alice** remains available from the tray menu.
 - **开机启动 Alice** uses the operating system login-item mechanism. When paired with background listening, Alice starts hidden and waits for the wake word.
+
+### 中文快速启用
+
+1. 在 **设置 → 核心设置** 选择 DeepSeek，并填写 API Key；默认模型为 `deepseek-v4-flash-vision-exp`。
+2. 将语音识别切换为 **本地（Go 后端）**，启用唤醒词并设置为 `alice`。
+3. 点击“检查麦克风”，在系统权限提示中允许 Alice 使用麦克风。
+4. 打开“后台语音监听”并保存，然后隐藏窗口到托盘。
+5. 说“爱丽丝，请打开日历”进行测试。需要操作桌面时，再按提示授予辅助功能和屏幕录制权限。
+
+API Key、Google 授权和系统权限都不会由安装程序代替用户授予；没有这些授权时，Alice 会明确提示缺少的能力，而不会伪称操作已经完成。
 
 ### 💻 Dedicated Chrome [Extension](https://github.com/pmbstyle/alice-chrome-extension)
 
