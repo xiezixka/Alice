@@ -37,6 +37,13 @@ describe('parseWakeWord', () => {
     })
   })
 
+  it('accepts the bundled Piper-to-Whisper transcript variant', () => {
+    expect(parseWakeWord('艾莉絲请打开日历', 'alice')).toEqual({
+      hasWakeWord: true,
+      command: '请打开日历',
+    })
+  })
+
   it('accepts mixed-script aliases emitted by ASR', () => {
     expect(parseWakeWord('艾莉斯請告訴我今天的安排', 'alice')).toEqual({
       hasWakeWord: true,
