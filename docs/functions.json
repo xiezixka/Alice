@@ -165,7 +165,7 @@
   {
     "type": "function",
     "name": "desktop_action",
-    "description": "Performs a confirmed desktop action such as opening an app, focusing a window, clicking coordinates, typing text, or pressing a hotkey.",
+    "description": "Performs a confirmed desktop action such as opening an app, focusing a window, clicking coordinates, typing text, or pressing a hotkey. For chat apps without an API integration, use this only after observing the open conversation and confirming the recipient and exact text; it cannot read or send messages in a closed app or in the background.",
     "strict": false,
     "parameters": {
       "type": "object",
