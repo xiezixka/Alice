@@ -369,6 +369,25 @@
             class="space-y-2 p-3 border border-neutral-content/20 rounded-md bg-gray-800/50"
           >
             <div
+              class="mb-3 flex flex-col gap-2 rounded-md border border-cyan-500/30 bg-cyan-950/20 p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p class="text-sm font-semibold text-cyan-100">
+                  桌面智能体基础工具
+                </p>
+                <p class="text-xs text-gray-300 mt-1">
+                  启用屏幕观察、桌面操作和文件整理工具；发送邮件、删除日历等不可逆操作不会被一键开启。
+                </p>
+              </div>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline btn-info shrink-0"
+                @click="enableDesktopAgentTools"
+              >
+                一键启用
+              </button>
+            </div>
+            <div
               v-if="availableTools.length === 0"
               class="text-xs text-gray-400"
             >
@@ -520,6 +539,25 @@ defineEmits<{
 
 const settingsStore = useSettingsStore()
 const customToolsStore = useCustomToolsStore()
+
+const desktopAgentToolPreset = [
+  'desktop_capabilities',
+  'capture_desktop_screen',
+  'desktop_action',
+  'list_directory_detailed',
+  'find_files',
+  'organize_files',
+  'undo_file_organization',
+]
+
+const enableDesktopAgentTools = () => {
+  props.currentSettings.assistantTools = Array.from(
+    new Set([
+      ...props.currentSettings.assistantTools,
+      ...desktopAgentToolPreset,
+    ])
+  )
+}
 
 onMounted(() => {
   customToolsStore.ensureInitialized()
