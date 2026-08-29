@@ -117,16 +117,18 @@ Swap Alice's appearance with [your own](https://github.com/xiezixka/Alice/blob/m
 
 ## 🚀 Download
 
-👉 **[Download the latest release](https://github.com/xiezixka/Alice/releases/latest)**
+👉 **[Download the latest stable release](https://github.com/xiezixka/Alice/releases/latest)** (when one has been published)
+
+For fork builds, use the [Build and Release workflow](https://github.com/xiezixka/Alice/actions/workflows/build.yml). Run it with **Create a GitHub release** disabled, then download the platform artifact from the completed run. Manual artifacts are retained by GitHub for five days.
 
 <!-- STABLE_DOWNLOADS -->
 
-| Platform                       | Download                                                                                                                                |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **Windows**                    | [Alice-AI-App-Windows-1.5.0-Setup.exe](https://github.com/xiezixka/Alice/releases/download/v1.5.0/Alice-AI-App-Windows-1.5.0-Setup.exe) |
-| **macOS**                      | [Alice-AI-App-Mac-1.5.0-Installer.dmg](https://github.com/xiezixka/Alice/releases/download/v1.5.0/Alice-AI-App-Mac-1.5.0-Installer.dmg) |
-| **Linux**                      | [Alice-AI-App-Linux-1.5.0.AppImage](https://github.com/xiezixka/Alice/releases/download/v1.5.0/Alice-AI-App-Linux-1.5.0.AppImage)       |
-| **ArchLinux**(community build) | [AUR Package](https://aur.archlinux.org/packages/alice-ai-app-bin)                                                                      |
+| Platform                       | Download                                                           |
+| ------------------------------ | ------------------------------------------------------------------ |
+| **Windows**                    | `release-artifacts-windows-latest` from the completed workflow run |
+| **macOS**                      | `release-artifacts-macos-latest` from the completed workflow run   |
+| **Linux**                      | `release-artifacts-ubuntu-latest` from the completed workflow run  |
+| **ArchLinux**(community build) | [AUR Package](https://aur.archlinux.org/packages/alice-ai-app-bin) |
 
 <!-- STABLE_DOWNLOADS_END -->
 
