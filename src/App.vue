@@ -23,17 +23,17 @@
         d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
       ></path>
     </svg>
-    <span>A new version {{ updateInfo.version }} of Alice is available!</span>
+    <span>Alice 新版本 {{ updateInfo.version }} 已可用！</span>
     <div class="flex items-center">
       <button class="btn btn-sm mr-2" @click="updateAvailable = false">
-        Ignore
+        忽略
       </button>
       <button
         class="btn btn-sm btn-primary btn-active"
         @click="installUpdate()"
       >
-        <template v-if="!generalStore.isMinimized">Install & Restart</template>
-        <template v-else>Install</template>
+        <template v-if="!generalStore.isMinimized">安装并重启</template>
+        <template v-else>安装</template>
       </button>
     </div>
   </div>
@@ -104,7 +104,7 @@ onMounted(async () => {
     window.aliceIPC.on('settings-changed', async data => {
       if (data.type === 'settings-saved' && data.success && data.validationComplete) {
         try {
-          generalStore.statusMessage = 'Applying new settings...'
+          generalStore.statusMessage = '正在应用新设置…'
           const isProduction = await window.aliceIPC.invoke('app:is-packaged')
 
           if (isProduction) {
@@ -114,11 +114,11 @@ onMounted(async () => {
           }
         } catch (error) {
           console.error('[App] Error handling settings change:', error)
-          generalStore.statusMessage = 'Error: Failed to apply new settings'
+          generalStore.statusMessage = '错误：应用新设置失败'
         }
       } else if (data.type === 'settings-saved' && !data.success) {
         console.log('[App] Settings validation failed, not applying changes')
-        generalStore.statusMessage = 'Settings validation failed'
+        generalStore.statusMessage = '设置校验失败'
       }
     })
   }

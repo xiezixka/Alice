@@ -51,7 +51,7 @@ export function createBackendService(
       }
       throw new Error(`Unknown STT provider: ${sttProvider}`)
     } catch (error: any) {
-      deps.setStatusMessage('Error: Transcription failed')
+      deps.setStatusMessage('错误：语音转写失败')
       deps.logError('Transcription service error:', error)
 
       if (
@@ -59,7 +59,7 @@ export function createBackendService(
         error?.message?.includes('not initialized')
       ) {
         deps.setStatusMessage(
-          'Error: Local STT service not ready. Please check backend status.'
+          '错误：本地语音识别服务未就绪，请检查后端状态。'
         )
       }
 
@@ -131,7 +131,7 @@ export function createBackendService(
         codex: 'ChatGPT Codex',
       }
       const providerName = providerNameMap[provider] || provider
-      deps.setStatusMessage(`Error: Could not fetch ${providerName} models.`)
+      deps.setStatusMessage(`错误：无法获取 ${providerName} 模型。`)
       return []
     }
   }

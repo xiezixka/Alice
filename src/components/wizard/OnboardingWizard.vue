@@ -142,7 +142,7 @@ const formData = reactive({
   deepseekBaseUrl: DEEPSEEK_OPENAI_BASE_URL,
   useLocalModels: false,
   availableModels: [] as string[],
-  localSttLanguage: 'auto',
+  localSttLanguage: 'zh',
 })
 
 const isTesting = reactive({
@@ -171,10 +171,10 @@ const isFinishing = ref(false)
 
 const currentStepTitle = computed(() => {
   const titles = {
-    1: 'Welcome to Alice',
-    2: 'AI Provider Setup',
-    3: 'Voice & Memory Mode',
-    4: 'Final Configuration',
+    1: '欢迎使用 Alice',
+    2: 'AI 服务设置',
+    3: '语音与记忆模式',
+    4: '完成配置',
   }
   return titles[step.value as keyof typeof titles] || 'Setup'
 })
@@ -728,13 +728,13 @@ const finishOnboarding = async () => {
   try {
     const success = await settingsStore.completeOnboarding(formData)
     if (!success) {
-      alert('Failed to save settings. Please try again.')
+      alert('设置保存失败，请重试。')
       return
     }
     window.electron?.resize?.(DEFAULT_MAIN_WINDOW_SIZE)
   } catch (error) {
     console.error('Onboarding completion error:', error)
-    alert('An error occurred during setup. Please try again.')
+    alert('设置过程中发生错误，请重试。')
   } finally {
     isFinishing.value = false
   }

@@ -45,11 +45,11 @@ export const useCustomToolsStore = defineStore('customTools', () => {
     try {
       const response = (await window.customToolsAPI.list()) as OperationResult<CustomToolsSnapshot>
       if (!response.success || !response.data) {
-        throw new Error(response.error || 'Unable to load custom tools.')
+        throw new Error(response.error || '无法加载自定义工具。')
       }
       setSnapshot(response.data)
     } catch (err: any) {
-      error.value = err?.message || 'Unable to load custom tools.'
+      error.value = err?.message || '无法加载自定义工具。'
     } finally {
       isLoading.value = false
       initialized.value = true
@@ -74,7 +74,7 @@ export const useCustomToolsStore = defineStore('customTools', () => {
         error.value = response.error
       }
     } catch (err: any) {
-      error.value = err?.message || 'Unable to refresh custom tools.'
+      error.value = err?.message || '无法刷新自定义工具。'
     } finally {
       isRefreshing.value = false
     }
@@ -87,11 +87,11 @@ export const useCustomToolsStore = defineStore('customTools', () => {
     try {
       const response = await window.customToolsAPI.replaceJson(rawJson)
       if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to save custom tools JSON.')
+        throw new Error(response.error || '保存自定义工具 JSON 失败。')
       }
       setSnapshot(response.data)
     } catch (err: any) {
-      error.value = err?.message || 'Failed to save custom tools JSON.'
+      error.value = err?.message || '保存自定义工具 JSON 失败。'
       throw err
     } finally {
       isLoading.value = false
@@ -106,7 +106,7 @@ export const useCustomToolsStore = defineStore('customTools', () => {
       arrayBuffer
     )
     if (!response.success || !response.data) {
-      throw new Error(response.error || 'Failed to upload script.')
+      throw new Error(response.error || '上传脚本失败。')
     }
     return response.data
   }
@@ -115,7 +115,7 @@ export const useCustomToolsStore = defineStore('customTools', () => {
     if (!window.customToolsAPI) return
     const response = await window.customToolsAPI.upsert(tool)
     if (!response.success || !response.data) {
-      throw new Error(response.error || 'Failed to save custom tool.')
+      throw new Error(response.error || '保存自定义工具失败。')
     }
     setSnapshot(response.data)
   }
@@ -124,7 +124,7 @@ export const useCustomToolsStore = defineStore('customTools', () => {
     if (!window.customToolsAPI) return
     const response = await window.customToolsAPI.toggle(id, enabled)
     if (!response.success || !response.data) {
-      throw new Error(response.error || 'Failed to update custom tool.')
+      throw new Error(response.error || '更新自定义工具失败。')
     }
     setSnapshot(response.data)
   }
@@ -133,7 +133,7 @@ export const useCustomToolsStore = defineStore('customTools', () => {
     if (!window.customToolsAPI) return
     const response = await window.customToolsAPI.delete(id)
     if (!response.success || !response.data) {
-      throw new Error(response.error || 'Failed to delete custom tool.')
+      throw new Error(response.error || '删除自定义工具失败。')
     }
     setSnapshot(response.data)
   }

@@ -1,16 +1,16 @@
 <template>
   <div class="space-y-6">
     <h3 class="text-xl font-semibold mb-4 text-blue-400">
-      Core API Configuration
+      核心 API 配置
     </h3>
     <fieldset
       class="fieldset bg-gray-900/90 border-blue-500/50 rounded-box w-full border p-4"
     >
-      <legend class="fieldset-legend">API Keys & Providers</legend>
+      <legend class="fieldset-legend">API 密钥与服务商</legend>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
         <div>
           <label for="ai-provider" class="block mb-1 text-sm"
-            >AI Provider *</label
+            >AI 服务商 *</label
           >
           <select
             id="ai-provider"
@@ -19,17 +19,17 @@
           >
             <option value="openai">OpenAI</option>
             <option value="openrouter">OpenRouter</option>
-            <option value="zai">Z.ai (Coding Plan)</option>
+            <option value="zai">Z.ai（编程套餐）</option>
             <option value="minimax">MiniMax</option>
             <option value="deepseek">DeepSeek</option>
             <option value="codex">ChatGPT Codex</option>
-            <option value="ollama">Ollama (Local)</option>
-            <option value="lm-studio">LM Studio (Local)</option>
+            <option value="ollama">Ollama（本地）</option>
+            <option value="lm-studio">LM Studio（本地）</option>
           </select>
         </div>
         <div>
           <label for="stt-provider" class="block mb-1 text-sm"
-            >Speech-to-Text Provider *</label
+            >语音识别服务商 *</label
           >
           <select
             id="stt-provider"
@@ -41,8 +41,8 @@
           >
             <option value="openai">OpenAI (gpt-4o-transcribe)</option>
             <option value="groq">Groq (whisper-large-v3)</option>
-            <option value="google">Google (Cloud)</option>
-            <option value="local">Local (Go Backend)</option>
+            <option value="google">Google（云端）</option>
+            <option value="local">本地（Go 后端）</option>
           </select>
         </div>
         <div
@@ -52,7 +52,7 @@
           "
         >
           <label for="stt-language" class="block mb-1 text-sm"
-            >Language *</label
+            >语言 *</label
           >
           <select
             id="stt-language"
@@ -63,38 +63,38 @@
                 $emit('update:setting', 'localSttLanguage', getTargetValue(e))
             "
           >
-            <option value="auto">Auto-detect</option>
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="it">Italian</option>
-            <option value="pt">Portuguese</option>
-            <option value="ru">Russian</option>
-            <option value="ja">Japanese</option>
-            <option value="ko">Korean</option>
-            <option value="zh">Chinese</option>
-            <option value="ar">Arabic</option>
-            <option value="hi">Hindi</option>
-            <option value="tr">Turkish</option>
-            <option value="pl">Polish</option>
-            <option value="nl">Dutch</option>
-            <option value="sv">Swedish</option>
-            <option value="da">Danish</option>
-            <option value="no">Norwegian</option>
-            <option value="fi">Finnish</option>
+            <option value="auto">自动检测</option>
+            <option value="en">英语</option>
+            <option value="es">西班牙语</option>
+            <option value="fr">法语</option>
+            <option value="de">德语</option>
+            <option value="it">意大利语</option>
+            <option value="pt">葡萄牙语</option>
+            <option value="ru">俄语</option>
+            <option value="ja">日语</option>
+            <option value="ko">韩语</option>
+            <option value="zh">中文</option>
+            <option value="ar">阿拉伯语</option>
+            <option value="hi">印地语</option>
+            <option value="tr">土耳其语</option>
+            <option value="pl">波兰语</option>
+            <option value="nl">荷兰语</option>
+            <option value="sv">瑞典语</option>
+            <option value="da">丹麦语</option>
+            <option value="no">挪威语</option>
+            <option value="fi">芬兰语</option>
           </select>
           <p class="text-xs text-gray-400 mt-1">
             {{
               currentSettings.sttProvider === 'google'
-                ? 'Select your language for better accuracy.'
-                : 'Auto-detect works for most languages. Select a specific language for better accuracy.'
+                ? '选择语言可提升识别准确率。'
+                : '自动检测适用于大多数语言；选择具体语言可提升准确率。'
             }}
           </p>
         </div>
         <div>
           <label for="openai-key" class="block mb-1 text-sm"
-            >OpenAI API Key *</label
+            >OpenAI API 密钥 *</label
           >
           <input
             id="openai-key"
@@ -105,12 +105,12 @@
             placeholder="sk-..."
           />
           <p class="text-xs text-gray-400 mt-1">
-            Required for TTS/STT/embeddings regardless of AI provider.
+            无论 AI 服务商如何，语音播报、语音识别和向量功能都需要此密钥。
           </p>
         </div>
         <div v-if="currentSettings.aiProvider === 'openrouter'">
           <label for="openrouter-key" class="block mb-1 text-sm"
-            >OpenRouter API Key *</label
+            >OpenRouter API 密钥 *</label
           >
           <input
             id="openrouter-key"
@@ -121,12 +121,12 @@
             placeholder="sk-or-v1-..."
           />
           <p class="text-xs text-gray-400 mt-1">
-            Required for chat models when using OpenRouter.
+            使用 OpenRouter 聊天模型时需要此密钥。
           </p>
         </div>
         <div v-if="currentSettings.aiProvider === 'ollama'">
           <label for="ollama-url" class="block mb-1 text-sm"
-            >Ollama Base URL *</label
+            >Ollama 基础地址 *</label
           >
           <input
             id="ollama-url"
@@ -136,11 +136,11 @@
             placeholder="http://localhost:11434"
           />
           <p class="text-xs text-gray-400 mt-1">
-            URL where your Ollama server is running.
+            Ollama 服务运行的地址。
           </p>
         </div>
         <div v-if="currentSettings.aiProvider === 'zai'">
-          <label for="zai-key" class="block mb-1 text-sm">Z.ai API Key *</label>
+          <label for="zai-key" class="block mb-1 text-sm">Z.ai API 密钥 *</label>
           <input
             id="zai-key"
             type="password"
@@ -150,12 +150,12 @@
             placeholder="..."
           />
           <p class="text-xs text-gray-400 mt-1">
-            Required for GLM Coding Plan chat models.
+            使用 GLM 编程套餐聊天模型时需要此密钥。
           </p>
         </div>
         <div v-if="currentSettings.aiProvider === 'zai'">
           <label for="zai-url" class="block mb-1 text-sm"
-            >Z.ai Base URL *</label
+            >Z.ai 基础地址 *</label
           >
           <input
             id="zai-url"
@@ -165,12 +165,12 @@
             placeholder="https://api.z.ai/api/coding/paas/v4"
           />
           <p class="text-xs text-gray-400 mt-1">
-            Coding Plan endpoint for OpenAI-compatible tools.
+            兼容 OpenAI 工具格式的编程套餐接口地址。
           </p>
         </div>
         <div v-if="currentSettings.aiProvider === 'minimax'">
           <label for="minimax-key" class="block mb-1 text-sm"
-            >MiniMax API Key *</label
+            >MiniMax API 密钥 *</label
           >
           <input
             id="minimax-key"
@@ -181,12 +181,12 @@
             placeholder="..."
           />
           <p class="text-xs text-gray-400 mt-1">
-            Required for MiniMax OpenAI-compatible chat models.
+            使用 MiniMax 兼容 OpenAI 的聊天模型时需要此密钥。
           </p>
         </div>
         <div v-if="currentSettings.aiProvider === 'minimax'">
           <label for="minimax-url" class="block mb-1 text-sm"
-            >MiniMax Base URL *</label
+            >MiniMax 基础地址 *</label
           >
           <input
             id="minimax-url"
@@ -196,12 +196,12 @@
             placeholder="https://api.minimax.io/v1"
           />
           <p class="text-xs text-gray-400 mt-1">
-            OpenAI-compatible endpoint for MiniMax token/coding plans.
+            MiniMax 令牌/编程套餐的 OpenAI 兼容接口地址。
           </p>
         </div>
         <div v-if="currentSettings.aiProvider === 'deepseek'">
           <label for="deepseek-key" class="block mb-1 text-sm"
-            >DeepSeek API Key *</label
+            >DeepSeek API 密钥 *</label
           >
           <input
             id="deepseek-key"
@@ -212,12 +212,12 @@
             placeholder="sk-..."
           />
           <p class="text-xs text-gray-400 mt-1">
-            Required for DeepSeek chat models.
+            使用 DeepSeek 聊天模型时需要此密钥。
           </p>
         </div>
         <div v-if="currentSettings.aiProvider === 'deepseek'">
           <label for="deepseek-url" class="block mb-1 text-sm"
-            >DeepSeek Base URL *</label
+            >DeepSeek 基础地址 *</label
           >
           <input
             id="deepseek-url"
@@ -227,11 +227,11 @@
             placeholder="https://api.deepseek.com"
           />
           <p class="text-xs text-gray-400 mt-1">
-            OpenAI-compatible endpoint for DeepSeek chat completions.
+            DeepSeek 聊天补全的 OpenAI 兼容接口地址。
           </p>
         </div>
         <div v-if="currentSettings.aiProvider === 'codex'">
-          <label class="block mb-1 text-sm">ChatGPT Codex Account *</label>
+          <label class="block mb-1 text-sm">ChatGPT Codex 账号 *</label>
           <div class="rounded-lg border border-blue-500/30 bg-gray-950/60 p-3">
             <div class="flex flex-col gap-3">
               <div>
@@ -240,8 +240,8 @@
                     codexAuthStatus.isAuthenticated
                       ? codexAuthStatus.accountLabel ||
                         currentSettings.codexAccountLabel ||
-                        'Connected'
-                      : 'Not connected'
+                        '已连接'
+                      : '未连接'
                   }}
                 </p>
                 <p
@@ -269,8 +269,8 @@
                 >
                   {{
                     codexAuthStatus.authInProgress
-                      ? 'Waiting for browser auth...'
-                      : 'Authorize ChatGPT Codex'
+                      ? '等待浏览器授权…'
+                      : '授权 ChatGPT Codex'
                   }}
                 </button>
                 <button
@@ -280,7 +280,7 @@
                   :disabled="codexAuthStatus.isLoading"
                   @click="disconnectCodex"
                 >
-                  Disconnect
+                  断开连接
                 </button>
                 <button
                   type="button"
@@ -288,19 +288,18 @@
                   :disabled="codexAuthStatus.isLoading"
                   @click="checkCodexAuthStatus"
                 >
-                  Check status
+                  检查状态
                 </button>
               </div>
             </div>
             <p class="text-xs text-gray-400 mt-1">
-              Uses your ChatGPT Codex subscription for chat inference. OpenAI
-              API key is still needed only for OpenAI STT/TTS/embeddings.
+              使用你的 ChatGPT Codex 订阅进行聊天推理。只有在使用 OpenAI 语音识别、语音播报或向量功能时才需要 OpenAI API 密钥。
             </p>
           </div>
         </div>
         <div v-if="currentSettings.aiProvider === 'lm-studio'">
           <label for="lmstudio-url" class="block mb-1 text-sm"
-            >LM Studio Base URL *</label
+            >LM Studio 基础地址 *</label
           >
           <input
             id="lmstudio-url"
@@ -310,12 +309,12 @@
             placeholder="http://localhost:1234"
           />
           <p class="text-xs text-gray-400 mt-1">
-            URL where your LM Studio server is running.
+            LM Studio 服务运行的地址。
           </p>
         </div>
         <div v-if="currentSettings.sttProvider === 'groq'">
           <label for="groq-key" class="block mb-1 text-sm"
-            >Groq API Key (for STT) *</label
+            >Groq API 密钥（用于语音识别）*</label
           >
           <input
             id="groq-key"
@@ -326,7 +325,7 @@
             placeholder="gsk_..."
           />
           <p class="text-xs text-gray-400 mt-1">
-            Required only if Groq STT is selected above.
+            仅在上方选择 Groq 语音识别时需要。
           </p>
         </div>
         <div
@@ -336,7 +335,7 @@
           "
         >
           <label for="google-key" class="block mb-1 text-sm"
-            >Google API Key *</label
+            >Google API 密钥 *</label
           >
           <input
             id="google-key"
@@ -347,7 +346,7 @@
             placeholder="AIza..."
           />
           <p class="text-xs text-gray-400 mt-1">
-            Required for Google STT or TTS services.
+            使用 Google 语音识别或语音播报服务时需要。
           </p>
         </div>
       </div>
@@ -359,7 +358,7 @@
       class="fieldset bg-gray-900/90 border-blue-500/50 rounded-box w-full border p-4"
     >
       <legend class="fieldset-legend">
-        Local Speech-to-Text Configuration (Go Backend)
+        本地语音识别配置（Go 后端）
         <span
           class="w-2 h-2 rounded-full inline-block"
           :class="getServiceStatusClass('stt')"
@@ -370,7 +369,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label for="stt-model" class="block mb-1 text-sm"
-              >Whisper Model *</label
+              >Whisper 模型 *</label
             >
             <select
               id="stt-model"
@@ -381,20 +380,20 @@
               "
             >
               <option value="whisper-tiny.en">
-                Tiny (English only, fastest)
+                Tiny（仅英语，最快）
               </option>
-              <option value="whisper-base">Base (multilingual)</option>
-              <option value="whisper-small">Small (better accuracy)</option>
-              <option value="whisper-medium">Medium (high accuracy)</option>
-              <option value="whisper-large">Large (best accuracy)</option>
+              <option value="whisper-base">Base（多语言）</option>
+              <option value="whisper-small">Small（更高准确率）</option>
+              <option value="whisper-medium">Medium（高准确率）</option>
+              <option value="whisper-large">Large（最佳准确率）</option>
             </select>
             <p class="text-xs text-gray-400 mt-1">
-              Larger models provide better accuracy but require more resources.
+              模型越大准确率越高，但需要更多系统资源。
             </p>
           </div>
           <div>
             <label for="stt-wake-enable" class="block mb-1 text-sm"
-              >Enable Wake Word</label
+              >启用唤醒词</label
             >
             <select
               id="stt-wake-enable"
@@ -409,13 +408,13 @@
                   )
               "
             >
-              <option value="true">Enable</option>
-              <option value="false">Disable</option>
+              <option value="true">启用</option>
+              <option value="false">禁用</option>
             </select>
           </div>
           <div v-show="currentSettings.localSttEnabled">
             <label for="stt-wakeword" class="block mb-1 text-sm"
-              >Wake Word *</label
+              >唤醒词 *</label
             >
             <input
               id="stt-wakeword"
@@ -429,8 +428,7 @@
               placeholder="alice"
             />
             <p class="text-xs text-gray-400 mt-1">
-              The word that will activate voice recording. Use simple, common
-              words for better recognition.
+              说出此词即可激活录音；使用简单、常见的词语可提升识别效果。
             </p>
           </div>
         </div>
@@ -442,7 +440,7 @@
       class="fieldset bg-gray-900/90 border-blue-500/50 rounded-box w-full border p-4"
     >
       <legend class="fieldset-legend">
-        Text-to-Speech Configuration
+        语音播报配置
         <span
           class="w-2 h-2 rounded-full inline-block"
           :class="getServiceStatusClass('tts')"
@@ -452,25 +450,23 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
         <div>
           <label for="tts-provider" class="block mb-1 text-sm"
-            >TTS Provider *</label
+            >语音播报服务商 *</label
           >
           <select
             id="tts-provider"
             v-model="currentSettings.ttsProvider"
             class="select select-bordered w-full focus:select-primary"
           >
-            <option value="openai">OpenAI (Cloud)</option>
-            <option value="google">Google (Cloud)</option>
-            <option value="local">Local (Piper)</option>
+            <option value="openai">OpenAI（云端）</option>
+            <option value="google">Google（云端）</option>
+            <option value="local">本地（Piper）</option>
           </select>
           <p class="text-xs text-gray-400 mt-1">
-            Choose between cloud-based OpenAI TTS or local Piper TTS.
+            可选择云端 OpenAI 语音或本地 Piper 语音。
           </p>
         </div>
         <div v-if="currentSettings.ttsProvider === 'openai'">
-          <label for="tts-voice" class="block mb-1 text-sm"
-            >OpenAI TTS Voice</label
-          >
+          <label for="tts-voice" class="block mb-1 text-sm">OpenAI 语音</label>
           <select
             id="tts-voice"
             v-model="currentSettings.ttsVoice"
@@ -487,14 +483,12 @@
             <option value="sage">Sage</option>
             <option value="shimmer">Shimmer</option>
             <option value="verse">Verse</option>
-            <option value="marin">Marin (Recommended)</option>
-            <option value="cedar">Cedar (Recommended)</option>
+            <option value="marin">Marin（推荐）</option>
+            <option value="cedar">Cedar（推荐）</option>
           </select>
         </div>
         <div v-if="currentSettings.ttsProvider === 'google'">
-          <label for="google-tts-voice" class="block mb-1 text-sm"
-            >Google TTS Voice</label
-          >
+          <label for="google-tts-voice" class="block mb-1 text-sm">Google 语音</label>
           <select
             id="google-tts-voice"
             v-model="currentSettings.googleTtsVoice"
@@ -503,21 +497,19 @@
               e => $emit('update:setting', 'googleTtsVoice', getTargetValue(e))
             "
           >
-            <option value="en-US-Journey-F">Journey F (Fem)</option>
-            <option value="en-US-Journey-O">Journey O (Fem)</option>
-            <option value="en-US-Neural2-C">Neural2 C (Fem)</option>
-            <option value="en-US-Neural2-F">Neural2 F (Fem)</option>
-            <option value="en-US-Neural2-H">Neural2 H (Fem)</option>
-            <option value="en-US-Standard-C">Standard C (Fem)</option>
-            <option value="en-US-Standard-E">Standard E (Fem)</option>
-            <option value="en-US-Wavenet-C">Wavenet C (Fem)</option>
-            <option value="en-US-Wavenet-F">Wavenet F (Fem)</option>
+            <option value="en-US-Journey-F">Journey F（女声）</option>
+            <option value="en-US-Journey-O">Journey O（女声）</option>
+            <option value="en-US-Neural2-C">Neural2 C（女声）</option>
+            <option value="en-US-Neural2-F">Neural2 F（女声）</option>
+            <option value="en-US-Neural2-H">Neural2 H（女声）</option>
+            <option value="en-US-Standard-C">Standard C（女声）</option>
+            <option value="en-US-Standard-E">Standard E（女声）</option>
+            <option value="en-US-Wavenet-C">Wavenet C（女声）</option>
+            <option value="en-US-Wavenet-F">Wavenet F（女声）</option>
           </select>
         </div>
         <div v-if="currentSettings.ttsProvider === 'local'">
-          <label for="local-tts-voice" class="block mb-1 text-sm"
-            >Local TTS Voice</label
-          >
+          <label for="local-tts-voice" class="block mb-1 text-sm">本地语音</label>
           <div class="space-y-3">
             <div class="flex gap-2 items-center">
               <select
@@ -529,8 +521,8 @@
                 <option v-if="availableVoices.length === 0" disabled value="">
                   {{
                     isRefreshingVoices
-                      ? 'Loading voices...'
-                      : 'No voices available'
+                      ? '正在加载语音…'
+                      : '暂无可用语音'
                   }}
                 </option>
                 <optgroup
@@ -553,7 +545,7 @@
                 @click="refreshVoices"
                 :disabled="isRefreshingVoices"
                 class="btn btn-square btn-sm"
-                title="Refresh voices"
+                title="刷新语音列表"
               >
                 <span
                   v-if="isRefreshingVoices"
@@ -566,7 +558,7 @@
                 @click="previewVoice"
                 :disabled="!currentSettings.localTtsVoice || isPreviewingVoice"
                 class="btn btn-square btn-sm"
-                title="Preview selected voice"
+                title="试听所选语音"
               >
                 <span
                   v-if="isPreviewingVoice"
@@ -581,18 +573,18 @@
             >
               <span>
                 {{ availableVoices.filter(v => v.gender !== 'male').length }}
-                voice{{
+                条语音{{
                   availableVoices.filter(v => v.gender !== 'male').length !== 1
                     ? 's'
                     : ''
                 }}
-                across {{ Object.keys(groupedVoices).length }} languages
+                ，覆盖 {{ Object.keys(groupedVoices).length }} 种语言
               </span>
               <span
                 class="text-blue-400 cursor-pointer hover:underline"
                 @click="showVoiceHelp = !showVoiceHelp"
               >
-                {{ showVoiceHelp ? 'Hide Help' : 'Voice Help' }}
+                {{ showVoiceHelp ? '隐藏帮助' : '语音帮助' }}
               </span>
             </div>
 
@@ -601,29 +593,27 @@
               v-if="showVoiceHelp"
               class="bg-base-300 p-3 rounded-lg text-xs space-y-2"
             >
-              <h5 class="font-medium text-sm">Voice Quality Levels:</h5>
+              <h5 class="font-medium text-sm">语音质量等级：</h5>
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <span class="badge badge-xs badge-outline mr-1">x_low</span>
-                  16kHz, Smallest
+                  16kHz，最小
                 </div>
                 <div>
                   <span class="badge badge-xs badge-outline mr-1">low</span>
-                  16kHz, Fast
+                  16kHz，快速
                 </div>
                 <div>
                   <span class="badge badge-xs badge-outline mr-1">medium</span>
-                  22kHz, High Quality
+                  22kHz，高质量
                 </div>
                 <div>
                   <span class="badge badge-xs badge-outline mr-1">high</span>
-                  22kHz, Best Quality
+                  22kHz，最佳质量
                 </div>
               </div>
               <p class="text-base-content/60 mt-2">
-                💡 <strong>Tip:</strong> Voice models are downloaded
-                automatically when first used. Higher quality voices provide
-                better audio but require more storage space.
+                💡 <strong>提示：</strong>语音模型首次使用时会自动下载。更高质量的语音效果更好，但需要更多存储空间。
               </p>
             </div>
           </div>
@@ -636,7 +626,7 @@
       class="fieldset bg-gray-900/90 border-blue-500/50 rounded-box w-full border p-4"
     >
       <legend class="fieldset-legend">
-        Embedding Configuration
+        向量配置
         <span
           class="w-2 h-2 rounded-full inline-block"
           :class="getServiceStatusClass('embeddings')"
@@ -646,20 +636,18 @@
       <div class="grid grid-cols-1 gap-4 p-2">
         <div>
           <label for="embedding-provider" class="block mb-1 text-sm"
-            >Embedding Provider *</label
+            >向量服务商 *</label
           >
           <select
             id="embedding-provider"
             v-model="currentSettings.embeddingProvider"
             class="select select-bordered w-full focus:select-primary"
           >
-            <option value="openai">OpenAI (Cloud)</option>
-            <option value="local">Local (multi-lang E5)</option>
+            <option value="openai">OpenAI（云端）</option>
+            <option value="local">本地（多语言 E5）</option>
           </select>
           <p class="text-xs text-gray-400 mt-1">
-            Choose between cloud-based OpenAI embeddings or local multi-lang E5
-            embeddings. Existing text is preserved; local vectors are rebuilt
-            when the model changes.
+            可选择云端 OpenAI 向量或本地多语言 E5 向量。已有文本会保留；模型变更时会重新构建本地向量。
           </p>
         </div>
       </div>
@@ -669,25 +657,25 @@
     <fieldset
       class="fieldset bg-gray-900/90 border-blue-500/50 rounded-box w-full border p-4"
     >
-      <legend class="fieldset-legend">Local Documents (RAG)</legend>
+      <legend class="fieldset-legend">本地文档（RAG）</legend>
       <div class="grid grid-cols-1 gap-4 p-2">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label for="rag-enabled" class="block mb-1 text-sm"
-              >Enable RAG</label
+              >启用 RAG</label
             >
             <select
               id="rag-enabled"
               v-model="currentSettings.ragEnabled"
               class="select select-bordered w-full focus:select-primary"
             >
-              <option :value="true">Enabled</option>
-              <option :value="false">Disabled</option>
+              <option :value="true">已启用</option>
+              <option :value="false">已禁用</option>
             </select>
           </div>
           <div>
             <label for="rag-topk" class="block mb-1 text-sm"
-              >Top K Chunks</label
+              >召回分块数量（Top K）</label
             >
             <input
               id="rag-topk"
@@ -700,7 +688,7 @@
           </div>
           <div>
             <label for="rag-max-chars" class="block mb-1 text-sm"
-              >Max Context Chars</label
+              >最大上下文字符数</label
             >
             <input
               id="rag-max-chars"
@@ -721,7 +709,7 @@
             :disabled="isIndexingRag"
             @click="selectRagPaths"
           >
-            Add Files/Folders
+            添加文件/文件夹
           </button>
           <button
             type="button"
@@ -729,7 +717,7 @@
             :disabled="isIndexingRag || currentSettings.ragPaths.length === 0"
             @click="reindexRag"
           >
-            Reindex
+            重新索引
           </button>
           <button
             type="button"
@@ -737,10 +725,10 @@
             :disabled="isIndexingRag"
             @click="clearRagIndex"
           >
-            Clear Index
+            清空索引
           </button>
           <span class="text-xs text-gray-400">
-            {{ ragStats.documents }} docs, {{ ragStats.chunks }} chunks
+            {{ ragStats.documents }} 个文档，{{ ragStats.chunks }} 个分块
           </span>
           <span v-if="ragStatusMessage" class="text-xs text-gray-400">
             {{ ragStatusMessage }}
@@ -748,7 +736,7 @@
         </div>
 
         <div v-if="currentSettings.ragPaths.length > 0">
-          <label class="block mb-2 text-sm">Indexed Paths</label>
+          <label class="block mb-2 text-sm">已索引路径</label>
           <div class="space-y-2">
             <div
               v-for="pathItem in currentSettings.ragPaths"
@@ -761,7 +749,7 @@
                 class="btn btn-xs btn-ghost"
                 @click="removeRagPath(pathItem)"
               >
-                Remove
+                移除
               </button>
             </div>
           </div>
@@ -868,21 +856,21 @@ const getServiceStatusClass = (service: 'stt' | 'tts' | 'embeddings') => {
 const getServiceStatusText = (service: 'stt' | 'tts' | 'embeddings') => {
   const status = serviceStatus.value[service].status
   const serviceNames = {
-    stt: 'Speech-to-Text',
-    tts: 'Text-to-Speech',
-    embeddings: 'Embeddings',
+    stt: '语音识别',
+    tts: '语音播报',
+    embeddings: '向量',
   }
 
   switch (status) {
     case 'ready':
-      return `${serviceNames[service]} service is ready`
+      return `${serviceNames[service]}服务已就绪`
     case 'downloading':
-      return `${serviceNames[service]} model is downloading`
+      return `${serviceNames[service]}模型正在下载`
     case 'error':
-      return `${serviceNames[service]} service has errors`
+      return `${serviceNames[service]}服务存在错误`
     case 'offline':
     default:
-      return `${serviceNames[service]} service is offline`
+      return `${serviceNames[service]}服务离线`
   }
 }
 
@@ -909,26 +897,26 @@ const groupedVoices = computed(() => {
 
 const getLanguageDisplayName = (langCode: string): string => {
   const languageMap: Record<string, string> = {
-    'en-US': 'English (US)',
-    'en-GB': 'English (UK)',
-    'es-ES': 'Spanish (Spain)',
-    'es-MX': 'Spanish (Mexico)',
-    'fr-FR': 'French',
-    'de-DE': 'German',
-    'it-IT': 'Italian',
-    'pt-BR': 'Portuguese (Brazil)',
-    'ru-RU': 'Russian',
-    'zh-CN': 'Chinese (Mandarin)',
-    'ja-JP': 'Japanese',
-    'nl-NL': 'Dutch',
-    'no-NO': 'Norwegian',
-    'sv-SE': 'Swedish',
-    'da-DK': 'Danish',
-    'fi-FI': 'Finnish',
-    'pl-PL': 'Polish',
-    'uk-UA': 'Ukrainian',
-    'hi-IN': 'Hindi',
-    'ar-JO': 'Arabic',
+    'en-US': '英语（美国）',
+    'en-GB': '英语（英国）',
+    'es-ES': '西班牙语（西班牙）',
+    'es-MX': '西班牙语（墨西哥）',
+    'fr-FR': '法语',
+    'de-DE': '德语',
+    'it-IT': '意大利语',
+    'pt-BR': '葡萄牙语（巴西）',
+    'ru-RU': '俄语',
+    'zh-CN': '中文（普通话）',
+    'ja-JP': '日语',
+    'nl-NL': '荷兰语',
+    'no-NO': '挪威语',
+    'sv-SE': '瑞典语',
+    'da-DK': '丹麦语',
+    'fi-FI': '芬兰语',
+    'pl-PL': '波兰语',
+    'uk-UA': '乌克兰语',
+    'hi-IN': '印地语',
+    'ar-JO': '阿拉伯语',
   }
   return languageMap[langCode] || langCode
 }

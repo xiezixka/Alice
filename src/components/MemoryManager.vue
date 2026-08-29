@@ -1,35 +1,35 @@
 <template>
   <div class="memory-manager p-4 h-full overflow-y-auto text-white">
-    <h2 class="text-2xl font-semibold mb-6 text-center">Manage Memories</h2>
+    <h2 class="text-2xl font-semibold mb-6 text-center">管理记忆</h2>
 
     <form
       @submit.prevent="handleSaveMemory"
       class="mb-8 p-4 bg-gray-800 rounded-lg"
     >
       <h3 class="text-xl mb-3">
-        {{ editingMemoryId ? 'Edit Memory' : 'Create New Memory' }}
+        {{ editingMemoryId ? '编辑记忆' : '创建新记忆' }}
       </h3>
       <div class="mb-4">
-        <label for="memory-content" class="block mb-1 text-sm">Content *</label>
+        <label for="memory-content" class="block mb-1 text-sm">内容 *</label>
         <textarea
           id="memory-content"
           v-model="form.content"
           rows="3"
           class="textarea textarea-bordered w-full focus:textarea-primary text-white bg-gray-700"
-          placeholder="Enter memory content..."
+          placeholder="输入要保存的记忆内容…"
           required
         ></textarea>
       </div>
       <div class="mb-4">
         <label for="memory-type" class="block mb-1 text-sm"
-          >Type (e.g., personal, work, hobby)</label
+          >类型（例如：个人、工作、爱好）</label
         >
         <input
           id="memory-type"
           type="text"
           v-model="form.memoryType"
           class="input input-bordered w-full focus:input-primary text-white bg-gray-700"
-          placeholder="general"
+          placeholder="常规"
         />
       </div>
       <div class="flex gap-3">
@@ -42,7 +42,7 @@
             v-if="isSaving"
             class="loading loading-spinner loading-xs"
           ></span>
-          {{ editingMemoryId ? 'Save Changes' : 'Add Memory' }}
+          {{ editingMemoryId ? '保存修改' : '添加记忆' }}
         </button>
         <button
           v-if="editingMemoryId"
@@ -50,7 +50,7 @@
           @click="cancelEdit"
           class="btn btn-warning btn-sm"
         >
-          Cancel Edit
+          取消编辑
         </button>
       </div>
       <p v-if="formError" class="text-red-400 text-xs mt-2">{{ formError }}</p>
@@ -58,24 +58,24 @@
 
     <div class="mb-6">
       <div class="flex justify-between items-center mb-3">
-        <h3 class="text-xl">Stored Memories ({{ memories.length }})</h3>
+        <h3 class="text-xl">已保存的记忆（{{ memories.length }}）</h3>
         <button
           @click="confirmDeleteAllMemories"
           class="btn btn-error btn-sm btn-outline"
           :disabled="memories.length === 0 || isLoading"
         >
-          Delete All Memories
+          删除全部记忆
         </button>
       </div>
       <div v-if="isLoading" class="text-center py-4">
         <span class="loading loading-lg loading-spinner text-primary"></span>
-        <p>Loading memories...</p>
+        <p>正在加载记忆…</p>
       </div>
       <div
         v-else-if="memories.length === 0"
         class="text-center py-4 text-gray-400"
       >
-        No memories stored yet.
+        暂无已保存的记忆。
       </div>
       <ul v-else class="space-y-3">
         <li
@@ -85,22 +85,22 @@
         >
           <div class="flex-grow">
             <p class="text-xs text-gray-400 mb-1">
-              <span class="font-semibold">Type:</span>
+              <span class="font-semibold">类型：</span>
               {{ memory.memoryType || 'general' }} |
-              <span class="font-semibold">Date:</span>
+              <span class="font-semibold">日期：</span>
               {{ formatDate(memory.createdAt) }}
             </p>
             <p class="text-sm whitespace-pre-wrap">{{ memory.content }}</p>
           </div>
           <div class="flex gap-2 sm:mt-0 shrink-0">
             <button @click="startEdit(memory)" class="btn btn-secondary btn-xs">
-              Edit
+              编辑
             </button>
             <button
               @click="confirmDeleteMemory(memory.id)"
               class="btn btn-error btn-xs btn-outline"
             >
-              Delete
+              删除
             </button>
           </div>
         </li>
@@ -145,7 +145,7 @@ async function fetchMemories() {
         ...mem,
       }))
     } else {
-      listError.value = result.error || 'Failed to fetch memories.'
+      listError.value = result.error || '获取记忆失败。'
     }
   } catch (error: any) {
     listError.value = `Error: ${error.message}`
@@ -156,7 +156,7 @@ async function fetchMemories() {
 
 async function handleSaveMemory() {
   if (!form.content.trim()) {
-    formError.value = 'Memory content cannot be empty.'
+    formError.value = '记忆内容不能为空。'
     return
   }
   isSaving.value = true
@@ -188,7 +188,7 @@ async function handleSaveMemory() {
           '[MemoryManager UI] Error generating embedding:',
           embedError
         )
-        formError.value = `Error generating embedding: ${embedError.message}. Memory will be saved without it.`
+        formError.value = `生成向量失败：${embedError.message}。将不带向量保存记忆。`
         generatedEmbeddingOpenAI = undefined
         generatedEmbeddingLocal = undefined
       }
@@ -220,7 +220,7 @@ async function handleSaveMemory() {
       await fetchMemories()
       resetForm()
     } else {
-      formError.value = result.error || 'Failed to save memory.'
+      formError.value = result.error || '保存记忆失败。'
     }
   } catch (error: any) {
     formError.value = `Error: ${error.message}`
@@ -255,7 +255,7 @@ function resetForm() {
 }
 
 async function confirmDeleteMemory(id: string) {
-  if (confirm('Are you sure you want to delete this memory?')) {
+  if (confirm('确定要删除这条记忆吗？')) {
     isLoading.value = true
     listError.value = null
     try {
@@ -263,7 +263,7 @@ async function confirmDeleteMemory(id: string) {
       if (result.success) {
         await fetchMemories()
       } else {
-        listError.value = result.error || 'Failed to delete memory.'
+        listError.value = result.error || '删除记忆失败。'
       }
     } catch (error: any) {
       listError.value = `Error: ${error.message}`
@@ -276,7 +276,7 @@ async function confirmDeleteMemory(id: string) {
 async function confirmDeleteAllMemories() {
   if (
     confirm(
-      'Are you sure you want to delete ALL memories? This cannot be undone.'
+      '确定要删除全部记忆吗？此操作无法撤销。'
     )
   ) {
     isLoading.value = true
@@ -286,7 +286,7 @@ async function confirmDeleteAllMemories() {
       if (result.success) {
         await fetchMemories()
       } else {
-        listError.value = result.error || 'Failed to delete all memories.'
+        listError.value = result.error || '删除全部记忆失败。'
       }
     } catch (error: any) {
       listError.value = `Error: ${error.message}`

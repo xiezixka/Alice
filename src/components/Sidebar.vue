@@ -25,32 +25,33 @@
         <div class="text-white">
           <p class="text-lg font-semibold mb-2">
             {{
-              generalStore.statusMessage.includes('Error:')
-                ? 'Initialization Failed'
-                : 'Initializing Alice'
+              (generalStore.statusMessage.includes('Error:') ||
+                generalStore.statusMessage.includes('错误：'))
+                ? '初始化失败'
+                : '正在初始化 Alice'
             }}
           </p>
           <p
-            v-if="generalStore.statusMessage.includes('Error:')"
+            v-if="generalStore.statusMessage.includes('Error:') || generalStore.statusMessage.includes('错误：')"
             class="text-sm text-red-400"
           >
             {{ generalStore.statusMessage }}
           </p>
-          <p v-else class="text-sm">Please wait...</p>
+          <p v-else class="text-sm">请稍候…</p>
 
           <button
-            v-if="generalStore.statusMessage.includes('Error:')"
+            v-if="generalStore.statusMessage.includes('Error:') || generalStore.statusMessage.includes('错误：')"
             @click="retryInitialization"
             class="mt-4 btn btn-sm btn-warning"
           >
-            Retry Init
+            重试初始化
           </button>
           <button
-            v-if="generalStore.statusMessage.includes('Error:')"
+            v-if="generalStore.statusMessage.includes('Error:') || generalStore.statusMessage.includes('错误：')"
             @click="openSettingsWindow"
             class="mt-4 ml-2 btn btn-sm btn-info"
           >
-            Check Settings
+            检查设置
           </button>
         </div>
       </div>
@@ -67,9 +68,9 @@
         <div class="flex items-center gap-1 bg-gray-800 rounded-lg pl-2">
           <img
             :src="pdfIcon"
-            alt="PDF Icon"
+            alt="PDF 图标"
             class="w-6 h-6 mr-2 cursor-pointer hover:opacity-60"
-            title="Attach PDF"
+            title="附加 PDF"
             @click="triggerFileUpload"
           />
           <input
@@ -83,7 +84,7 @@
             v-model="chatInput"
             @keyup.enter="chatInputHandle"
             class="input w-full bg-transparent border-0 shadow-none text-white p-3 relative z-10 disabled:cursor-not-allowed focus:outline-none focus:shadow-none"
-            placeholder="Type your message here..."
+            placeholder="在这里输入消息…"
             :disabled="!isConversationReady"
           />
         </div>
@@ -93,12 +94,12 @@
         class="text-xs text-gray-400 p-1 pl-3 flex justify-between items-center"
       >
         <span class="truncate" :title="attachedFile.name"
-          >Attached: {{ attachedFile.name }}</span
+          >已附加：{{ attachedFile.name }}</span
         >
         <button
           @click="clearAttachedFile"
           class="btn btn-xs btn-ghost"
-          title="Remove file"
+          title="移除文件"
         >
           ✕
         </button>
@@ -108,9 +109,10 @@
         v-if="!isConversationReady && !attachedFile"
       >
         {{
-          generalStore.statusMessage.includes('Error:')
-            ? 'AI Services unavailable. Check settings or retry.'
-            : 'Initializing AI services...'
+          (generalStore.statusMessage.includes('Error:') ||
+            generalStore.statusMessage.includes('错误：'))
+            ? 'AI 服务不可用，请检查设置或重试。'
+            : '正在初始化 AI 服务…'
         }}
       </div>
     </div>
@@ -202,7 +204,7 @@ const chatInputHandle = async () => {
       clearAttachedFile()
     }, debounceDelay)
   } else if (!isConversationReady.value) {
-    generalStore.statusMessage = 'AI not ready. Please wait or check settings.'
+    generalStore.statusMessage = 'AI 尚未就绪，请稍候或检查设置。'
   }
 }
 
@@ -247,7 +249,7 @@ const smartScrollToBottom = () => {
 
 const retryInitialization = async () => {
   if (!conversationStore.isInitialized) {
-    generalStore.statusMessage = 'Retrying init...'
+    generalStore.statusMessage = '正在重试初始化…'
     await conversationStore.initialize()
   }
 }
@@ -275,7 +277,7 @@ onMounted(async () => {
     openSettingsWindow()
     generalStore.setAudioState('CONFIG')
   } else if (aiNeedsInitialization) {
-    generalStore.statusMessage = 'Initializing AI...'
+    generalStore.statusMessage = '正在初始化 AI…'
 
     const initSuccess = await conversationStore.initialize()
     if (initSuccess) {

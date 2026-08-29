@@ -1,32 +1,31 @@
 <template>
   <div>
     <div class="mb-6">
-      <h2 class="text-2xl font-semibold mb-3">Choose Your AI Provider</h2>
+      <h2 class="text-2xl font-semibold mb-3">选择 AI 服务商</h2>
       <p class="text-base-content/70">
-        Select how you want to power Alice's intelligence. You can always change
-        this later.
+        选择为 Alice 提供智能能力的方式，之后仍可随时修改。
       </p>
     </div>
 
     <div class="form-control mb-6">
       <label class="label">
-        <span class="label-text font-medium">AI Provider</span>
+        <span class="label-text font-medium">AI 服务商</span>
       </label>
       <select
         v-model="formData.aiProvider"
         class="select select-bordered w-full focus:select-primary focus:outline-none"
         @change="$emit('reset-tests')"
       >
-        <option value="openai">OpenAI (GPT models, image generation)</option>
+        <option value="openai">OpenAI（GPT 模型、图片生成）</option>
         <option value="openrouter">
-          OpenRouter (400+ models, no image gen)
+          OpenRouter（400+ 个模型，不支持图片生成）
         </option>
-        <option value="zai">Z.ai (GLM Coding Plan)</option>
-        <option value="minimax">MiniMax (OpenAI-compatible)</option>
-        <option value="deepseek">DeepSeek (OpenAI-compatible)</option>
-        <option value="codex">ChatGPT Codex (subscription)</option>
-        <option value="ollama">Ollama (Local LLMs)</option>
-        <option value="lm-studio">LM Studio (Local LLMs)</option>
+        <option value="zai">Z.ai（GLM 编程套餐）</option>
+        <option value="minimax">MiniMax（兼容 OpenAI）</option>
+        <option value="deepseek">DeepSeek（兼容 OpenAI）</option>
+        <option value="codex">ChatGPT Codex（订阅）</option>
+        <option value="ollama">Ollama（本地大模型）</option>
+        <option value="lm-studio">LM Studio（本地大模型）</option>
       </select>
     </div>
 
@@ -48,7 +47,7 @@
         </svg>
         <div>
           <p>
-            Get your API key from the
+            请从
             <a
               href="https://platform.openai.com/api-keys"
               target="_blank"
@@ -57,12 +56,12 @@
             >.
           </p>
           <p>
-            You might need to
+            如需生成图片，可能还需要
             <a
               href="https://platform.openai.com/settings/organization/general"
               target="_blank"
               class="link"
-              >verify your organization</a
+              >验证组织</a
             >
             for image generation.
           </p>
@@ -71,7 +70,7 @@
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text">OpenAI API Key</span>
+          <span class="label-text">OpenAI API 密钥</span>
         </label>
         <input
           type="password"
@@ -94,7 +93,7 @@
           v-if="isTesting.openai"
           class="loading loading-spinner loading-xs mr-2"
         ></span>
-        Test OpenAI Key
+        测试 OpenAI 密钥
       </button>
 
       <TestResult :result="testResult.openai" />
@@ -117,20 +116,19 @@
           ></path>
         </svg>
         <span
-          >OpenRouter provides access to 400+ models. You can choose local
-          models for voice features in the next step.</span
+          >OpenRouter 提供 400+ 个模型，下一步可以为语音功能选择本地模型。</span
         >
       </div>
 
       <!-- OpenRouter Key -->
       <div class="form-control">
         <label class="label">
-          <span class="label-text">OpenRouter API Key</span>
+          <span class="label-text">OpenRouter API 密钥</span>
         </label>
         <div class="text-sm text-base-content/70 mb-2">
           Get your key from the
           <a href="https://openrouter.ai/keys" target="_blank" class="link"
-            >OpenRouter Platform</a
+            >OpenRouter 平台</a
           >
         </div>
         <input
@@ -156,7 +154,7 @@
           v-if="isTesting.openrouter"
           class="loading loading-spinner loading-xs mr-2"
         ></span>
-        Test OpenRouter Key
+        测试 OpenRouter 密钥
       </button>
 
       <TestResult :result="testResult.openrouter" />
@@ -179,14 +177,13 @@
           ></path>
         </svg>
         <span
-          >Z.ai uses the GLM Coding Plan OpenAI-compatible endpoint. Web search
-          can still run through Alice tools if configured.</span
+          >Z.ai 使用 GLM 编程套餐的 OpenAI 兼容接口，配置后仍可通过 Alice 工具进行网页搜索。</span
         >
       </div>
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text">Z.ai API Key</span>
+          <span class="label-text">Z.ai API 密钥</span>
         </label>
         <input
           type="password"
@@ -201,7 +198,7 @@
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text">Z.ai Base URL</span>
+          <span class="label-text">Z.ai 基础地址</span>
         </label>
         <input
           type="text"
@@ -227,7 +224,7 @@
           v-if="isTesting.zai"
           class="loading loading-spinner loading-xs mr-2"
         ></span>
-        Test Z.ai Key
+        测试 Z.ai 密钥
       </button>
 
       <TestResult :result="testResult.zai" />
@@ -238,7 +235,7 @@
       >
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Assistant Model</span>
+            <span class="label-text">助手模型</span>
           </label>
           <select
             v-model="formData.assistantModel"
@@ -256,7 +253,7 @@
 
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Summarization Model</span>
+            <span class="label-text">摘要模型</span>
           </label>
           <select
             v-model="formData.summarizationModel"
@@ -291,14 +288,13 @@
           ></path>
         </svg>
         <span
-          >MiniMax uses the OpenAI-compatible endpoint for token/coding plans.
-          Web search can still run through Alice tools if configured.</span
+          >MiniMax 使用兼容 OpenAI 的令牌/编程套餐接口，配置后仍可通过 Alice 工具进行网页搜索。</span
         >
       </div>
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text">MiniMax API Key</span>
+          <span class="label-text">MiniMax API 密钥</span>
         </label>
         <input
           type="password"
@@ -314,7 +310,7 @@
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text">MiniMax Base URL</span>
+          <span class="label-text">MiniMax 基础地址</span>
         </label>
         <input
           type="text"
@@ -341,7 +337,7 @@
           v-if="isTesting.minimax"
           class="loading loading-spinner loading-xs mr-2"
         ></span>
-        Test MiniMax Key
+        测试 MiniMax 密钥
       </button>
 
       <TestResult :result="testResult.minimax" />
@@ -352,7 +348,7 @@
       >
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Assistant Model</span>
+            <span class="label-text">助手模型</span>
           </label>
           <select
             v-model="formData.assistantModel"
@@ -370,7 +366,7 @@
 
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Summarization Model</span>
+            <span class="label-text">摘要模型</span>
           </label>
           <select
             v-model="formData.summarizationModel"
@@ -405,14 +401,13 @@
           ></path>
         </svg>
         <span>
-          DeepSeek uses an OpenAI-compatible chat completions endpoint. Alice
-          disables DeepSeek thinking mode for tool-call compatibility.
+          DeepSeek 使用兼容 OpenAI 的聊天补全接口。为兼容工具调用，Alice 会关闭 DeepSeek 思考模式。
         </span>
       </div>
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text">DeepSeek API Key</span>
+          <span class="label-text">DeepSeek API 密钥</span>
         </label>
         <input
           type="password"
@@ -428,7 +423,7 @@
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text">DeepSeek Base URL</span>
+          <span class="label-text">DeepSeek 基础地址</span>
         </label>
         <input
           type="text"
@@ -455,7 +450,7 @@
           v-if="isTesting.deepseek"
           class="loading loading-spinner loading-xs mr-2"
         ></span>
-        Test DeepSeek Key
+        测试 DeepSeek 密钥
       </button>
 
       <TestResult :result="testResult.deepseek" />
@@ -468,7 +463,7 @@
       >
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Assistant Model</span>
+            <span class="label-text">助手模型</span>
           </label>
           <select
             v-model="formData.assistantModel"
@@ -486,7 +481,7 @@
 
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Summarization Model</span>
+            <span class="label-text">摘要模型</span>
           </label>
           <select
             v-model="formData.summarizationModel"
@@ -521,8 +516,7 @@
           ></path>
         </svg>
         <span>
-          Uses your ChatGPT Codex subscription for text inference. Voice,
-          embeddings, and image generation stay on their own providers.
+          使用你的 ChatGPT Codex 订阅进行文本推理，语音、向量和图片生成仍由各自的服务商提供。
         </span>
       </div>
 
@@ -530,13 +524,12 @@
         <p class="text-sm font-medium">
           {{
             formData.codexAuthConnected
-              ? formData.codexAccountLabel || 'Connected'
-              : 'Not connected'
+              ? formData.codexAccountLabel || '已连接'
+              : '未连接'
           }}
         </p>
         <p class="text-sm text-base-content/70 mt-1">
-          Alice opens the official ChatGPT login in your browser. Tokens stay in
-          the Codex app-server profile managed by the desktop app.
+          Alice 会在浏览器中打开官方 ChatGPT 登录页，令牌保存在桌面应用管理的 Codex app-server 配置中。
         </p>
       </div>
 
@@ -551,8 +544,8 @@
         ></span>
         {{
           formData.codexAuthConnected
-            ? 'Refresh ChatGPT Codex Status'
-            : 'Authorize ChatGPT Codex'
+            ? '刷新 ChatGPT Codex 状态'
+            : '授权 ChatGPT Codex'
         }}
       </button>
 
@@ -564,7 +557,7 @@
       >
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Assistant Model</span>
+            <span class="label-text">助手模型</span>
           </label>
           <select
             v-model="formData.assistantModel"
@@ -582,7 +575,7 @@
 
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Summarization Model</span>
+            <span class="label-text">摘要模型</span>
           </label>
           <select
             v-model="formData.summarizationModel"
@@ -617,14 +610,13 @@
           ></path>
         </svg>
         <span
-          >Make sure Ollama is installed and running. You can use built-in local
-          models for voice features in the next step.</span
+          >请确保 Ollama 已安装并运行，下一步可以为语音功能使用内置本地模型。</span
         >
       </div>
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text">Ollama Base URL</span>
+          <span class="label-text">Ollama 基础地址</span>
         </label>
         <input
           type="text"
@@ -647,7 +639,7 @@
           v-if="isTesting.ollama"
           class="loading loading-spinner loading-xs mr-2"
         ></span>
-        Test Ollama Connection
+        测试 Ollama 连接
       </button>
 
       <TestResult :result="testResult.ollama" />
@@ -659,7 +651,7 @@
       >
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Assistant Model</span>
+            <span class="label-text">助手模型</span>
           </label>
           <select
             v-model="formData.assistantModel"
@@ -677,7 +669,7 @@
 
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Summarization Model</span>
+            <span class="label-text">摘要模型</span>
           </label>
           <select
             v-model="formData.summarizationModel"
@@ -712,14 +704,13 @@
           ></path>
         </svg>
         <span
-          >Make sure LM Studio is installed with a local server running. You can
-          use built-in local models for voice features in the next step.</span
+          >请确保 LM Studio 已安装且本地服务正在运行，下一步可以为语音功能使用内置本地模型。</span
         >
       </div>
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text">LM Studio Base URL</span>
+          <span class="label-text">LM Studio 基础地址</span>
         </label>
         <input
           type="text"
@@ -742,7 +733,7 @@
           v-if="isTesting.lmStudio"
           class="loading loading-spinner loading-xs mr-2"
         ></span>
-        Test LM Studio Connection
+        测试 LM Studio 连接
       </button>
 
       <TestResult :result="testResult.lmStudio" />
@@ -756,7 +747,7 @@
       >
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Assistant Model</span>
+            <span class="label-text">助手模型</span>
           </label>
           <select
             v-model="formData.assistantModel"
@@ -774,7 +765,7 @@
 
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Summarization Model</span>
+            <span class="label-text">摘要模型</span>
           </label>
           <select
             v-model="formData.summarizationModel"

@@ -1,14 +1,14 @@
 <template>
   <div class="space-y-6">
-    <h3 class="text-xl font-semibold mb-4 text-yellow-400">Global Hotkeys</h3>
+    <h3 class="text-xl font-semibold mb-4 text-yellow-400">全局快捷键</h3>
     <fieldset
       class="fieldset bg-gray-900/90 border-yellow-500/50 rounded-box w-full border p-4"
     >
-      <legend class="fieldset-legend">Keyboard Shortcuts</legend>
+      <legend class="fieldset-legend">键盘快捷方式</legend>
       <div class="p-2 space-y-4">
         <div>
           <label for="mic-toggle-hotkey" class="block mb-1 text-sm"
-            >Microphone Toggle Hotkey</label
+            >麦克风切换快捷键</label
           >
           <div class="flex items-center justify-between">
             <kbd class="kbd kbd-xl">{{
@@ -25,8 +25,8 @@
               >
                 {{
                   isRecordingHotkeyFor === 'microphoneToggleHotkey'
-                    ? 'Recording...'
-                    : 'Record'
+                    ? '录制中…'
+                    : '录制'
                 }}
               </button>
               <button
@@ -35,7 +35,7 @@
                 class="btn btn-warning btn-outline btn-sm"
                 :disabled="!currentSettings.microphoneToggleHotkey"
               >
-                Clear
+                清除
               </button>
             </div>
           </div>
@@ -43,13 +43,13 @@
             v-if="isRecordingHotkeyFor === 'microphoneToggleHotkey'"
             class="text-xs text-yellow-400 mt-1"
           >
-            Press the desired key combination. Press Esc to cancel.
+            请按下所需的组合键，按 Esc 取消。
           </p>
         </div>
 
         <div>
           <label for="mute-playback-hotkey" class="block mb-1 text-sm"
-            >Mute Playback Hotkey</label
+            >静音播报快捷键</label
           >
           <div class="flex items-center justify-between">
             <kbd class="kbd kbd-xl">{{
@@ -64,8 +64,8 @@
               >
                 {{
                   isRecordingHotkeyFor === 'mutePlaybackHotkey'
-                    ? 'Recording...'
-                    : 'Record'
+                    ? '录制中…'
+                    : '录制'
                 }}
               </button>
               <button
@@ -74,7 +74,7 @@
                 class="btn btn-warning btn-outline btn-sm"
                 :disabled="!currentSettings.mutePlaybackHotkey"
               >
-                Clear
+                清除
               </button>
             </div>
           </div>
@@ -82,13 +82,13 @@
             v-if="isRecordingHotkeyFor === 'mutePlaybackHotkey'"
             class="text-xs text-yellow-400 mt-1"
           >
-            Press the desired key combination. Press Esc to cancel.
+            请按下所需的组合键，按 Esc 取消。
           </p>
         </div>
 
         <div>
           <label for="take-screenshot-hotkey" class="block mb-1 text-sm"
-            >Take Screenshot Hotkey</label
+            >截屏快捷键</label
           >
           <div class="flex items-center justify-between">
             <kbd class="kbd kbd-xl">{{
@@ -103,8 +103,8 @@
               >
                 {{
                   isRecordingHotkeyFor === 'takeScreenshotHotkey'
-                    ? 'Recording...'
-                    : 'Record'
+                    ? '录制中…'
+                    : '录制'
                 }}
               </button>
               <button
@@ -113,7 +113,7 @@
                 class="btn btn-warning btn-outline btn-sm"
                 :disabled="!currentSettings.takeScreenshotHotkey"
               >
-                Clear
+                清除
               </button>
             </div>
           </div>
@@ -121,7 +121,7 @@
             v-if="isRecordingHotkeyFor === 'takeScreenshotHotkey'"
             class="text-xs text-yellow-400 mt-1"
           >
-            Press the desired key combination. Press Esc to cancel.
+            请按下所需的组合键，按 Esc 取消。
           </p>
         </div>
       </div>

@@ -1,13 +1,13 @@
 <template>
   <div class="space-y-6">
     <h3 class="text-xl font-semibold mb-4 text-purple-400">
-      Integrations & APIs
+      集成与 API
     </h3>
 
     <fieldset
       class="fieldset bg-gray-900/90 border-purple-500/50 rounded-box w-full border p-4"
     >
-      <legend class="fieldset-legend">Google Services Integration</legend>
+      <legend class="fieldset-legend">Google 服务集成</legend>
       <div class="p-2 space-y-4">
         <div
           v-if="
@@ -23,8 +23,8 @@
           >
             {{
               googleAuthStatus.isLoading
-                ? 'Connecting...'
-                : 'Connect to Google Services'
+                ? '连接中…'
+                : '连接 Google 服务'
             }}
           </button>
         </div>
@@ -34,8 +34,7 @@
           "
         >
           <p class="text-sm mb-2">
-            Awaiting authorization in your browser. Please follow the
-            instructions there.
+            正在等待浏览器授权，请按照浏览器中的说明操作。
           </p>
           <span class="loading loading-dots loading-md"></span>
         </div>
@@ -54,14 +53,14 @@
                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <span>Successfully connected to Google Services.</span>
+            <span>已成功连接 Google 服务。</span>
           </div>
           <button
             type="button"
             @click="$emit('disconnect-google-services')"
             class="btn btn-warning btn-outline"
           >
-            Disconnect from Google Services
+            断开 Google 服务
           </button>
         </div>
         <p
@@ -86,11 +85,11 @@
     <fieldset
       class="fieldset bg-gray-900/90 border-cyan-500/50 rounded-box w-full border p-4"
     >
-      <legend class="fieldset-legend">Remote MCP Servers</legend>
+      <legend class="fieldset-legend">远程 MCP 服务</legend>
       <div class="p-2 space-y-4">
         <div>
           <label for="mcp-servers-config" class="block mb-1 text-sm">
-            MCP Servers JSON Configuration (Array)
+            MCP 服务 JSON 配置（数组）
           </label>
           <textarea
             id="mcp-servers-config"
@@ -100,13 +99,12 @@
             :placeholder="mcpPlaceholder"
           ></textarea>
           <p class="text-xs text-gray-400 mt-1">
-            Enter a JSON array of MCP server configurations. Each object should
-            follow the
+            输入 MCP 服务配置 JSON 数组，每个对象应遵循
             <a
               href="https://cookbook.openai.com/examples/mcp/mcp_tool_guide"
               target="_blank"
               class="link link-hover"
-              >OpenAI MCP tool format</a
+              >OpenAI MCP 工具格式</a
             >.
           </p>
         </div>
@@ -117,14 +115,14 @@
       class="fieldset bg-gray-900/90 border-gray-600/50 rounded-box w-full border p-4"
     >
       <legend class="fieldset-legend">
-        Optional Tool APIs
+        可选工具 API
         <a
           href="https://github.com/pmbstyle/Alice/blob/main/docs/toolsInstructions.md"
           target="_blank"
           class="ml-2"
         >
           <span class="badge badge-sm badge-soft whitespace-nowrap">
-            Info
+            说明
             <img :src="newTabIcon" class="size-3 inline-block ml-1" />
           </span>
         </a>
@@ -132,7 +130,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
         <div>
           <label for="jackett-url" class="block mb-1 text-sm"
-            >Jackett URL (Torrent Search)</label
+            >Jackett 地址（种子搜索）</label
           >
           <input
             id="jackett-url"
@@ -143,7 +141,7 @@
         </div>
         <div>
           <label for="jackett-key" class="block mb-1 text-sm"
-            >Jackett API Key</label
+            >Jackett API 密钥</label
           >
           <input
             id="jackett-key"
@@ -154,7 +152,7 @@
           />
         </div>
         <div>
-          <label for="qb-url" class="block mb-1 text-sm">qBittorrent URL</label>
+          <label for="qb-url" class="block mb-1 text-sm">qBittorrent 地址</label>
           <input
             id="qb-url"
             type="text"
@@ -164,7 +162,7 @@
         </div>
         <div>
           <label for="qb-user" class="block mb-1 text-sm"
-            >qBittorrent Username</label
+            >qBittorrent 用户名</label
           >
           <input
             id="qb-user"
@@ -175,7 +173,7 @@
         </div>
         <div>
           <label for="qb-pass" class="block mb-1 text-sm"
-            >qBittorrent Password</label
+            >qBittorrent 密码</label
           >
           <input
             id="qb-pass"
@@ -189,7 +187,7 @@
           v-if="currentSettings.assistantTools.includes('perform_web_search')"
         >
           <label for="tavily-key" class="block mb-1 text-sm"
-            >Tavily API Key (Web Search)</label
+            >Tavily API 密钥（网页搜索）</label
           >
           <input
             id="tavily-key"
@@ -200,7 +198,7 @@
             placeholder="tvly-..."
           />
           <p class="text-xs text-gray-400 mt-1">
-            Required for web search functionality. Get your API key from
+            使用网页搜索功能时需要，可从
             <a
               href="https://tavily.com"
               target="_blank"
@@ -216,7 +214,7 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label for="searxng-url" class="block mb-1 text-sm"
-                >SearXNG Instance URL</label
+                >SearXNG 实例地址</label
               >
               <input
                 id="searxng-url"
@@ -228,7 +226,7 @@
             </div>
             <div>
               <label for="searxng-key" class="block mb-1 text-sm"
-                >SearXNG API Key (Optional)</label
+                >SearXNG API 密钥（可选）</label
               >
               <input
                 id="searxng-key"
@@ -236,18 +234,17 @@
                 v-model="currentSettings.VITE_SEARXNG_API_KEY"
                 class="input focus:outline-none w-full"
                 autocomplete="new-password"
-                placeholder="Leave empty for public instances"
+                placeholder="公开实例可留空"
               />
             </div>
           </div>
           <p class="text-xs text-gray-400 mt-1">
-            Use your own SearXNG instance for privacy-focused web search. API
-            key is optional - most self-hosted instances don't require it.
+            使用自己的 SearXNG 实例可获得更好的隐私保护。API 密钥可选，大多数自托管实例不需要。
             <a
               href="https://docs.searxng.org"
               target="_blank"
               class="link link-primary"
-              >Setup guide</a
+              >设置指南</a
             >.
           </p>
         </div>

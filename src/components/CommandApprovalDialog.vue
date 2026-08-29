@@ -25,13 +25,13 @@
             isMinified ? 'text-sm font-semibold' : 'text-lg font-semibold'
           "
         >
-          {{ isMinified ? 'Approve Command?' : 'Command Approval Required' }}
+          {{ isMinified ? '批准命令？' : '需要批准命令' }}
         </h3>
       </div>
 
       <div v-if="!isMinified" class="mb-4">
         <p class="text-sm text-base-content/70 mb-2">
-          Alice wants to execute the following command:
+          Alice 请求执行以下命令：
         </p>
         <div class="bg-base-200 rounded p-3 font-mono text-sm break-all">
           {{ command }}
@@ -48,7 +48,7 @@
 
       <div v-if="!isMinified" class="mb-6">
         <p class="text-sm text-base-content/70">
-          Do you want to allow this command to run?
+          是否允许执行此命令？
         </p>
       </div>
 
@@ -59,7 +59,7 @@
             isMinified ? 'btn btn-success btn-xs' : 'btn btn-success btn-sm'
           "
         >
-          {{ isMinified ? '✓ Once' : '✓ Allow Once' }}
+          {{ isMinified ? '✓ 单次' : '✓ 允许一次' }}
         </button>
         <button
           @click="$emit('approve', 'session')"
@@ -67,7 +67,7 @@
             isMinified ? 'btn btn-primary btn-xs' : 'btn btn-primary btn-sm'
           "
         >
-          {{ isMinified ? '✓ Session' : '✓ Allow for This Session' }}
+          {{ isMinified ? '✓ 本次会话' : '✓ 本次会话允许' }}
         </button>
         <button
           @click="$emit('approve', 'forever')"
@@ -75,13 +75,13 @@
             isMinified ? 'btn btn-accent btn-xs' : 'btn btn-accent btn-sm'
           "
         >
-          {{ isMinified ? '✓ Always' : '✓ Always Allow This Command' }}
+          {{ isMinified ? '✓ 始终' : '✓ 始终允许此命令' }}
         </button>
         <button
           @click="$emit('cancel')"
           :class="isMinified ? 'btn btn-error btn-xs' : 'btn btn-error btn-sm'"
         >
-          {{ isMinified ? '✗' : '✗ Deny' }}
+          {{ isMinified ? '✗' : '✗ 拒绝' }}
         </button>
       </div>
     </div>

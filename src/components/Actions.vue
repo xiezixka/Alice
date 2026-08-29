@@ -6,7 +6,7 @@
         class="indicator"
         :class="{ mini: isMinimized }"
         @click="!isConfigState ? emit('toggleRecording') : null"
-        data-tip="Toggle Microphone"
+        data-tip="切换麦克风"
         :aria-label="micAriaLabel"
       />
       <img
@@ -14,16 +14,16 @@
         class="indicator"
         :class="{ mini: isMinimized }"
         @click="!isConfigState ? emit('togglePlaying') : null"
-        data-tip="Toggle Speech Output"
-        aria-label="Toggle Speech Output"
+        data-tip="切换语音播报"
+        aria-label="切换语音播报"
       />
       <img
         v-if="!isMinimized"
         :src="chatIcon"
         class="indicator"
         @click="!isConfigState ? changeSidebarView('chat') : null"
-        data-tip="Toggle Chat Panel"
-        aria-label="Toggle Chat Panel"
+        data-tip="切换聊天面板"
+        aria-label="切换聊天面板"
       />
     </div>
     <div
@@ -60,8 +60,8 @@
     >
       <button
         class="btn btn-circle bg-opacity-20 bg-gray-500 border-0 p-2 btn-indicator-side tooltip tooltip-right"
-        data-tip="Take Screenshot"
-        aria-label="Take Screenshot"
+        data-tip="截取屏幕"
+        aria-label="截取屏幕"
         :class="{ 'btn-sm': isMinimized }"
         @click="!isConfigState ? emit('takeScreenShot') : null"
         :disabled="takingScreenShot"
@@ -75,8 +75,8 @@
       </button>
       <button
         class="btn btn-circle bg-opacity-20 bg-gray-500 border-0 p-2 btn-indicator-side tooltip tooltip-left"
-        :data-tip="isMinimized ? 'Maximize' : 'Minimize'"
-        :aria-label="isMinimized ? 'Maximize Window' : 'Minimize Window'"
+        :data-tip="isMinimized ? '最大化' : '最小化'"
+        :aria-label="isMinimized ? '最大化窗口' : '最小化窗口'"
         :class="{ 'btn-sm': isMinimized }"
         @click="!isConfigState ? toggleMinimize() : null"
       >
@@ -94,7 +94,7 @@
         <button
           tabindex="0"
           role="button"
-          aria-label="Application Menu"
+          aria-label="应用菜单"
           class="btn btn-circle bg-opacity-20 bg-gray-500 border-0 p-2 btn-indicator-side close tooltip tooltip-bottom mb-2"
           :class="{ 'btn-sm': isMinimized }"
         >
@@ -106,10 +106,10 @@
         >
           <li>
             <a @click="!isConfigState ? openSettingsWindow() : null"
-              >Settings</a
+              >设置</a
             >
           </li>
-          <li><a @click="closeWindow">Close app</a></li>
+          <li><a @click="closeWindow">关闭应用</a></li>
         </ul>
       </div>
     </div>

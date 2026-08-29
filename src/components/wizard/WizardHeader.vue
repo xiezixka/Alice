@@ -27,7 +27,7 @@
     <button
       @click="$emit('close')"
       class="p-2 hover:bg-gray-700 rounded-full transition-colors"
-      title="Close Setup"
+      title="关闭设置向导"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

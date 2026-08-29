@@ -178,7 +178,7 @@ export function useAudioProcessing() {
       console.error('[VAD Manager] VAD initialization failed:', error)
       await destroyVAD()
       setAudioState('IDLE')
-      generalStore.statusMessage = 'Error: Mic/VAD init failed'
+      generalStore.statusMessage = '错误：麦克风/语音检测初始化失败'
       isSpeechDetected.value = false
     } finally {
       isVadInitializing.value = false
@@ -282,7 +282,7 @@ export function useAudioProcessing() {
       }
     } catch (error) {
       console.error('[Audio Processing] Error during transcription:', error)
-      generalStore.statusMessage = 'Error: Transcription failed'
+      generalStore.statusMessage = '错误：语音转写失败'
       setAudioState(isRecordingRequested.value ? 'LISTENING' : 'IDLE')
       isSpeechDetected.value = false
     }

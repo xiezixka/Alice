@@ -21,17 +21,17 @@ export function useScreenshot() {
       takingScreenShot.value = true
       screenshotReady.value = false
       screenShot.value = ''
-      statusMessage.value = 'Taking a screenshot...'
+      statusMessage.value = '正在截屏…'
       try {
         await window.aliceIPC.invoke('show-overlay')
         console.log('Screenshot overlay requested.')
       } catch (error) {
         console.error('Error showing screenshot overlay:', error)
-        statusMessage.value = "Error: Couldn't start screenshot"
+        statusMessage.value = '错误：无法开始截屏'
         takingScreenShot.value = false
       }
     } else if (!isElectron) {
-      statusMessage.value = 'Screenshot not available in web mode.'
+      statusMessage.value = '网页模式下无法截屏。'
     } else {
       console.log('Screenshot request ignored, already in progress.')
     }
@@ -45,14 +45,14 @@ export function useScreenshot() {
           if (dataURI) {
             screenShot.value = dataURI
             screenshotReady.value = true
-            statusMessage.value = 'Screenshot ready'
+            statusMessage.value = '截屏已准备好'
           } else {
-            statusMessage.value = 'Error: Captured empty screenshot'
+            statusMessage.value = '错误：截屏内容为空'
             screenshotReady.value = false
           }
         } catch (error) {
           console.error('Error retrieving screenshot via IPC:', error)
-          statusMessage.value = 'Error retrieving screenshot'
+          statusMessage.value = '错误：获取截屏失败'
           screenshotReady.value = false
         }
       }

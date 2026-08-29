@@ -3,8 +3,8 @@
     <!-- Progress indicator -->
     <div class="mb-4">
       <div class="flex justify-between text-sm text-base-content/60 mb-2">
-        <span>Step {{ step }} of {{ totalSteps }}</span>
-        <span>{{ Math.round((step / totalSteps) * 100) }}% Complete</span>
+        <span>第 {{ step }} 步，共 {{ totalSteps }} 步</span>
+        <span>已完成 {{ Math.round((step / totalSteps) * 100) }}%</span>
       </div>
       <div class="w-full bg-base-300 rounded-full h-2">
         <div
@@ -30,7 +30,7 @@
             d="M15 19l-7-7 7-7"
           />
         </svg>
-        Back
+        上一步
       </button>
       <div v-else></div>
       <!-- Spacer -->
@@ -41,7 +41,7 @@
         class="btn btn-primary"
         :disabled="!canContinue"
       >
-        Next
+        下一步
         <svg
           class="w-4 h-4 ml-2"
           fill="none"
@@ -80,7 +80,7 @@
             d="M5 13l4 4L19 7"
           />
         </svg>
-        Finish Setup
+        完成设置
       </button>
     </div>
   </div>

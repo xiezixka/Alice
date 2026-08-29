@@ -16,17 +16,17 @@ import {
 
 export const DEFAULT_ASSISTANT_PERSONA_PROMPT = DEFAULT_PERSONA_PROMPT
 
-const DEFAULT_SUMMARIZATION_SYSTEM_PROMPT = `You are an expert conversation summarizer.
-Your task is to create a **concise and brief** factual summary of the following conversation segment.
-Focus on:
-- Key topics discussed.
-- Important information, facts, or preferences shared by the user or assistant.
-- Decisions made.
-- Any unresolved questions or outstanding tasks.
+const DEFAULT_SUMMARIZATION_SYSTEM_PROMPT = `你是一名专业的对话摘要助手。
+你的任务是对下面的对话片段生成**简洁、客观**的事实摘要。
+请重点关注：
+- 讨论的核心主题。
+- 用户或助手分享的重要信息、事实或偏好。
+- 已做出的决定。
+- 尚未解决的问题或待办事项。
 
-The summary should help provide context for future interactions, allowing the conversation to resume naturally.
-**Keep the summary to 2-4 sentences and definitely no more than 150 words.**
-Do not add any conversational fluff, commentary, or an introductory/concluding sentence like "Here is the summary:". Just provide the factual summary of the conversation transcript.`
+摘要应为后续交互提供上下文，使对话能够自然延续。
+**摘要控制在 2-4 句话，且不超过 150 字。**
+不要添加闲聊、评论，也不要加入“以下是摘要”等开头或结尾句，只输出对话内容的事实摘要。`
 
 export interface AliceSettings {
   VITE_OPENAI_API_KEY: string
@@ -152,7 +152,7 @@ const defaultSettings: AliceSettings = {
   aiProvider: 'openai',
 
   localSttModel: 'whisper-base',
-  localSttLanguage: 'auto',
+  localSttLanguage: 'zh',
   localSttEnabled: false,
   localSttWakeWord: 'alice',
 
@@ -215,70 +215,70 @@ const defaultSettings: AliceSettings = {
 }
 
 const settingKeyToLabelMap: Record<keyof AliceSettings, string> = {
-  VITE_OPENAI_API_KEY: 'OpenAI API Key',
-  VITE_OPENROUTER_API_KEY: 'OpenRouter API Key',
-  VITE_ZAI_API_KEY: 'Z.ai API Key',
-  VITE_MINIMAX_API_KEY: 'MiniMax API Key',
-  VITE_DEEPSEEK_API_KEY: 'DeepSeek API Key',
-  VITE_GROQ_API_KEY: 'Groq API Key (STT)',
-  VITE_GOOGLE_API_KEY: 'Google API Key',
-  sttProvider: 'Speech-to-Text Provider',
-  aiProvider: 'AI Provider',
+  VITE_OPENAI_API_KEY: 'OpenAI API 密钥',
+  VITE_OPENROUTER_API_KEY: 'OpenRouter API 密钥',
+  VITE_ZAI_API_KEY: 'Z.ai API 密钥',
+  VITE_MINIMAX_API_KEY: 'MiniMax API 密钥',
+  VITE_DEEPSEEK_API_KEY: 'DeepSeek API 密钥',
+  VITE_GROQ_API_KEY: 'Groq API 密钥（语音识别）',
+  VITE_GOOGLE_API_KEY: 'Google API 密钥',
+  sttProvider: '语音识别服务商',
+  aiProvider: 'AI 服务商',
 
   // Local Go Backend STT labels
-  localSttModel: 'Local STT Model',
-  localSttLanguage: 'Language',
-  localSttEnabled: 'Enable Wake Word',
-  localSttWakeWord: 'Wake Word',
+  localSttModel: '本地语音识别模型',
+  localSttLanguage: '语言',
+  localSttEnabled: '启用唤醒词',
+  localSttWakeWord: '唤醒词',
 
-  ollamaBaseUrl: 'Ollama Base URL',
-  lmStudioBaseUrl: 'LM Studio Base URL',
-  zaiBaseUrl: 'Z.ai Base URL',
-  minimaxBaseUrl: 'MiniMax Base URL',
-  deepseekBaseUrl: 'DeepSeek Base URL',
-  codexAuthConnected: 'ChatGPT Codex authorization',
-  codexAccountLabel: 'ChatGPT Codex account',
+  ollamaBaseUrl: 'Ollama 基础地址',
+  lmStudioBaseUrl: 'LM Studio 基础地址',
+  zaiBaseUrl: 'Z.ai 基础地址',
+  minimaxBaseUrl: 'MiniMax 基础地址',
+  deepseekBaseUrl: 'DeepSeek 基础地址',
+  codexAuthConnected: 'ChatGPT Codex 授权',
+  codexAccountLabel: 'ChatGPT Codex 账号',
 
-  assistantModel: 'Assistant Model',
-  assistantSystemPrompt: 'Assistant Persona Prompt',
-  assistantTemperature: 'Assistant Temperature',
-  assistantTopP: 'Assistant Top P',
-  assistantReasoningEffort: 'Reasoning Effort',
-  assistantVerbosity: 'Response Verbosity',
-  assistantTools: 'Enabled Assistant Tools',
-  assistantAvatar: 'Assistant Avatar',
-  MAX_HISTORY_MESSAGES_FOR_API: 'Max History Messages for API',
-  SUMMARIZATION_MESSAGE_COUNT: 'Summarization Message Count',
-  SUMMARIZATION_MODEL: 'Summarization Model',
-  SUMMARIZATION_SYSTEM_PROMPT: 'Summarization System Prompt',
-  ttsProvider: 'Text-to-Speech Provider',
-  ttsVoice: 'OpenAI TTS Voice',
-  googleTtsVoice: 'Google TTS Voice',
-  localTtsVoice: 'Local TTS Voice',
-  embeddingProvider: 'Embedding Provider',
-  ragEnabled: 'Local Documents (RAG) Enabled',
-  ragPaths: 'Local Documents Paths',
-  ragTopK: 'Local Documents Top K',
-  ragMaxContextChars: 'Local Documents Max Context Chars',
-  microphoneToggleHotkey: 'Microphone Toggle Hotkey',
-  mutePlaybackHotkey: 'Mute Playback Hotkey',
-  takeScreenshotHotkey: 'Take Screenshot Hotkey',
+  assistantModel: '助手模型',
+  assistantSystemPrompt: '助手人设提示词',
+  assistantTemperature: '助手温度',
+  assistantTopP: '助手 Top P',
+  assistantReasoningEffort: '推理力度',
+  assistantVerbosity: '回复详细度',
+  assistantTools: '已启用的助手工具',
+  assistantAvatar: '助手形象',
+  MAX_HISTORY_MESSAGES_FOR_API: 'API 最大历史消息数',
+  SUMMARIZATION_MESSAGE_COUNT: '摘要消息数量',
+  SUMMARIZATION_MODEL: '摘要模型',
+  SUMMARIZATION_SYSTEM_PROMPT: '摘要系统提示词',
+  ttsProvider: '语音播报服务商',
+  ttsVoice: 'OpenAI 语音',
+  googleTtsVoice: 'Google 语音',
+  localTtsVoice: '本地语音',
+  embeddingProvider: '向量服务商',
+  ragEnabled: '启用本地文档（RAG）',
+  ragPaths: '本地文档路径',
+  ragTopK: '本地文档 Top K',
+  ragMaxContextChars: '本地文档最大上下文字符数',
+  microphoneToggleHotkey: '麦克风切换快捷键',
+  mutePlaybackHotkey: '静音播报快捷键',
+  takeScreenshotHotkey: '截屏快捷键',
 
-  VITE_JACKETT_API_KEY: 'Jackett API Key (Torrents)',
-  VITE_JACKETT_URL: 'Jackett URL (Torrents)',
-  VITE_QB_URL: 'qBittorrent URL',
-  VITE_QB_USERNAME: 'qBittorrent Username',
-  VITE_QB_PASSWORD: 'qBittorrent Password',
+  VITE_JACKETT_API_KEY: 'Jackett API 密钥（种子）',
+  VITE_JACKETT_URL: 'Jackett 地址（种子）',
+  VITE_QB_URL: 'qBittorrent 地址',
+  VITE_QB_USERNAME: 'qBittorrent 用户名',
+  VITE_QB_PASSWORD: 'qBittorrent 密码',
 
-  VITE_TAVILY_API_KEY: 'Tavily API Key (Web Search)',
+  VITE_TAVILY_API_KEY: 'Tavily API 密钥（网页搜索）',
 
-  VITE_SEARXNG_URL: 'SearXNG Instance URL',
-  VITE_SEARXNG_API_KEY: 'SearXNG API Key (optional)',
+  VITE_SEARXNG_URL: 'SearXNG 实例地址',
+  VITE_SEARXNG_API_KEY: 'SearXNG API 密钥（可选）',
 
-  websocketPort: 'WebSocket Port',
-  mcpServersConfig: 'MCP Servers JSON Configuration',
-  approvedCommands: 'Approved Commands',
-  onboardingCompleted: 'Onboarding Completed',
+  websocketPort: 'WebSocket 端口',
+  mcpServersConfig: 'MCP 服务 JSON 配置',
+  approvedCommands: '已批准的命令',
+  onboardingCompleted: '已完成首次设置',
 }
 
 const ESSENTIAL_CORE_API_KEYS: (keyof AliceSettings)[] = [
@@ -956,7 +956,7 @@ export const useSettingsStore = defineStore('settings', () => {
       !currentConfigForTest.VITE_OPENAI_API_KEY?.trim()
     ) {
       error.value = `Essential setting '${settingKeyToLabelMap.VITE_OPENAI_API_KEY}' is missing.`
-      generalStore.statusMessage = 'OpenAI API Key is required.'
+      generalStore.statusMessage = '需要 OpenAI API 密钥。'
       isSaving.value = false
       return
     }
@@ -964,67 +964,67 @@ export const useSettingsStore = defineStore('settings', () => {
     if (currentConfigForTest.aiProvider === 'openrouter') {
       if (!currentConfigForTest.VITE_OPENROUTER_API_KEY?.trim()) {
         error.value = `Essential setting '${settingKeyToLabelMap.VITE_OPENROUTER_API_KEY}' is missing.`
-        generalStore.statusMessage = 'OpenRouter API Key is required.'
+        generalStore.statusMessage = '需要 OpenRouter API 密钥。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'zai') {
       if (!currentConfigForTest.VITE_ZAI_API_KEY?.trim()) {
         error.value = `Essential setting '${settingKeyToLabelMap.VITE_ZAI_API_KEY}' is missing.`
-        generalStore.statusMessage = 'Z.ai API Key is required.'
+        generalStore.statusMessage = '需要 Z.ai API 密钥。'
         isSaving.value = false
         return
       }
       if (!currentConfigForTest.zaiBaseUrl?.trim()) {
         error.value = `Essential setting '${settingKeyToLabelMap.zaiBaseUrl}' is missing.`
-        generalStore.statusMessage = 'Z.ai Base URL is required.'
+        generalStore.statusMessage = '需要 Z.ai 基础地址。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'minimax') {
       if (!currentConfigForTest.VITE_MINIMAX_API_KEY?.trim()) {
         error.value = `Essential setting '${settingKeyToLabelMap.VITE_MINIMAX_API_KEY}' is missing.`
-        generalStore.statusMessage = 'MiniMax API Key is required.'
+        generalStore.statusMessage = '需要 MiniMax API 密钥。'
         isSaving.value = false
         return
       }
       if (!currentConfigForTest.minimaxBaseUrl?.trim()) {
         error.value = `Essential setting '${settingKeyToLabelMap.minimaxBaseUrl}' is missing.`
-        generalStore.statusMessage = 'MiniMax Base URL is required.'
+        generalStore.statusMessage = '需要 MiniMax 基础地址。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'deepseek') {
       if (!currentConfigForTest.VITE_DEEPSEEK_API_KEY?.trim()) {
         error.value = `Essential setting '${settingKeyToLabelMap.VITE_DEEPSEEK_API_KEY}' is missing.`
-        generalStore.statusMessage = 'DeepSeek API Key is required.'
+        generalStore.statusMessage = '需要 DeepSeek API 密钥。'
         isSaving.value = false
         return
       }
       if (!currentConfigForTest.deepseekBaseUrl?.trim()) {
         error.value = `Essential setting '${settingKeyToLabelMap.deepseekBaseUrl}' is missing.`
-        generalStore.statusMessage = 'DeepSeek Base URL is required.'
+        generalStore.statusMessage = '需要 DeepSeek 基础地址。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'codex') {
       if (!currentConfigForTest.codexAuthConnected) {
         error.value = `Essential setting '${settingKeyToLabelMap.codexAuthConnected}' is missing.`
-        generalStore.statusMessage = 'ChatGPT Codex authorization is required.'
+        generalStore.statusMessage = '需要 ChatGPT Codex 授权。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'ollama') {
       if (!currentConfigForTest.ollamaBaseUrl?.trim()) {
         error.value = `Essential setting '${settingKeyToLabelMap.ollamaBaseUrl}' is missing.`
-        generalStore.statusMessage = 'Ollama Base URL is required.'
+        generalStore.statusMessage = '需要 Ollama 基础地址。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'lm-studio') {
       if (!currentConfigForTest.lmStudioBaseUrl?.trim()) {
         error.value = `Essential setting '${settingKeyToLabelMap.lmStudioBaseUrl}' is missing.`
-        generalStore.statusMessage = 'LM Studio Base URL is required.'
+        generalStore.statusMessage = '需要 LM Studio 基础地址。'
         isSaving.value = false
         return
       }
@@ -1035,7 +1035,7 @@ export const useSettingsStore = defineStore('settings', () => {
       !currentConfigForTest.VITE_GROQ_API_KEY?.trim()
     ) {
       error.value = `Groq STT is selected, but '${settingKeyToLabelMap.VITE_GROQ_API_KEY}' is missing.`
-      generalStore.statusMessage = 'Groq API Key is required for Groq STT.'
+      generalStore.statusMessage = 'Groq 语音识别需要 Groq API 密钥。'
       isSaving.value = false
       return
     }
@@ -1047,14 +1047,14 @@ export const useSettingsStore = defineStore('settings', () => {
     ) {
       error.value = `Google is selected, but '${settingKeyToLabelMap.VITE_GOOGLE_API_KEY}' is missing.`
       generalStore.statusMessage =
-        'Google API Key is required for Google services.'
+        'Google 服务需要 Google API 密钥。'
       isSaving.value = false
       return
     }
 
     const settingsPersistedInitially = await saveSettingsToFile()
     if (!settingsPersistedInitially) {
-      generalStore.statusMessage = 'Error saving settings to file.'
+      generalStore.statusMessage = '错误：保存设置文件失败。'
       return
     }
 
@@ -1080,8 +1080,8 @@ export const useSettingsStore = defineStore('settings', () => {
           currentConfigForTest.aiProvider
         )
         error.value = `${providerName} connection is valid. Please select an '${settingKeyToLabelMap.assistantModel}'.`
-        generalStore.statusMessage = 'Assistant model not selected.'
-        successMessage.value = `${providerName} connection is valid. Models loaded. Please complete model selections.`
+        generalStore.statusMessage = '尚未选择助手模型。'
+        successMessage.value = `${providerName} 连接有效，模型已加载，请完成模型选择。`
         isSaving.value = false
         return
       }
@@ -1090,36 +1090,38 @@ export const useSettingsStore = defineStore('settings', () => {
           currentConfigForTest.aiProvider
         )
         error.value = `${providerName} connection is valid. Please select a '${settingKeyToLabelMap.SUMMARIZATION_MODEL}'.`
-        generalStore.statusMessage = 'Summarization model not selected.'
-        successMessage.value = `${providerName} connection is valid. Models loaded. Please complete model selections.`
+        generalStore.statusMessage = '尚未选择摘要模型。'
+        successMessage.value = `${providerName} 连接有效，模型已加载，请完成模型选择。`
         isSaving.value = false
         return
       }
 
-      successMessage.value = 'Settings are valid and saved!'
+      successMessage.value = '设置校验通过并已保存！'
       if (!isProduction.value) {
         successMessage.value +=
-          ' (Dev mode - .env might override for operation if not using UI for all settings)'
+          '（开发模式：如果未在界面配置全部设置，.env 可能会覆盖部分配置）'
       }
-      generalStore.statusMessage = 'Re-initializing Alice with new settings...'
+      generalStore.statusMessage = '正在使用新设置重新初始化 Alice…'
 
       if (conversationStore.isInitialized) {
         conversationStore.isInitialized = false
       }
       const initSuccess = await conversationStore.initialize()
       if (initSuccess) {
-        successMessage.value += ' Alice is ready.'
+        successMessage.value += ' Alice 已就绪。'
         generalStore.setAudioState('IDLE')
       } else {
-        const initErrorMsg = generalStore.statusMessage.includes('Error:')
+        const initErrorMsg =
+          generalStore.statusMessage.includes('Error:') ||
+          generalStore.statusMessage.includes('错误：')
           ? generalStore.statusMessage
-          : 'Failed to re-initialize Alice with new settings.'
+          : '使用新设置重新初始化 Alice 失败。'
         error.value = (error.value ? error.value + '; ' : '') + initErrorMsg
         successMessage.value = `Settings valid, but ${initErrorMsg}`
       }
     } else {
       generalStore.statusMessage =
-        'Settings validation failed. Check API Key(s).'
+        '设置校验失败，请检查 API 密钥。'
     }
     isSaving.value = false
     setTimeout(() => {

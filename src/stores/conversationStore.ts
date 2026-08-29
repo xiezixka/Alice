@@ -355,7 +355,7 @@ export const useConversationStore = defineStore('conversation', () => {
     const essentialCheckPassed = settingsStore.areEssentialSettingsProvided
     if (!essentialCheckPassed) {
       generalStore.statusMessage =
-        'Error: Core settings (API Keys/Models/STT) not configured.'
+        '错误：核心设置（API 密钥/模型/语音识别）未配置。'
       isInitialized.value = false
       return false
     }
@@ -364,7 +364,7 @@ export const useConversationStore = defineStore('conversation', () => {
       await fetchModels()
     }
     isInitialized.value = true
-    generalStore.statusMessage = 'Stand by'
+    generalStore.statusMessage = '待命'
     generalStore.chatHistory = []
     currentResponseId.value = null
     currentConversationTurnId.value = `turn-${Date.now()}`

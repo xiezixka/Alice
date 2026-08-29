@@ -21,10 +21,9 @@
         </svg>
       </div>
 
-      <h2 class="text-2xl font-semibold mb-3">Set up Alice essentials</h2>
+      <h2 class="text-2xl font-semibold mb-3">设置 Alice 的核心功能</h2>
       <p class="text-base-content/65 max-w-md mx-auto">
-        Choose the model provider, voice path, and memory mode now. You can
-        fine-tune the details later in Settings.
+        先选择模型服务商、语音方案和记忆模式，稍后可在“设置”中进一步调整。
       </p>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-8 text-left">
@@ -42,9 +41,9 @@
               d="M13 10V3L4 14h7v7l9-11h-7z"
             />
           </svg>
-          <div class="font-medium text-base-content/90">Provider</div>
+          <div class="font-medium text-base-content/90">服务商</div>
           <div class="text-sm text-base-content/60 mt-1">
-            OpenAI, OpenRouter, or local runtime.
+            OpenAI、OpenRouter 或本地运行时。
           </div>
         </div>
 
@@ -62,9 +61,9 @@
               d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
             />
           </svg>
-          <div class="font-medium text-base-content/90">Voice</div>
+          <div class="font-medium text-base-content/90">语音</div>
           <div class="text-sm text-base-content/60 mt-1">
-            Speech-to-text and text-to-speech.
+            语音识别与语音播报。
           </div>
         </div>
 
@@ -82,9 +81,9 @@
               d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
             />
           </svg>
-          <div class="font-medium text-base-content/90">Memory</div>
+          <div class="font-medium text-base-content/90">记忆</div>
           <div class="text-sm text-base-content/60 mt-1">
-            Embeddings for local recall.
+            使用向量实现本地记忆召回。
           </div>
         </div>
       </div>

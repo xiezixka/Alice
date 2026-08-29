@@ -35,7 +35,7 @@ export const useGeneralStore = defineStore('general', () => {
     updateMessageToolCallsByTempId,
   } = historyManager
   const chatInput = ref<string>('')
-  const statusMessage = ref<string>('Stand by')
+  const statusMessage = ref<string>('待命')
   const openSidebar = ref<boolean>(false)
   const isMinimized = ref<boolean>(false)
   const takingScreenShot = ref<boolean>(false)
@@ -61,31 +61,31 @@ export const useGeneralStore = defineStore('general', () => {
     switch (newState) {
       case 'IDLE':
         statusMessage.value = isRecordingRequested.value
-          ? 'Mic Ready'
-          : 'Stand by'
+          ? '麦克风已就绪'
+          : '待命'
         break
       case 'LISTENING':
         statusMessage.value = awaitingWakeWord.value
-          ? 'Waiting for wake word...'
-          : 'Listening...'
+          ? '等待唤醒词…'
+          : '聆听中…'
         break
       case 'PROCESSING_AUDIO':
-        statusMessage.value = 'Processing audio...'
+        statusMessage.value = '正在处理音频…'
         break
       case 'WAITING_FOR_RESPONSE':
-        statusMessage.value = 'Thinking...'
+        statusMessage.value = '思考中…'
         break
       case 'SPEAKING':
-        statusMessage.value = 'Speaking...'
+        statusMessage.value = '播报中…'
         break
       case 'CONFIG':
-        statusMessage.value = 'Setting up...'
+        statusMessage.value = '正在准备…'
         break
       case 'GENERATING_IMAGE':
-        statusMessage.value = 'Creating image...'
+        statusMessage.value = '正在生成图片…'
         break
       default:
-        statusMessage.value = 'Unknown state'
+        statusMessage.value = '未知状态'
         break
     }
   }

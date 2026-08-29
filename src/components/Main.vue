@@ -187,7 +187,7 @@ const handleProcessingComplete = (transcription: string) => {
 
 const processRequestFromSidebar = (text: string) => {
   if (isProcessingRequest) {
-    generalStore.statusMessage = 'Processing previous request...'
+    generalStore.statusMessage = '正在处理上一条请求…'
     setTimeout(() => {
       generalStore.setAudioState(audioState.value)
     }, 2000)
@@ -203,10 +203,10 @@ const processRequestFromSidebar = (text: string) => {
       generalStore.recognizedText = ''
       processRequest(text, 'SIDEBAR_TEXT')
     } else {
-      generalStore.statusMessage = 'Busy, please wait...'
+      generalStore.statusMessage = '当前繁忙，请稍候…'
 
       setTimeout(() => {
-        if (generalStore.statusMessage === 'Busy, please wait...')
+        if (generalStore.statusMessage === '当前繁忙，请稍候…')
           generalStore.setAudioState(audioState.value)
       }, 2000)
     }
@@ -228,7 +228,7 @@ const processRequest = async (
 
   const fileToProcess = generalStore.attachedFile
   if (fileToProcess) {
-    generalStore.statusMessage = `Uploading ${fileToProcess.name}...`
+    generalStore.statusMessage = `正在上传 ${fileToProcess.name}…`
     try {
       const uploadedFileId = await uploadFileToOpenAI(fileToProcess)
       if (uploadedFileId) {
@@ -238,7 +238,7 @@ const processRequest = async (
           fileName: fileToProcess.name,
         })
       } else {
-        generalStore.statusMessage = 'Error: PDF file upload failed.'
+        generalStore.statusMessage = '错误：PDF 文件上传失败。'
         isProcessingRequest = false
         setAudioState(isRecordingRequested.value ? 'LISTENING' : 'IDLE')
         generalStore.attachedFile = null
@@ -246,7 +246,7 @@ const processRequest = async (
       }
     } catch (error) {
       console.error('Error uploading file:', error)
-      generalStore.statusMessage = 'Error: PDF file upload failed.'
+      generalStore.statusMessage = '错误：PDF 文件上传失败。'
       isProcessingRequest = false
       setAudioState(isRecordingRequested.value ? 'LISTENING' : 'IDLE')
       generalStore.attachedFile = null
@@ -266,7 +266,7 @@ const processRequest = async (
   }
 
   if (appContentParts.length === 0) {
-    generalStore.statusMessage = 'Nothing to send.'
+    generalStore.statusMessage = '没有可发送的内容。'
     isProcessingRequest = false
     setAudioState(isRecordingRequested.value ? 'LISTENING' : 'IDLE')
     return

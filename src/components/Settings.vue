@@ -5,7 +5,7 @@
       class="text-center p-4"
     >
       <span class="loading loading-lg loading-spinner text-primary my-4"></span>
-      <p>Loading settings...</p>
+      <p>正在加载设置…</p>
     </div>
 
     <form @submit.prevent="handleSaveAndTestSettings" v-else class="space-y-6">
@@ -16,7 +16,7 @@
           :class="{ 'tab-active': activeTab === 'core' }"
           @click="activeTab = 'core'"
         >
-          🔑 Core
+          🔑 核心设置
         </button>
         <button
           type="button"
@@ -24,7 +24,7 @@
           :class="{ 'tab-active': activeTab === 'assistant' }"
           @click="activeTab = 'assistant'"
         >
-          🤖 AI
+          🤖 AI 助手
         </button>
         <button
           type="button"
@@ -32,7 +32,7 @@
           :class="{ 'tab-active': activeTab === 'memories' }"
           @click="activeTab = 'memories'"
         >
-          🧠 Memories
+          🧠 记忆
         </button>
         <button
           type="button"
@@ -40,7 +40,7 @@
           :class="{ 'tab-active': activeTab === 'hotkeys' }"
           @click="activeTab = 'hotkeys'"
         >
-          ⌨️ Keys
+          ⌨️ 快捷键
         </button>
         <button
           type="button"
@@ -48,7 +48,7 @@
           :class="{ 'tab-active': activeTab === 'integrations' }"
           @click="activeTab = 'integrations'"
         >
-          🔌 Apps
+          🔌 应用与集成
         </button>
         <button
           type="button"
@@ -56,7 +56,7 @@
           :class="{ 'tab-active': activeTab === 'security' }"
           @click="activeTab = 'security'"
         >
-          🔒 Permissions
+          🔒 权限
         </button>
         <button
           type="button"
@@ -64,7 +64,7 @@
           :class="{ 'tab-active': activeTab === 'customization' }"
           @click="activeTab = 'customization'"
         >
-          ✨ Customization
+          ✨ 个性化
         </button>
       </div>
 
@@ -128,7 +128,7 @@
             v-if="settingsStore.isSaving"
             class="loading loading-spinner loading-sm"
           ></span>
-          {{ settingsStore.isSaving ? 'Saving & Testing...' : 'Save & Reload' }}
+          {{ settingsStore.isSaving ? '保存并测试中…' : '保存并重新加载' }}
         </button>
       </div>
 
@@ -174,8 +174,7 @@
       </div>
 
       <p class="text-xs text-gray-400 mt-4 text-center">
-        * Essential for core functionality. Other API keys are optional based on
-        desired tools.
+        * 带星号的是核心功能所必需的设置，其余 API 密钥仅在使用对应工具时需要。
       </p>
       <div
         class="text-xs text-gray-400 mt-4 flex justify-center items-center gap-1"
@@ -189,11 +188,11 @@
             target="_blank"
             class="link link-hover"
             >v{{ appVersion }}</a
-          >. Built with</span
+          >。由</span
         >
         <img :src="heartIcon" class="size-3 inline-block ml-1" />
         <span
-          >by
+          >制作，
           <a
             href="https://github.com/pmbstyle"
             target="_blank"
@@ -321,64 +320,60 @@ function getToolInfo(name: string): {
   description: string
 } {
   const nameMap: Record<string, string> = {
-    get_current_datetime: 'Current Date & Time',
-    open_path: 'Open Apps/URLs',
-    manage_clipboard: 'Clipboard Read/Write',
-    save_memory: 'Save Memory',
-    delete_memory: 'Delete Memory',
-    recall_memories: 'Recall Memories',
-    get_calendar_events: 'Get Calendar Events',
-    create_calendar_event: 'Create Calendar Event',
-    update_calendar_event: 'Update Calendar Event',
-    delete_calendar_event: 'Delete Calendar Event',
-    get_unread_emails: 'Get Unread Emails',
-    search_emails: 'Search Emails',
-    get_email_content: 'Get Email Content',
-    search_torrents: 'Torrent Search',
-    add_torrent_to_qb: 'Add Torrent to QB',
-    perform_web_search: 'Web Search (Tavily)',
-    searxng_web_search: 'Web Search (SearXNG)',
+    get_current_datetime: '当前日期与时间',
+    open_path: '打开应用/网址',
+    manage_clipboard: '读写剪贴板',
+    save_memory: '保存记忆',
+    delete_memory: '删除记忆',
+    recall_memories: '召回记忆',
+    get_calendar_events: '获取日历事件',
+    create_calendar_event: '创建日历事件',
+    update_calendar_event: '更新日历事件',
+    delete_calendar_event: '删除日历事件',
+    get_unread_emails: '获取未读邮件',
+    search_emails: '搜索邮件',
+    get_email_content: '获取邮件内容',
+    search_torrents: '搜索种子',
+    add_torrent_to_qb: '添加种子到 QB',
+    perform_web_search: '网页搜索（Tavily）',
+    searxng_web_search: '网页搜索（SearXNG）',
   }
 
   const descriptionMap: Record<string, string> = {
-    get_current_datetime: 'Allows Alice to get the current date and time',
+    get_current_datetime: '允许 Alice 获取当前日期和时间',
     open_path:
-      "Allows Alice to open apps, URLs, files, and folders on the user's computer",
-    manage_clipboard: "Alice can read and write to the user's clipboard",
-    save_memory: 'Alice can store memories (long term memory)',
-    delete_memory: 'Alice can delete memories (long term memory)',
-    recall_memories: 'Alice can recall memories (long term memory)',
+      '允许 Alice 打开电脑上的应用、网址、文件和文件夹',
+    manage_clipboard: '允许 Alice 读写电脑剪贴板',
+    save_memory: '允许 Alice 保存长期记忆',
+    delete_memory: '允许 Alice 删除长期记忆',
+    recall_memories: '允许 Alice 召回长期记忆',
     list_directory:
-      "Alice can list the files and folders on the user's computer",
-    execute_command: "Alice can execute shell commands on the user's computer",
-    schedule_task: 'Alice can schedule tasks to run on a recurring basis',
-    manage_scheduled_tasks: 'Alice can manage scheduled tasks',
-    get_calendar_events: 'Google Calendar integration to get calendar events',
+      '允许 Alice 列出电脑上的文件和文件夹',
+    execute_command: '允许 Alice 在电脑上执行 Shell 命令',
+    schedule_task: '允许 Alice 创建周期性任务',
+    manage_scheduled_tasks: '允许 Alice 管理计划任务',
+    get_calendar_events: '通过 Google 日历获取日历事件',
     create_calendar_event:
-      'Google Calendar integration to create calendar events',
+      '通过 Google 日历创建日历事件',
     update_calendar_event:
-      'Google Calendar integration to update calendar events',
+      '通过 Google 日历更新日历事件',
     delete_calendar_event:
-      'Google Calendar integration to delete calendar events',
-    get_unread_emails: 'Google Gmail integration to get unread emails',
-    search_emails: 'Google Gmail integration to search emails',
-    get_email_content: 'Google Gmail integration to get email content',
-    search_torrents:
-      'Alice can search for torrents on the internet (requires Jackett)',
-    add_torrent_to_qb:
-      'Alice can add a torrent to qBittorrent (requires qBittorrent)',
-    browser_context:
-      'Alice can get information about the current webpage in users browser (requires browser extension)',
-    perform_web_search: 'For models that lack web search capabilities (Tavily)',
-    searxng_web_search:
-      'For models that lack web search capabilities (SearXNG)',
+      '通过 Google 日历删除日历事件',
+    get_unread_emails: '通过 Google Gmail 获取未读邮件',
+    search_emails: '通过 Google Gmail 搜索邮件',
+    get_email_content: '通过 Google Gmail 获取邮件内容',
+    search_torrents: '允许 Alice 搜索网络种子（需要 Jackett）',
+    add_torrent_to_qb: '允许 Alice 将种子添加到 qBittorrent（需要 qBittorrent）',
+    browser_context: '允许 Alice 获取浏览器当前网页信息（需要浏览器扩展）',
+    perform_web_search: '为不具备网页搜索能力的模型提供搜索（Tavily）',
+    searxng_web_search: '为不具备网页搜索能力的模型提供搜索（SearXNG）',
   }
 
   return {
     displayName:
       nameMap[name] ||
       name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    description: descriptionMap[name] || 'No description available',
+      description: descriptionMap[name] || '暂无描述',
   }
 }
 

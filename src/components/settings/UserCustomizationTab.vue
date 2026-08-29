@@ -1,12 +1,12 @@
 <template>
   <div class="space-y-6">
     <h3 class="text-xl font-semibold mb-4 text-green-400">
-      User Customization
+      用户个性化
     </h3>
     <fieldset
       class="fieldset bg-gray-900/90 border-blue-500/50 rounded-box w-full border p-4"
     >
-      <legend class="fieldset-legend">Assistant Avatar</legend>
+      <legend class="fieldset-legend">助手形象</legend>
       <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex gap-4">
           <div
@@ -24,17 +24,17 @@
           </div>
           <div class="space-y-2 text-sm text-gray-300">
             <p>
-              Drop folders inside
+              将文件夹放入
               <code class="text-xs bg-gray-800 px-1 py-0.5 rounded">{{
                 customizationPathDisplay
               }}</code>
-              with three MP4 files:
+              ，并包含三个 MP4 文件：
               <code>speaking.mp4</code>,
-              <code>thinking.mp4</code>, and
+              <code>thinking.mp4</code> 和
               <code>standby.mp4</code>.
             </p>
             <p class="text-xs text-gray-400">
-              Folder name becomes the avatar name. Standby video renders inside the app and this preview.
+              文件夹名称会成为形象名称；待机视频会显示在应用和此预览中。
             </p>
             <div class="flex flex-wrap items-center gap-2 pt-2">
               <button
@@ -47,16 +47,16 @@
                   v-if="customAvatarsStore.isRefreshing"
                   class="loading loading-spinner loading-xs mr-2"
                 ></span>
-                Refresh
+                刷新
               </button>
               <span class="text-xs text-gray-500">
-                {{ customAvatarsStore.customAvatarCount }} custom avatars detected
+                检测到 {{ customAvatarsStore.customAvatarCount }} 个自定义形象
               </span>
             </div>
           </div>
         </div>
         <div class="text-sm text-gray-200">
-          Currently selected:
+          当前选择：
           <span class="font-semibold text-white">{{ selectedAvatar.name }}</span>
         </div>
       </div>
@@ -66,7 +66,7 @@
           class="flex items-center gap-2 text-sm text-gray-300"
         >
           <span class="loading loading-spinner loading-sm"></span>
-          Loading avatars...
+          正在加载形象…
         </div>
         <div
           v-else
@@ -93,7 +93,7 @@
             <div class="flex flex-col gap-1">
               <span class="font-semibold text-white">{{ avatar.name }}</span>
               <span class="text-xs text-gray-400">
-                {{ avatar.source === 'builtin' ? 'Built-in' : avatar.folderName }}
+                {{ avatar.source === 'builtin' ? '内置' : avatar.folderName }}
               </span>
             </div>
           </label>
@@ -108,9 +108,9 @@
           v-else-if="!customAvatarsStore.customAvatarCount"
           class="text-xs text-gray-400"
         >
-          No custom avatars yet. Create a folder under
+          暂无自定义形象。请在
           <code>{{ customizationPathDisplay }}</code>
-          and add the required videos to see it here.
+          下创建文件夹并加入所需视频，即可在此查看。
         </p>
       </div>
     </fieldset>
@@ -118,13 +118,13 @@
     <fieldset
       class="fieldset bg-gray-900/90 border-green-500/50 rounded-box w-full border p-4"
     >
-      <legend class="fieldset-legend">Custom Tools</legend>
+      <legend class="fieldset-legend">自定义工具</legend>
       <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p class="text-sm text-gray-300 max-w-2xl">
-            Drop your own tool definitions and scripts into Alice. Tools are stored in
+            将自定义工具定义和脚本放入 Alice。工具存储在
             <code class="text-xs bg-gray-800 px-1 py-0.5 rounded">{{ store.filePath || 'user-customization/custom-tools.json' }}</code>.
-            Each entry can be edited here, refreshed from disk, or managed manually if you prefer.
+            你可以在此编辑条目、从磁盘刷新，或手动管理。
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -138,7 +138,7 @@
               v-if="store.isRefreshing"
               class="loading loading-spinner loading-xs mr-2"
             ></span>
-            Refresh
+            刷新
           </button>
           <label class="btn btn-sm btn-outline btn-secondary cursor-pointer">
             <input
@@ -148,14 +148,14 @@
               class="hidden"
               @change="handleScriptUpload"
             />
-            Upload Script
+            上传脚本
           </label>
           <button
             type="button"
             class="btn btn-sm btn-primary"
             @click="openToolModal()"
           >
-            Add Tool
+            添加工具
           </button>
         </div>
       </div>
@@ -175,7 +175,7 @@
           />
         </svg>
         <div>
-          <h4 class="font-semibold">JSON warnings</h4>
+          <h4 class="font-semibold">JSON 警告</h4>
           <ul class="list-disc pl-5 text-sm">
             <li v-for="issue in store.diagnostics" :key="issue">{{ issue }}</li>
           </ul>
@@ -188,9 +188,9 @@
     <section class="space-y-3 mt-4">
       <header class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h3 class="text-lg font-semibold text-gray-100">Available custom Tools</h3>
+          <h3 class="text-lg font-semibold text-gray-100">可用的自定义工具</h3>
           <p class="text-sm text-gray-400">
-            Toggle availability, inspect validation errors, or edit each definition individually.
+            切换可用状态、查看校验错误，或单独编辑每个定义。
           </p>
         </div>
         <span class="text-xs text-gray-500">
@@ -200,14 +200,14 @@
 
       <div v-if="store.isLoading" class="flex items-center gap-2 text-sm text-gray-300">
         <span class="loading loading-spinner loading-sm"></span>
-        Loading tools...
+        正在加载工具…
       </div>
 
       <div
         v-else-if="!store.tools.length"
         class="text-sm text-gray-400 border border-dashed border-gray-600 rounded-lg p-6"
       >
-        No custom tools yet. Upload a script and click "Add Tool" to register it.
+        暂无自定义工具。上传脚本后点击“添加工具”进行注册。
       </div>
 
       <div v-else class="space-y-4">
@@ -224,21 +224,21 @@
                   class="badge"
                   :class="tool.isValid ? 'badge-success' : 'badge-error'"
                 >
-                  {{ tool.isValid ? 'Valid' : 'Needs attention' }}
+                  {{ tool.isValid ? '有效' : '需要处理' }}
                 </span>
                 <span
                   class="badge badge-outline"
                   :class="tool.enabled ? 'badge-success' : 'badge-ghost'"
                 >
-                  {{ tool.enabled ? 'Enabled' : 'Disabled' }}
+                  {{ tool.enabled ? '已启用' : '已禁用' }}
                 </span>
               </div>
               <p class="text-sm text-gray-300 mt-1">{{ tool.description }}</p>
               <p class="text-xs text-gray-500 mt-2">
-                Entry: <code>{{ tool.handler.entry || 'not set' }}</code>
+                入口：<code>{{ tool.handler.entry || '未设置' }}</code>
               </p>
               <p class="text-xs text-gray-500">
-                Runtime: {{ tool.handler.runtime || 'node' }}
+                运行时：{{ tool.handler.runtime || 'node' }}
               </p>
               <ul
                 v-if="tool.errors.length"
@@ -249,7 +249,7 @@
             </div>
             <div class="flex flex-col gap-2 items-start md:items-end">
               <label class="label cursor-pointer gap-2">
-                <span class="label-text text-sm text-gray-300">Enabled</span>
+                <span class="label-text text-sm text-gray-300">已启用</span>
                 <input
                   type="checkbox"
                   class="toggle toggle-success"
@@ -263,14 +263,14 @@
                   type="button"
                   class="btn btn-xs"
                   @click="openToolModal(tool)">
-                  Edit
+                  编辑
                 </button>
                 <button
                   type="button"
                   class="btn btn-xs btn-ghost"
                   @click="() => confirmDelete(tool)"
                 >
-                  Delete
+                  删除
                 </button>
               </div>
             </div>
@@ -285,13 +285,13 @@
         @click="showAdvanced = !showAdvanced"
       >
         <div>
-          <h4 class="text-lg font-semibold text-gray-100">Advanced JSON Editor</h4>
+          <h4 class="text-lg font-semibold text-gray-100">高级 JSON 编辑器</h4>
           <p class="text-xs text-gray-500">
-            Edit <code>custom-tools.json</code> directly. Validate JSON before saving.
+            直接编辑 <code>custom-tools.json</code>，保存前请先校验 JSON。
           </p>
         </div>
         <span class="text-sm text-gray-400">
-          {{ showAdvanced ? 'Hide' : 'Show' }}
+          {{ showAdvanced ? '隐藏' : '显示' }}
         </span>
       </header>
       <div v-if="showAdvanced" class="p-4 space-y-3">
@@ -305,7 +305,7 @@
             class="btn btn-sm"
             @click="resetJsonEditor"
           >
-            Reset from disk
+            从磁盘恢复
           </button>
           <button
             type="button"
@@ -317,7 +317,7 @@
               v-if="isSavingJson"
               class="loading loading-spinner loading-xs mr-2"
             ></span>
-            Save JSON
+            保存 JSON
           </button>
           <span v-if="jsonError" class="text-xs text-red-400">{{ jsonError }}</span>
         </div>
@@ -328,13 +328,13 @@
     <dialog ref="toolModal" class="modal">
       <div class="modal-box w-11/12 max-w-3xl">
         <h3 class="font-bold text-lg mb-4">
-          {{ editingTool ? 'Edit custom tool' : 'Add custom tool' }}
+          {{ editingTool ? '编辑自定义工具' : '添加自定义工具' }}
         </h3>
         <form class="space-y-5" @submit.prevent="saveTool">
           <div class="grid md:grid-cols-2 gap-4">
             <label class="form-control gap-2">
               <span class="label-text font-semibold text-xs uppercase tracking-wide"
-                >Function name *</span
+                >函数名称 *</span
               >
               <input
                 v-model="toolForm.name"
@@ -346,20 +346,20 @@
             </label>
             <label class="form-control gap-2">
               <span class="label-text font-semibold text-xs uppercase tracking-wide"
-                >Display description *</span
+                >显示描述 *</span
               >
               <input
                 v-model="toolForm.description"
                 type="text"
                 required
                 class="input input-bordered"
-                placeholder="What this tool does"
+                placeholder="描述此工具的功能"
               />
             </label>
           </div>
           <label class="form-control gap-2">
             <span class="label-text font-semibold text-xs uppercase tracking-wide"
-              >Script entry path *</span
+              >脚本入口路径 *</span
             >
             <input
               v-model="toolForm.entry"
@@ -369,51 +369,51 @@
               placeholder="custom-tool-scripts/weather.js"
             />
             <span class="label-text-alt text-xs text-gray-400"
-              >Paths are relative to <code>{{ customizationRoot }}</code></span
+              >路径相对于 <code>{{ customizationRoot }}</code></span
             >
           </label>
           <label class="form-control gap-2">
             <span class="label-text font-semibold text-xs uppercase tracking-wide"
-              >JSON schema (parameters)</span
+              >JSON 模式（参数）</span
             >
             <textarea
               v-model="toolForm.parameters"
               class="textarea textarea-bordered font-mono text-xs h-44 leading-5"
             ></textarea>
             <span class="label-text-alt text-xs text-gray-400"
-              >Provide a valid JSON schema describing tool arguments.</span
+              >提供描述工具参数的有效 JSON 模式。</span
             >
           </label>
           <div class="grid md:grid-cols-2 gap-4">
             <label class="form-control gap-2">
               <span class="label-text font-semibold text-xs uppercase tracking-wide"
-                >Strict validation</span
+                >严格校验</span
               >
               <select v-model="toolForm.strict" class="select select-bordered">
-                <option :value="false">Flexible</option>
-                <option :value="true">Strict</option>
+                <option :value="false">宽松</option>
+                <option :value="true">严格</option>
               </select>
             </label>
             <label
               class="label cursor-pointer gap-3 border border-white/10 rounded-lg px-4 py-3 bg-base-200/40"
             >
               <div class="flex flex-col">
-                <span class="label-text font-semibold text-sm">Enable immediately</span>
+                <span class="label-text font-semibold text-sm">立即启用</span>
                 <span class="label-text-alt text-xs text-gray-400"
-                  >Enabled tools appear in the assistant panel.</span
+                  >启用的工具会显示在助手面板中。</span
                 >
               </div>
               <input type="checkbox" v-model="toolForm.enabled" class="toggle" />
             </label>
           </div>
           <div class="modal-action">
-            <button type="button" class="btn" @click="closeToolModal">Cancel</button>
-            <button type="submit" class="btn btn-primary">Save tool</button>
+            <button type="button" class="btn" @click="closeToolModal">取消</button>
+            <button type="submit" class="btn btn-primary">保存工具</button>
           </div>
         </form>
       </div>
       <form method="dialog" class="modal-backdrop">
-        <button>close</button>
+        <button>关闭</button>
       </form>
     </dialog>
   </div>
@@ -576,7 +576,7 @@ async function handleToggle(tool: any) {
 }
 
 async function confirmDelete(tool: any) {
-  if (confirm(`Delete custom tool ${tool.name}?`)) {
+  if (confirm(`确定删除自定义工具 ${tool.name} 吗？`)) {
     await store.deleteTool(tool.id)
   }
 }
@@ -595,7 +595,7 @@ async function handleScriptUpload(event: Event) {
       })
     }
   } catch (error: any) {
-    jsonError.value = error?.message || 'Failed to upload script.'
+    jsonError.value = error?.message || '上传脚本失败。'
   } finally {
     target.value = ''
   }
@@ -619,7 +619,7 @@ async function saveTool() {
     } as any)
     closeToolModal()
   } catch (error: any) {
-    jsonError.value = error?.message || 'Failed to save tool.'
+    jsonError.value = error?.message || '保存工具失败。'
   }
 }
 
@@ -634,7 +634,7 @@ async function saveJsonEditor() {
   try {
     await store.replaceJson(jsonEditorValue.value)
   } catch (error: any) {
-    jsonError.value = error?.message || 'Invalid JSON payload.'
+    jsonError.value = error?.message || 'JSON 内容无效。'
   } finally {
     isSavingJson.value = false
   }

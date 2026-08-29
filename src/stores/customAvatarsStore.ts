@@ -54,11 +54,11 @@ export const useCustomAvatarsStore = defineStore('customAvatars', () => {
       const response =
         (await window.customAvatarsAPI.list()) as OperationResult<CustomAvatarsSnapshot>
       if (!response.success || !response.data) {
-        throw new Error(response.error || 'Unable to load custom avatars.')
+        throw new Error(response.error || '无法加载自定义形象。')
       }
       mergeSnapshot(response.data)
     } catch (err: any) {
-      error.value = err?.message || 'Unable to load custom avatars.'
+      error.value = err?.message || '无法加载自定义形象。'
     } finally {
       isLoading.value = false
       initialized.value = true
@@ -80,11 +80,11 @@ export const useCustomAvatarsStore = defineStore('customAvatars', () => {
       const response =
         (await window.customAvatarsAPI.refresh()) as OperationResult<CustomAvatarsSnapshot>
       if (!response.success || !response.data) {
-        throw new Error(response.error || 'Unable to refresh custom avatars.')
+        throw new Error(response.error || '无法刷新自定义形象。')
       }
       mergeSnapshot(response.data)
     } catch (err: any) {
-      error.value = err?.message || 'Unable to refresh custom avatars.'
+      error.value = err?.message || '无法刷新自定义形象。'
       throw err
     } finally {
       isRefreshing.value = false

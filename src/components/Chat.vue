@@ -122,11 +122,11 @@ const getDisplayableMessageContent = (message: ChatMessage): string => {
               <div class="scheduled-reminder-container my-2 p-3 bg-gradient-to-r from-orange-500/20 to-yellow-500/20 border-l-4 border-orange-400 rounded-r-lg">
                 <div class="flex items-center gap-2 mb-1">
                   <span class="text-lg">⏰</span>
-                  <span class="text-sm font-medium text-orange-200">Scheduled Reminder</span>
+                  <span class="text-sm font-medium text-orange-200">定时提醒</span>
                   ${timeStr ? `<span class="text-xs text-gray-300 ml-auto">${timeStr}</span>` : ''}
                 </div>
                 <div class="text-white">${messageMarkdown(part.text)}</div>
-                ${part.taskName ? `<div class="text-xs text-gray-300 mt-1 italic">Task: ${part.taskName}</div>` : ''}
+                ${part.taskName ? `<div class="text-xs text-gray-300 mt-1 italic">任务：${part.taskName}</div>` : ''}
               </div>
             `
           } else {
@@ -152,8 +152,8 @@ const getDisplayableMessageContent = (message: ChatMessage): string => {
           ? 'partial-image-preview'
           : 'final-image'
         const titleText = part.isPartial
-          ? `Partial Image Preview ${part.partialIndex || ''} (Click to open if available)`
-          : 'Generated Image (Click to open)'
+          ? `图片预览 ${part.partialIndex || ''}（如可用，点击打开）`
+          : '已生成图片（点击打开）'
 
         combinedHtml += `
           <div class="generated-image-container my-2 ${imageClass}">
@@ -164,16 +164,16 @@ const getDisplayableMessageContent = (message: ChatMessage): string => {
               data-absolute-path="${part.absolutePathForOpening}"
               title="${titleText}"
             />
-            ${part.isPartial ? `<span class="text-xs text-gray-400 block text-center">Generating ...</span>` : ''}
+            ${part.isPartial ? `<span class="text-xs text-gray-400 block text-center">生成中…</span>` : ''}
           </div>
           <br/>`
       } else if (part.type === 'app_image_uri' && part.uri) {
         combinedHtml += `
           <img 
             src="${part.uri}" 
-            alt="User provided image" 
+            alt="用户提供的图片"
             class="max-w-xs md:max-w-sm rounded-lg my-2 shadow-lg" 
-            title="User provided image"
+            title="用户提供的图片"
           />
           <br/>`
       } else if (part.type === 'app_error' && part.text) {
@@ -191,7 +191,7 @@ const getDisplayableMessageContent = (message: ChatMessage): string => {
               </svg>
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-2">
-                  <span class="text-sm font-semibold text-red-300">Error${errorTypeDisplay}</span>
+                  <span class="text-sm font-semibold text-red-300">错误${errorTypeDisplay}</span>
                   ${errorCodeDisplay ? `<span class="text-xs text-gray-400">${errorCodeDisplay}</span>` : ''}
                 </div>
                 <div class="text-white text-sm leading-relaxed">${part.text}</div>
@@ -207,7 +207,7 @@ const getDisplayableMessageContent = (message: ChatMessage): string => {
       ? combinedHtml.slice(0, -5)
       : combinedHtml || (message.role === 'assistant' ? '...' : '')
   }
-  return messageMarkdown('Error: Unable to display message content.')
+  return messageMarkdown('错误：无法显示消息内容。')
 }
 
 const handleChatClick = (event: MouseEvent) => {
