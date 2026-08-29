@@ -89,9 +89,10 @@
           </p>
         </div>
         <div>
-          <label for="openai-key" class="block mb-1 text-sm"
-            >OpenAI API 密钥 *</label
-          >
+          <label for="openai-key" class="block mb-1 text-sm">
+            OpenAI API 密钥
+            <span v-if="openAiKeyRequired">*</span>
+          </label>
           <input
             id="openai-key"
             type="password"
@@ -101,7 +102,11 @@
             placeholder="sk-..."
           />
           <p class="text-xs text-gray-400 mt-1">
-            无论 AI 服务商如何，语音播报、语音识别和向量功能都需要此密钥。
+            {{
+              openAiKeyRequired
+                ? '当前配置使用了 OpenAI 服务，需要此密钥。'
+                : '当前配置不需要 OpenAI API 密钥；只有切换到 OpenAI 的聊天、语音或向量服务时才需要。'
+            }}
           </p>
         </div>
         <div v-if="currentSettings.aiProvider === 'openrouter'">
@@ -930,6 +935,14 @@ const getTargetValue = (event: Event): string => {
 const emitCheckboxChange = (key: keyof AliceSettings, event: Event): void => {
   emit('update:setting', key, (event.target as HTMLInputElement).checked)
 }
+
+const openAiKeyRequired = computed(
+  () =>
+    props.currentSettings.aiProvider === 'openai' ||
+    props.currentSettings.sttProvider === 'openai' ||
+    props.currentSettings.ttsProvider === 'openai' ||
+    props.currentSettings.embeddingProvider === 'openai'
+)
 
 const backgroundListeningReadiness = computed(() => {
   if (props.currentSettings.sttProvider !== 'local') {
