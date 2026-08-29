@@ -485,6 +485,14 @@
             <span class="font-medium">后台唤醒状态：</span>
             {{ backgroundListeningReadiness.message }}
           </div>
+          <button
+            v-if="!currentSettings.backgroundListeningEnabled"
+            type="button"
+            class="btn btn-sm btn-outline btn-info w-full sm:w-auto"
+            @click="enableBackgroundWake"
+          >
+            启用后台唤醒
+          </button>
         </div>
       </div>
     </fieldset>
@@ -898,6 +906,17 @@ const backgroundListeningReadiness = computed(() => {
   }
   return { ready: true, message: '已开启，隐藏窗口后会继续等待唤醒词。' }
 })
+
+const enableBackgroundWake = () => {
+  if (props.currentSettings.sttProvider !== 'local') {
+    emit('update:setting', 'sttProvider', 'local')
+  }
+  emit('update:setting', 'localSttEnabled', true)
+  if (!props.currentSettings.localSttWakeWord?.trim()) {
+    emit('update:setting', 'localSttWakeWord', 'alice')
+  }
+  emit('update:setting', 'backgroundListeningEnabled', true)
+}
 
 const updateServiceStatus = async () => {
   try {
