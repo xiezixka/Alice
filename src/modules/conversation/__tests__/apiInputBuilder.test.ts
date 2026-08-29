@@ -90,6 +90,61 @@ describe('createApiInputBuilder', () => {
     })
   })
 
+  it('attaches a screenshot to Responses tool output for vision models', async () => {
+    const imageUrl = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ=='
+    const history: ConversationHistoryMessage[] = [
+      { role: 'tool', tool_call_id: 'call_screen', content: '{"ok":true}' },
+    ]
+    const builder = createApiInputBuilder(
+      buildDependencies({
+        history,
+        getToolVisualOutput: () => ({
+          imageUrl,
+          detail: 'high',
+          contextText: '请分析当前屏幕。',
+        }),
+      })
+    )
+
+    const result = await builder.build({ isNewChain: false })
+    expect(result[0]).toMatchObject({
+      type: 'function_call_output',
+      call_id: 'call_screen',
+      output: [
+        { type: 'input_text', text: '{"ok":true}' },
+        { type: 'input_image', image_url: imageUrl, detail: 'high' },
+      ],
+    })
+  })
+
+  it('adds a temporary user image for chat-completions vision models', async () => {
+    const imageUrl = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ=='
+    const history: ConversationHistoryMessage[] = [
+      { role: 'tool', tool_call_id: 'call_screen', content: 'captured' },
+    ]
+    const builder = createApiInputBuilder(
+      buildDependencies({
+        history,
+        getAiProvider: () => 'deepseek',
+        getToolVisualOutput: () => ({
+          imageUrl,
+          detail: 'high',
+          contextText: '请分析当前屏幕。',
+        }),
+      })
+    )
+
+    const result = await builder.build({ isNewChain: false })
+    expect(result).toHaveLength(2)
+    expect(result[1]).toMatchObject({
+      role: 'user',
+      content: [
+        { type: 'input_text', text: '请分析当前屏幕。' },
+        { type: 'input_image', image_url: imageUrl, detail: 'high' },
+      ],
+    })
+  })
+
   it('keeps UI system status messages out of inference payloads', async () => {
     const history: ConversationHistoryMessage[] = [
       {

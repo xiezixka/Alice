@@ -1,4 +1,12 @@
-import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import {
+  BrowserWindow,
+  desktopCapturer,
+  dialog,
+  ipcMain,
+  screen,
+  shell,
+  systemPreferences,
+} from 'electron'
 import fs from 'fs/promises'
 import { exec, execFile } from 'child_process'
 import { promisify } from 'node:util'
@@ -27,6 +35,7 @@ type AppliedFileOperation = FileOperation & { completedAt: string }
 class DesktopManager {
   private static instance: DesktopManager | null = null
   private readonly approvedDirectoryRoots = new Set<string>()
+  private screenCaptureApprovedForSession = false
   private readonly fileOperationHistory = new Map<
     string,
     AppliedFileOperation[]
@@ -56,6 +65,7 @@ class DesktopManager {
       'desktop:applyFileOperations',
       'desktop:undoFileOperations',
       'desktop:getCapabilities',
+      'desktop:captureScreen',
       'desktop:runAction',
       'desktop:executeCommand',
     ]) {
@@ -393,6 +403,65 @@ class DesktopManager {
       this.getCapabilities()
     )
 
+    ipcMain.handle('desktop:captureScreen', async event => {
+      try {
+        const access = await this.ensureScreenCaptureApproved(event)
+        if (!access.success) return access
+
+        const primaryDisplay = screen.getPrimaryDisplay()
+        const { width, height } = primaryDisplay.size
+        const scale = Math.min(
+          1,
+          1600 / Math.max(width, 1),
+          1000 / Math.max(height, 1)
+        )
+        const thumbnailSize = {
+          width: Math.max(1, Math.round(width * scale)),
+          height: Math.max(1, Math.round(height * scale)),
+        }
+        const sources = await desktopCapturer.getSources({
+          types: ['screen'],
+          thumbnailSize,
+          fetchWindowIcons: false,
+        })
+        const source =
+          sources.find(item => item.display_id === String(primaryDisplay.id)) ||
+          sources[0]
+        if (!source || source.thumbnail.isEmpty()) {
+          return {
+            success: false,
+            error:
+              '未能读取屏幕内容。请确认 Alice 已获得 macOS“屏幕录制”权限。',
+          }
+        }
+
+        const jpeg = source.thumbnail.toJPEG(72)
+        if (!jpeg.byteLength) {
+          return { success: false, error: '屏幕截图为空。' }
+        }
+        const size = source.thumbnail.getSize()
+        return {
+          success: true,
+          data: {
+            imageDataUrl: `data:image/jpeg;base64,${jpeg.toString('base64')}`,
+            width: size.width,
+            height: size.height,
+            displayId: source.display_id || String(primaryDisplay.id),
+            capturedAt: new Date().toISOString(),
+          },
+        }
+      } catch (error) {
+        console.error('[DesktopManager] Screen capture failed:', error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? `屏幕读取失败：${error.message}`
+              : '屏幕读取失败。请检查系统屏幕录制权限。',
+        }
+      }
+    })
+
     ipcMain.handle('desktop:runAction', async (event, args) => {
       try {
         const action = this.parseDesktopAction(args)
@@ -527,6 +596,36 @@ class DesktopManager {
     return { success: true }
   }
 
+  private async ensureScreenCaptureApproved(
+    event: Electron.IpcMainInvokeEvent
+  ): Promise<{ success: true } | { success: false; error: string }> {
+    if (this.screenCaptureApprovedForSession) return { success: true }
+
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    const options = {
+      type: 'warning' as const,
+      buttons: ['取消', '仅允许本次', '本次运行始终允许'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+      title: '允许 Alice 读取屏幕？',
+      message: 'Alice 请求读取当前屏幕内容。',
+      detail:
+        '截图只会作为当前请求的临时视觉上下文发送给模型，不会写入长期聊天记录。你仍可在 macOS“系统设置 > 隐私与安全性 > 屏幕录制”中随时撤销权限。',
+    }
+    const confirmation = owner
+      ? await dialog.showMessageBox(owner, options)
+      : await dialog.showMessageBox(options)
+
+    if (confirmation.response === 0) {
+      return { success: false, error: '用户取消了屏幕读取。' }
+    }
+    if (confirmation.response === 2) {
+      this.screenCaptureApprovedForSession = true
+    }
+    return { success: true }
+  }
+
   private async pathExists(target: string): Promise<boolean> {
     try {
       await fs.access(target)
@@ -613,13 +712,22 @@ class DesktopManager {
 
   private getCapabilities() {
     const platform = process.platform
+    const screenPermission =
+      platform === 'darwin'
+        ? systemPreferences.getMediaAccessStatus('screen')
+        : 'not-applicable'
     return {
       platform,
       osVersion: os.release(),
       supportedActions: ['open_app', 'focus_window', 'click', 'type', 'hotkey'],
+      screenCapture: {
+        supported:
+          platform === 'darwin' || platform === 'win32' || platform === 'linux',
+        permission: screenPermission,
+      },
       note:
         platform === 'darwin'
-          ? '点击和输入通过 macOS System Events 执行，需要在系统设置中授予 Alice 辅助功能权限。'
+          ? '点击和输入通过 macOS System Events 执行，需要授予辅助功能权限；读取屏幕还需要授予屏幕录制权限。'
           : platform === 'win32'
             ? '点击和输入通过 Windows PowerShell 执行，部分应用可能需要以相同权限级别运行。'
             : 'Linux 需要安装并启用 xdotool；应用级语义控件尚未统一。',

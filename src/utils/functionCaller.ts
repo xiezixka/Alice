@@ -9,6 +9,7 @@ import {
   organize_files,
   undo_file_organization,
   desktop_capabilities,
+  capture_desktop_screen,
   desktop_action,
   execute_command,
 } from './functions/filesystem'
@@ -764,6 +765,7 @@ const functionRegistry: {
   organize_files,
   undo_file_organization,
   desktop_capabilities,
+  capture_desktop_screen,
   desktop_action,
   execute_command,
   schedule_task,
@@ -801,6 +803,7 @@ const functionSchemas = {
   organize_files: { required: ['operations'] },
   undo_file_organization: { required: ['operationId'] },
   desktop_capabilities: { required: [] },
+  capture_desktop_screen: { required: [] },
   desktop_action: { required: ['action'] },
   execute_command: { required: ['command'] },
   schedule_task: { required: ['name', 'schedule', 'action_type', 'details'] },

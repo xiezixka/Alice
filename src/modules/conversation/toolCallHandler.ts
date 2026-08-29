@@ -2,6 +2,7 @@ import type OpenAI from 'openai'
 import type { ToolCallHandler, ToolCallHandlerDependencies } from './types'
 import type { AudioState } from '../../stores/generalStore'
 import { isExpectedAbortError } from '../../utils/isAbortError'
+import { extractToolVisualOutput } from './toolVisualOutput'
 
 const PREVIOUS_RESPONSE_NOT_FOUND = 'Previous response with id'
 const NOT_FOUND_SUFFIX = 'not found'
@@ -50,11 +51,14 @@ export function createToolCallHandler(
         resultString = `Error: Tool execution failed - ${errorMessage}`
       }
 
-      dependencies.addToolMessage({
+      const parsedResult = extractToolVisualOutput(resultString)
+      const toolMessage = {
         toolCallId: toolCall.call_id,
         functionName,
-        content: resultString,
-      })
+        content: parsedResult.text,
+        ...(parsedResult.visual ? { visual: parsedResult.visual } : {}),
+      }
+      dependencies.addToolMessage(toolMessage)
 
       const isNewChainAfterTool = dependencies.getCurrentResponseId() === null
       const nextApiInput = await dependencies.buildApiInput(isNewChainAfterTool)

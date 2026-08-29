@@ -1,13 +1,10 @@
 import type OpenAI from 'openai'
 import type { AppChatMessageContentPart } from '../../types/chat'
 import { isChatCompletionsProvider } from '../../services/llmProviders/providerCatalog'
+import type { ToolVisualOutput } from './toolVisualOutput'
 
 export type ConversationHistoryRole =
-  | 'user'
-  | 'assistant'
-  | 'system'
-  | 'developer'
-  | 'tool'
+  'user' | 'assistant' | 'system' | 'developer' | 'tool'
 
 export interface ConversationHistoryMessage {
   local_id_temp?: string
@@ -24,6 +21,7 @@ export interface ApiInputBuilderDependencies {
   getChatHistory(): ConversationHistoryMessage[]
   getMaxHistoryMessagesForApi(): number
   getAiProvider(): string
+  getToolVisualOutput?(callId: string): ToolVisualOutput | undefined
 }
 
 export interface ApiInputBuilder {
@@ -61,14 +59,46 @@ export function createApiInputBuilder(
         }
 
         if (msg.role === 'tool') {
+          const callId = msg.tool_call_id || `unknown_call_id_${Date.now()}`
+          const outputText =
+            typeof msg.content === 'string'
+              ? msg.content
+              : JSON.stringify(msg.content)
+          const visual = dependencies.getToolVisualOutput?.(callId)
           apiItemPartial = {
             type: 'function_call_output',
-            call_id: msg.tool_call_id || `unknown_call_id_${Date.now()}`,
+            call_id: callId,
             output:
-              typeof msg.content === 'string'
-                ? msg.content
-                : JSON.stringify(msg.content),
+              visual && !isChatCompletionsProvider(aiProvider)
+                ? [
+                    { type: 'input_text', text: outputText },
+                    {
+                      type: 'input_image',
+                      image_url: visual.imageUrl,
+                      detail: visual.detail,
+                    },
+                  ]
+                : outputText,
           }
+          apiInput.push(apiItemPartial)
+
+          // Chat Completions tool messages currently accept text-only content.
+          // Put the same screenshot in a synthetic user message so DeepSeek and
+          // other OpenAI-compatible vision models can still inspect it.
+          if (visual && isChatCompletionsProvider(aiProvider)) {
+            apiInput.push({
+              role: 'user',
+              content: [
+                { type: 'input_text', text: visual.contextText },
+                {
+                  type: 'input_image',
+                  image_url: visual.imageUrl,
+                  detail: visual.detail,
+                },
+              ],
+            })
+          }
+          continue
         } else {
           const currentApiRole = msg.role as 'user' | 'assistant' | 'developer'
           apiItemPartial = { role: currentApiRole, content: [] }

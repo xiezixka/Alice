@@ -183,6 +183,7 @@ const defaultSettings: AliceSettings = {
     'delete_memory',
     'recall_memories',
     'desktop_capabilities',
+    'capture_desktop_screen',
     'list_directory_detailed',
     'find_files',
   ],

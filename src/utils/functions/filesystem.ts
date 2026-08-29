@@ -160,6 +160,27 @@ export async function desktop_capabilities(): Promise<FunctionResult> {
   }
 }
 
+export async function capture_desktop_screen(): Promise<FunctionResult> {
+  try {
+    const result = await requireDesktopAPI().captureScreen()
+    if (!result.success || !result.data) {
+      return { success: false, error: result.error || '屏幕读取失败。' }
+    }
+
+    // The data URL is intentionally returned only to the current tool call.
+    // The conversation layer strips it before adding the tool message to history.
+    return {
+      success: true,
+      data: {
+        message: '已捕获当前屏幕截图，供视觉模型分析。',
+        screenshot: result.data,
+      },
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
 export async function desktop_action(
   args: Record<string, any>
 ): Promise<FunctionResult> {

@@ -125,7 +125,22 @@ interface AliceDesktopAPI {
     success?: boolean
     platform: string
     supportedActions: string[]
+    screenCapture?: {
+      supported: boolean
+      permission: string
+    }
     note: string
+  }>
+  captureScreen: () => Promise<{
+    success: boolean
+    data?: {
+      imageDataUrl: string
+      width: number
+      height: number
+      displayId: string
+      capturedAt: string
+    }
+    error?: string
   }>
   runAction: (
     args: Record<string, any>

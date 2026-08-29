@@ -169,6 +169,7 @@ contextBridge.exposeInMainWorld('desktopAPI', {
   undoFileOperations: (operationId: string) =>
     aliceIPC.invoke('desktop:undoFileOperations', { operationId }),
   getCapabilities: () => aliceIPC.invoke('desktop:getCapabilities'),
+  captureScreen: () => aliceIPC.invoke('desktop:captureScreen'),
   runAction: (args: Record<string, any>) =>
     aliceIPC.invoke('desktop:runAction', args),
   executeCommand: (command: string) =>

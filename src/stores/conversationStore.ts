@@ -6,6 +6,7 @@ import { useGeneralStore } from './generalStore'
 import type { AudioState } from './generalStore'
 import { useSettingsStore } from './settingsStore'
 import { executeFunction } from '../utils/functionCaller'
+import type { ToolVisualOutput } from '../modules/conversation/toolVisualOutput'
 import eventBus from '../utils/eventBus'
 import { isExpectedAbortError } from '../utils/isAbortError'
 import { createStreamHandler } from '../modules/conversation/streamHandler'
@@ -18,9 +19,7 @@ import { createReminderHandler } from '../modules/conversation/reminderHandler'
 import { createChatOrchestrator } from '../modules/conversation/chatOrchestrator'
 import { createBackendService } from '../modules/conversation/backendService'
 import { buildAssistantSystemPrompt } from '../prompts/systemPrompt'
-import type {
-  ToolCallHandlerDependencies,
-} from '../modules/conversation/types'
+import type { ToolCallHandlerDependencies } from '../modules/conversation/types'
 import type { ApiInputBuilderDependencies } from '../modules/conversation/apiInputBuilder'
 import type { SummarizerDependencies } from '../modules/conversation/summarizer'
 import type { SpeechQueueDependencies } from '../modules/conversation/speechQueue'
@@ -78,7 +77,11 @@ function getMessageIdentity(message: ChatMessage): string {
   )
 }
 
-function formatRagSource(pathValue: string, title: string, page?: number | null) {
+function formatRagSource(
+  pathValue: string,
+  title: string,
+  page?: number | null
+) {
   const fileName = pathValue.split(/[\\/]/).pop() || title
   const pageSuffix = page && page > 0 ? `#p${page}` : ''
   return `${fileName}${pageSuffix}`
@@ -94,7 +97,7 @@ function buildRagContextBlock(
   }[],
   maxChars: number
 ): string {
-  const prefix = 'Relevant excerpts from user\'s documents (cite when used):'
+  const prefix = "Relevant excerpts from user's documents (cite when used):"
   let remaining = maxChars - (prefix.length + 1)
   if (remaining <= 0) return ''
 
@@ -196,7 +199,8 @@ function rerankRagResults(
 
   const anchorKeywords = keywords.filter(word => word.length >= 5)
   const scored = results.map(result => {
-    const haystack = `${result.title} ${result.path} ${result.text}`.toLowerCase()
+    const haystack =
+      `${result.title} ${result.path} ${result.text}`.toLowerCase()
     const normalizedHaystack = normalizeText(haystack)
     const matches = keywords.reduce((count, word) => {
       return haystack.includes(word) ? count + 1 : count
@@ -258,7 +262,8 @@ function shouldIndexAssistantMessage(message: ChatMessage): boolean {
   if (!text) return false
 
   const lower = text.toLowerCase()
-  const trivialPattern = /^(hi|hello|hey|thanks|sorry|ok|okay|sure|done)[.!?]*$/i
+  const trivialPattern =
+    /^(hi|hello|hey|thanks|sorry|ok|okay|sure|done)[.!?]*$/i
   if (text.length < 40 && trivialPattern.test(lower)) {
     return false
   }
@@ -296,6 +301,9 @@ export const useConversationStore = defineStore('conversation', () => {
   const ttsAbortController = ref<AbortController | null>(null)
   const llmAbortController = ref<AbortController | null>(null)
   const ephemeralEmotionalContext = ref<string | null>(null)
+  // Screenshot pixels are kept only until the tool continuation request is
+  // assembled. They are deliberately not added to persisted chat history.
+  const pendingToolVisualOutputs = new Map<string, ToolVisualOutput>()
   const getComposedSystemPrompt = () =>
     buildAssistantSystemPrompt(settingsStore.config.assistantSystemPrompt)
 
@@ -340,7 +348,9 @@ export const useConversationStore = defineStore('conversation', () => {
         message => !originalIdentities.has(getMessageIdentity(message))
       )
       chatHistory.value =
-        additions.length > 0 ? [...additions, ...originalHistory] : originalHistory
+        additions.length > 0
+          ? [...additions, ...originalHistory]
+          : originalHistory
     }
   }
 
@@ -370,54 +380,51 @@ export const useConversationStore = defineStore('conversation', () => {
     currentConversationTurnId.value = `turn-${Date.now()}`
 
     if (window.aliceIPC) {
-      window.aliceIPC.on(
-        'scheduler:reminder',
-        async reminderData => {
-          console.log(
-            '[ConversationStore] Received scheduler reminder:',
-            reminderData
-          )
-          try {
-            const reminderMessage: ChatMessage = {
-              id: `reminder-${Date.now()}`,
-              role: 'assistant',
-              content: [
-                {
-                  type: 'app_text',
-                  text: reminderData.message,
-                  isScheduledReminder: true,
-                  taskName: reminderData.taskName,
-                  timestamp: reminderData.timestamp,
-                },
-              ],
-              created_at: Date.now(),
-            }
+      window.aliceIPC.on('scheduler:reminder', async reminderData => {
+        console.log(
+          '[ConversationStore] Received scheduler reminder:',
+          reminderData
+        )
+        try {
+          const reminderMessage: ChatMessage = {
+            id: `reminder-${Date.now()}`,
+            role: 'assistant',
+            content: [
+              {
+                type: 'app_text',
+                text: reminderData.message,
+                isScheduledReminder: true,
+                taskName: reminderData.taskName,
+                timestamp: reminderData.timestamp,
+              },
+            ],
+            created_at: Date.now(),
+          }
 
-            generalStore.chatHistory.unshift(reminderMessage)
+          generalStore.chatHistory.unshift(reminderMessage)
 
-            if (reminderData.message && reminderData.message.trim()) {
-              ttsAbortController.value = new AbortController()
-              const ttsResponse = await api.ttsStream(
-                reminderData.message,
-                ttsAbortController.value.signal
-              )
-              if (
-                queueAudioForPlayback(ttsResponse) &&
-                audioState.value !== 'SPEAKING'
-              ) {
-                setAudioState('SPEAKING')
-              }
-            }
-          } catch (error: any) {
-            if (!isExpectedAbortError(error)) {
-              console.error(
-                '[ConversationStore] Failed to speak scheduler reminder:',
-                error
-              )
+          if (reminderData.message && reminderData.message.trim()) {
+            ttsAbortController.value = new AbortController()
+            const ttsResponse = await api.ttsStream(
+              reminderData.message,
+              ttsAbortController.value.signal
+            )
+            if (
+              queueAudioForPlayback(ttsResponse) &&
+              audioState.value !== 'SPEAKING'
+            ) {
+              setAudioState('SPEAKING')
             }
           }
+        } catch (error: any) {
+          if (!isExpectedAbortError(error)) {
+            console.error(
+              '[ConversationStore] Failed to speak scheduler reminder:',
+              error
+            )
+          }
         }
-      )
+      })
     }
 
     return true
@@ -429,14 +436,16 @@ export const useConversationStore = defineStore('conversation', () => {
     await summarizer.triggerSummarization()
   }
 
-  const apiInputBuilder = createApiInputBuilder(
-    createApiInputDependencies()
-  )
+  const apiInputBuilder = createApiInputBuilder(createApiInputDependencies())
 
   const buildApiInput = async (
     isNewChain: boolean
   ): Promise<OpenAI.Responses.Request.InputItemLike[]> => {
-    return apiInputBuilder.build({ isNewChain })
+    try {
+      return await apiInputBuilder.build({ isNewChain })
+    } finally {
+      pendingToolVisualOutputs.clear()
+    }
   }
 
   function createApiInputDependencies(): ApiInputBuilderDependencies {
@@ -445,6 +454,7 @@ export const useConversationStore = defineStore('conversation', () => {
       getMaxHistoryMessagesForApi: () =>
         settingsStore.config.MAX_HISTORY_MESSAGES_FOR_API,
       getAiProvider: () => settingsStore.config.aiProvider,
+      getToolVisualOutput: callId => pendingToolVisualOutputs.get(callId),
     }
   }
 
@@ -459,11 +469,7 @@ export const useConversationStore = defineStore('conversation', () => {
       analyzeContext: (formattedMessages, model) =>
         api.createContextAnalysisResponse(formattedMessages, model),
       createSummary: (formattedMessages, model, systemPrompt) =>
-        api.createSummarizationResponse(
-          formattedMessages,
-          model,
-          systemPrompt
-        ),
+        api.createSummarizationResponse(formattedMessages, model, systemPrompt),
       saveSummary: params =>
         window.aliceIPC.invoke('summaries:save-summary', params),
       setEphemeralEmotionalContext: value => {
@@ -607,9 +613,7 @@ export const useConversationStore = defineStore('conversation', () => {
     await speechQueueManager.enqueueSpeech(text)
   }
 
-  const toolCallHandler = createToolCallHandler(
-    createToolCallDependencies()
-  )
+  const toolCallHandler = createToolCallHandler(createToolCallDependencies())
 
   function createToolCallDependencies(): ToolCallHandlerDependencies {
     return {
@@ -621,7 +625,10 @@ export const useConversationStore = defineStore('conversation', () => {
           content: [{ type: 'app_text', text: messageText }],
         })
       },
-      addToolMessage: ({ toolCallId, functionName, content }) => {
+      addToolMessage: ({ toolCallId, functionName, content, visual }) => {
+        if (visual) {
+          pendingToolVisualOutputs.set(toolCallId, visual)
+        }
         generalStore.addMessageToHistory({
           role: 'tool',
           tool_call_id: toolCallId,
@@ -660,10 +667,7 @@ export const useConversationStore = defineStore('conversation', () => {
       processStream,
       parseErrorMessage: error => parseErrorMessage(error),
       updateMessageContent: (placeholderTempId, content) =>
-        generalStore.updateMessageContentByTempId(
-          placeholderTempId,
-          content
-        ),
+        generalStore.updateMessageContentByTempId(placeholderTempId, content),
       setAudioState: state => setAudioState(state as AudioState),
       isRecordingRequested: () => isRecordingRequested.value,
       getAssistantSystemPrompt: () => getComposedSystemPrompt(),
@@ -690,10 +694,7 @@ export const useConversationStore = defineStore('conversation', () => {
   function createStreamDependencies(placeholderTempId: string) {
     return {
       appendAssistantDelta: (delta: string) =>
-        generalStore.appendMessageDeltaByTempId(
-          placeholderTempId,
-          delta
-        ),
+        generalStore.appendMessageDeltaByTempId(placeholderTempId, delta),
       setAssistantResponseId: (responseId: string) => {
         currentResponseId.value = responseId
         generalStore.updateMessageApiResponseIdByTempId(
@@ -702,19 +703,11 @@ export const useConversationStore = defineStore('conversation', () => {
         )
       },
       setAssistantMessageId: (messageId: string) => {
-        generalStore.updateMessageApiIdByTempId(
-          placeholderTempId,
-          messageId
-        )
+        generalStore.updateMessageApiIdByTempId(placeholderTempId, messageId)
       },
       addToolCall: (toolCall: any) =>
-        generalStore.addToolCallToMessageByTempId(
-          placeholderTempId,
-          toolCall
-        ),
-      handleToolCall: async (
-        toolCall: OpenAI.Responses.FunctionCall
-      ) => {
+        generalStore.addToolCallToMessageByTempId(placeholderTempId, toolCall),
+      handleToolCall: async (toolCall: OpenAI.Responses.FunctionCall) => {
         await toolCallHandler.handleToolCall({
           toolCall,
           originalResponseIdForTool: currentResponseId.value,
@@ -802,8 +795,7 @@ export const useConversationStore = defineStore('conversation', () => {
         msg => msg.local_id_temp === placeholderTempId
       )
       if (assistantMessage && shouldIndexAssistantMessage(assistantMessage)) {
-        const conversationId =
-          currentResponseId.value || 'default_conversation'
+        const conversationId = currentResponseId.value || 'default_conversation'
         try {
           await api.indexMessageForThoughts(
             conversationId,
@@ -826,9 +818,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
     return result
   }
-  const chatOrchestrator = createChatOrchestrator(
-    createChatDependencies()
-  )
+  const chatOrchestrator = createChatOrchestrator(createChatDependencies())
 
   const chat = async () => {
     currentConversationTurnId.value = `turn-${Date.now()}`
@@ -866,6 +856,7 @@ export const useConversationStore = defineStore('conversation', () => {
       search_emails: '📧 Searching emails...',
       get_email_content: '📧 Reading email content...',
       browser_context: '🌐 Looking at your browser...',
+      capture_desktop_screen: '🖥️ 正在读取当前屏幕…',
       execute_command: (args: any) =>
         `💻 Executing: ${args?.command || 'command'}`,
       list_directory: (args: any) => `📁 Listing: ${args?.path || 'directory'}`,
@@ -1027,8 +1018,7 @@ export const useConversationStore = defineStore('conversation', () => {
       fetchOpenAIModels: () => api.fetchOpenAIModels(),
       transcribeWithOpenAI: (audio: ArrayBuffer) =>
         api.transcribeWithOpenAI(audio),
-      transcribeWithGroq: (audio: ArrayBuffer) =>
-        api.transcribeWithGroq(audio),
+      transcribeWithGroq: (audio: ArrayBuffer) => api.transcribeWithGroq(audio),
       transcribeWithGoogle: (audio: ArrayBuffer) =>
         api.transcribeWithGoogle(audio),
       transcribeWithBackend: (audio: ArrayBuffer) =>

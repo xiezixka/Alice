@@ -5,6 +5,7 @@
 import type OpenAI from 'openai'
 import type { AppChatMessageContentPart } from '../../types/chat'
 import type { AudioState } from '../../stores/generalStore'
+import type { ToolVisualOutput } from './toolVisualOutput'
 
 export type ConversationStreamEvent =
   | {
@@ -101,6 +102,7 @@ export interface ToolCallHandlerDependencies {
     toolCallId: string
     functionName: string
     content: string
+    visual?: ToolVisualOutput
   }): void
   executeFunction(functionName: string, args: object): Promise<string>
   buildApiInput(

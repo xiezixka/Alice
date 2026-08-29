@@ -44,6 +44,7 @@ export const INVOKE_CHANNELS = new Set([
   'desktop:applyFileOperations',
   'desktop:undoFileOperations',
   'desktop:getCapabilities',
+  'desktop:captureScreen',
   'desktop:runAction',
   'desktop:executeCommand',
   'http:request',

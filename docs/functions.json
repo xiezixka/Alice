@@ -192,6 +192,18 @@
   },
   {
     "type": "function",
+    "name": "capture_desktop_screen",
+    "description": "读取当前主屏幕截图并提供给支持视觉输入的模型。仅在需要理解屏幕内容、并且当前模型支持图像输入时调用；首次调用会请求用户授权，截图不会写入长期聊天记录。",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
     "name": "list_directory_detailed",
     "description": "Lists files and folders with type, size, and modification time. Read-only.",
     "strict": true,
