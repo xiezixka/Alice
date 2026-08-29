@@ -219,7 +219,7 @@ const micIconSrc = computed(() => {
 })
 
 const micAriaLabel = computed(() => {
-  return isRecordingRequested.value ? 'Stop Microphone' : 'Start Microphone'
+  return isRecordingRequested.value ? '停止麦克风' : '开启麦克风'
 })
 
 const closeActionLabel = computed(() =>
