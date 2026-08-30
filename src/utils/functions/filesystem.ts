@@ -33,7 +33,7 @@ export interface FileOperation {
 function requireDesktopAPI() {
   if (typeof window === 'undefined' || !window.desktopAPI) {
     throw new Error(
-      'Electron desktop bridge not available. This function only works in the desktop app.'
+      'Electron 桌面桥接不可用，此功能只能在桌面应用中使用。'
     )
   }
   return window.desktopAPI
@@ -47,7 +47,7 @@ export async function open_path(args: OpenPathArgs): Promise<FunctionResult> {
       return {
         success: false,
         error:
-          'Electron IPC bridge not available. This function only works in the desktop app.',
+          'Electron IPC 桥接不可用，此功能只能在桌面应用中使用。',
       }
     }
 
@@ -63,7 +63,7 @@ export async function open_path(args: OpenPathArgs): Promise<FunctionResult> {
     console.error('Error invoking electron:open-path:', error)
     return {
       success: false,
-      error: `Failed to execute open_path: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error: `打开路径失败：${error instanceof Error ? error.message : '未知错误'}`,
     }
   }
 }

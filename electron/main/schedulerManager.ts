@@ -262,7 +262,7 @@ export async function createScheduledTask(
     if (success) {
       return { success: true, taskId: task.id }
     } else {
-      return { success: false, error: 'Failed to schedule task' }
+      return { success: false, error: '创建计划任务失败。' }
     }
   } catch (error) {
     console.error('[SchedulerManager] Failed to create task:', error)

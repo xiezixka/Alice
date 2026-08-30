@@ -1588,7 +1588,7 @@ export function registerGoogleIPCHandlers(): void {
       if (!confirmed)
         return {
           success: false,
-          error: 'Google Calendar create cancelled by user.',
+          error: '用户取消了创建 Google 日历事件。',
         }
       return googleCalendarManager.createEvent(
         authClient,
@@ -1615,7 +1615,7 @@ export function registerGoogleIPCHandlers(): void {
       if (!confirmed)
         return {
           success: false,
-          error: 'Google Calendar update cancelled by user.',
+          error: '用户取消了修改 Google 日历事件。',
         }
       return googleCalendarManager.updateEvent(
         authClient,
@@ -1636,7 +1636,7 @@ export function registerGoogleIPCHandlers(): void {
       if (!confirmed)
         return {
           success: false,
-          error: 'Google Calendar delete cancelled by user.',
+          error: '用户取消了删除 Google 日历事件。',
         }
       return googleCalendarManager.deleteEvent(
         authClient,
@@ -1730,7 +1730,7 @@ export function registerGoogleIPCHandlers(): void {
       `主题：${subject}\n\n${body}`
     )
     if (!confirmed)
-      return { success: false, error: 'Email send cancelled by user.' }
+      return { success: false, error: '用户取消了发送邮件。' }
     return withAuthenticatedClient(
       authClient =>
         googleGmailManager.sendMessage({
@@ -1754,7 +1754,7 @@ export function registerGoogleIPCHandlers(): void {
       return { success: false, error: '邮件 ID 和回复正文不能为空。' }
     const confirmed = await confirmGmailWrite(event, '即将回复邮件', body)
     if (!confirmed)
-      return { success: false, error: 'Email reply cancelled by user.' }
+      return { success: false, error: '用户取消了回复邮件。' }
     return withAuthenticatedClient(
       authClient =>
         googleGmailManager.replyToMessage({

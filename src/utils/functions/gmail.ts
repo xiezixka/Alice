@@ -14,7 +14,7 @@ interface EmailMessageArgs {
 
 function requireIpc() {
   if (typeof window === 'undefined' || !window.aliceIPC?.invoke) {
-    throw new Error('Electron IPC bridge not available.')
+    throw new Error('Electron IPC 桥接不可用。')
   }
   return window.aliceIPC
 }

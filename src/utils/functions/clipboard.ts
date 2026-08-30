@@ -19,14 +19,14 @@ export async function manage_clipboard(
       return {
         success: false,
         error:
-          'Electron IPC bridge not available. This function only works in the desktop app.',
+          'Electron IPC 桥接不可用，此功能只能在桌面应用中使用。',
       }
     }
 
     if (args.action !== 'read' && args.action !== 'write') {
       return {
         success: false,
-        error: 'Invalid clipboard action. Must be "read" or "write".',
+        error: '剪贴板操作无效，必须是“read”或“write”。',
       }
     }
 
@@ -36,7 +36,7 @@ export async function manage_clipboard(
     ) {
       return {
         success: false,
-        error: 'Content is required for clipboard write operations.',
+        error: '写入剪贴板时必须提供内容。',
       }
     }
 
@@ -68,7 +68,7 @@ export async function manage_clipboard(
     console.error('Error during clipboard operation:', error)
     return {
       success: false,
-      error: `Failed to perform clipboard operation: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error: `执行剪贴板操作失败：${error instanceof Error ? error.message : '未知错误'}`,
     }
   }
 }

@@ -42,7 +42,7 @@ export async function schedule_task(
       } else {
         return {
           success: false,
-          error: `Unable to parse schedule "${args.schedule}". Try formats like "every morning at 8 AM", "every hour", "daily at 6 PM", or use cron format like "0 8 * * *".`,
+          error: `无法解析计划“${args.schedule}”。可以使用“每天早上 8 点”“每小时”“每天 18 点”等表达，或直接使用 cron 格式（例如“0 8 * * *”）。`,
         }
       }
     }
@@ -50,7 +50,7 @@ export async function schedule_task(
     if (!validateCronExpression(cronExpression)) {
       return {
         success: false,
-        error: `Generated cron expression "${cronExpression}" is invalid.`,
+        error: `生成的 cron 表达式“${cronExpression}”无效。`,
       }
     }
 
@@ -65,7 +65,7 @@ export async function schedule_task(
       return {
         success: true,
         data: {
-          message: `Task "${args.name}" scheduled successfully.`,
+          message: `已成功创建计划任务“${args.name}”。`,
           taskId: result.taskId,
           cronExpression,
           schedule: args.schedule,
@@ -74,7 +74,7 @@ export async function schedule_task(
     } else {
       return {
         success: false,
-        error: result.error || 'Failed to create scheduled task.',
+        error: result.error || '创建计划任务失败。',
       }
     }
   } catch (error: any) {
@@ -104,14 +104,14 @@ export async function manage_scheduled_tasks(
           return {
             success: true,
             data: {
-              message: `Found ${tasks.length} scheduled tasks.`,
+              message: `找到 ${tasks.length} 个计划任务。`,
               tasks,
             },
           }
         } else {
           return {
             success: false,
-            error: result.error || 'Failed to get scheduled tasks.',
+            error: result.error || '获取计划任务失败。',
           }
         }
       }
@@ -120,7 +120,7 @@ export async function manage_scheduled_tasks(
         if (!args.task_id) {
           return {
             success: false,
-            error: 'Task ID is required for delete action.',
+            error: '删除计划任务需要提供任务 ID。',
           }
         }
 
@@ -131,12 +131,12 @@ export async function manage_scheduled_tasks(
         if (result.success) {
           return {
             success: true,
-            data: { message: `Task ${args.task_id} deleted successfully.` },
+            data: { message: `已成功删除计划任务 ${args.task_id}。` },
           }
         } else {
           return {
             success: false,
-            error: result.error || 'Failed to delete task.',
+            error: result.error || '删除计划任务失败。',
           }
         }
       }
@@ -145,7 +145,7 @@ export async function manage_scheduled_tasks(
         if (!args.task_id) {
           return {
             success: false,
-            error: 'Task ID is required for toggle action.',
+            error: '切换计划任务状态需要提供任务 ID。',
           }
         }
 
@@ -157,19 +157,19 @@ export async function manage_scheduled_tasks(
           return {
             success: true,
             data: {
-              message: `Task ${args.task_id} status toggled successfully.`,
+              message: `已切换计划任务 ${args.task_id} 的启用状态。`,
             },
           }
         } else {
           return {
             success: false,
-            error: result.error || 'Failed to toggle task status.',
+            error: result.error || '切换计划任务状态失败。',
           }
         }
       }
 
       default:
-        return { success: false, error: `Unknown action: ${args.action}` }
+        return { success: false, error: `未知操作：${args.action}` }
     }
   } catch (error: any) {
     return { success: false, error: error.message }
@@ -192,14 +192,14 @@ export async function get_calendar_events(args: {
       maxResults: args.maxResults || 10,
     })
     if (result.success) {
-      return { success: true, data: result.data || 'No events found.' }
+      return { success: true, data: result.data || '没有找到日历事件。' }
     }
     return {
       success: false,
-      error: result.error || 'Failed to list calendar events.',
+      error: result.error || '获取日历事件失败。',
     }
   } catch (error: any) {
-    return { success: false, error: `IPC Error: ${error.message}` }
+    return { success: false, error: `IPC 调用失败：${error.message}` }
   }
 }
 
@@ -236,10 +236,10 @@ export async function create_calendar_event(args: {
     }
     return {
       success: false,
-      error: result.error || 'Failed to create calendar event.',
+      error: result.error || '创建日历事件失败。',
     }
   } catch (error: any) {
-    return { success: false, error: `IPC Error: ${error.message}` }
+    return { success: false, error: `IPC 调用失败：${error.message}` }
   }
 }
 
@@ -268,7 +268,7 @@ export async function update_calendar_event(args: {
     if (Object.keys(eventResource).length === 0) {
       return {
         success: false,
-        error: 'No fields provided to update for the event.',
+        error: '没有提供要修改的日历事件字段。',
       }
     }
 
@@ -285,10 +285,10 @@ export async function update_calendar_event(args: {
     }
     return {
       success: false,
-      error: result.error || 'Failed to update calendar event.',
+      error: result.error || '修改日历事件失败。',
     }
   } catch (error: any) {
-    return { success: false, error: `IPC Error: ${error.message}` }
+    return { success: false, error: `IPC 调用失败：${error.message}` }
   }
 }
 
@@ -309,10 +309,10 @@ export async function delete_calendar_event(args: {
     }
     return {
       success: false,
-      error: result.error || 'Failed to delete calendar event.',
+      error: result.error || '删除日历事件失败。',
     }
   } catch (error: any) {
-    return { success: false, error: `IPC Error: ${error.message}` }
+    return { success: false, error: `IPC 调用失败：${error.message}` }
   }
 }
 
