@@ -258,6 +258,25 @@ describe('DesktopObservationStore', () => {
     expect(invalidateObservation(observation)).toBe(false)
   })
 
+  it('includes a native window id in the opaque fingerprint', () => {
+    const store = new DesktopObservationStore({
+      now: () => 250_000,
+      idFactory: () => 'obs-window-id',
+    })
+    const firstWindow = context({ windowId: 'win:10:100' })
+    const observation = store.create(firstWindow)
+
+    expect(store.validate(observation.observationId, firstWindow).valid).toBe(
+      true
+    )
+    expect(
+      store.validate(observation.observationId, {
+        ...firstWindow,
+        windowId: 'win:10:200',
+      })
+    ).toMatchObject({ valid: false, reason: 'context-changed' })
+  })
+
   it('returns explicit reasons for malformed input and invalidates exactly once', () => {
     const store = new DesktopObservationStore({
       now: () => 300_000,

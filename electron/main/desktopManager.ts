@@ -41,6 +41,7 @@ import {
   type DesktopDisplayBounds,
 } from './desktopCoordinates'
 import { selectPrimaryCaptureSource } from './desktopCaptureSelection'
+import { sameForegroundContext as foregroundContextsMatch } from './foregroundContext'
 
 const execFileAsync = promisify(execFile)
 
@@ -68,6 +69,8 @@ type DesktopAction =
 type ForegroundContext = {
   foregroundApp?: string
   windowTitle?: string
+  /** Native process/window identity; retained only in the in-memory token. */
+  windowId?: string
   confidence: 'full' | 'unavailable'
   source: 'accessibility' | 'win32' | 'xdotool' | 'unavailable'
   error?: string
@@ -1000,6 +1003,7 @@ class DesktopManager {
             scaleFactor: primaryDisplay.scaleFactor,
             foregroundApp: foreground.foregroundApp,
             windowTitle: foreground.windowTitle,
+            windowId: foreground.windowId,
           })
           data.observationId = observation.observationId
           data.expiresAtMs = observation.expiresAt
@@ -1101,12 +1105,7 @@ class DesktopManager {
     first: ForegroundContext,
     second: ForegroundContext
   ): boolean {
-    const normalize = (value: string | undefined) =>
-      (value || '').normalize('NFKC').trim().replace(/\s+/gu, ' ')
-    return (
-      normalize(first.foregroundApp) === normalize(second.foregroundApp) &&
-      normalize(first.windowTitle) === normalize(second.windowTitle)
-    )
+    return foregroundContextsMatch(first, second)
   }
 
   /** Read the foreground app/window without prompting for new permissions. */
@@ -1117,11 +1116,17 @@ class DesktopManager {
           'tell application "System Events"',
           'set frontProcess to first process whose frontmost is true',
           'set processName to name of frontProcess',
+          'set processId to ""',
+          'try',
+          'set processId to (unix id of frontProcess) as text',
+          'end try',
+          'set windowIndex to ""',
           'set windowName to ""',
           'try',
+          'set windowIndex to (index of front window of frontProcess) as text',
           'set windowName to name of front window of frontProcess',
           'end try',
-          'return processName & linefeed & windowName',
+          'return processName & linefeed & processId & linefeed & windowIndex & linefeed & windowName',
           'end tell',
         ].join('\n')
         const { stdout } = await execFileAsync('osascript', ['-e', script], {
@@ -1129,15 +1134,23 @@ class DesktopManager {
           maxBuffer: 32 * 1024,
         })
         const lines = String(stdout)
-          .trim()
+          .trimEnd()
           .split(/\r?\n/u)
           .map(value => value.trim())
         const foregroundApp = lines.shift() || undefined
+        const processId = lines.shift() || undefined
+        const windowIndex = lines.shift() || undefined
         const windowTitle = lines.join(' ').trim() || undefined
-        if (foregroundApp || windowTitle) {
+        const windowId = processId
+          ? windowIndex
+            ? `mac:${processId}:${windowIndex}`
+            : `mac:${processId}`
+          : undefined
+        if (foregroundApp || windowTitle || windowId) {
           return {
             foregroundApp,
             windowTitle,
+            windowId,
             confidence: 'full',
             source: 'accessibility',
           }
@@ -1168,7 +1181,9 @@ $processId = [uint32]0
 [void][AliceForegroundWindow]::GetWindowThreadProcessId($handle, [ref]$processId)
 $processName = ''
 try { $processName = (Get-Process -Id $processId -ErrorAction Stop).ProcessName } catch {}
-[PSCustomObject]@{ app = $processName; title = $titleBuilder.ToString() } | ConvertTo-Json -Compress
+$pidText = if ($processId -gt 0) { $processId.ToString() } else { '' }
+$handleText = if ($handle -ne [IntPtr]::Zero) { $handle.ToInt64().ToString() } else { '' }
+[PSCustomObject]@{ app = $processName; title = $titleBuilder.ToString(); pid = $pidText; handle = $handleText } | ConvertTo-Json -Compress
 `
         const { stdout } = await execFileAsync(
           'powershell.exe',
@@ -1185,15 +1200,31 @@ try { $processName = (Get-Process -Id $processId -ErrorAction Stop).ProcessName 
         const parsed = JSON.parse(String(stdout).trim()) as {
           app?: unknown
           title?: unknown
+          pid?: unknown
+          handle?: unknown
         }
         const foregroundApp =
           typeof parsed.app === 'string' ? parsed.app.trim() : undefined
         const windowTitle =
           typeof parsed.title === 'string' ? parsed.title.trim() : undefined
-        if (foregroundApp || windowTitle) {
+        const processId =
+          typeof parsed.pid === 'string' || typeof parsed.pid === 'number'
+            ? String(parsed.pid).trim()
+            : ''
+        const handle =
+          typeof parsed.handle === 'string' || typeof parsed.handle === 'number'
+            ? String(parsed.handle).trim()
+            : ''
+        const windowId = handle
+          ? `win:${processId || '0'}:${handle}`
+          : processId
+            ? `win:${processId}`
+            : undefined
+        if (foregroundApp || windowTitle || windowId) {
           return {
             foregroundApp,
             windowTitle,
+            windowId,
             confidence: 'full',
             source: 'win32',
           }
@@ -1237,10 +1268,12 @@ try { $processName = (Get-Process -Id $processId -ErrorAction Stop).ProcessName 
           }
         }
         const windowTitle = String(title).trim() || undefined
-        if (foregroundApp || windowTitle) {
+        const windowIdentity = `x11:${id}`
+        if (foregroundApp || windowTitle || windowIdentity) {
           return {
             foregroundApp,
             windowTitle,
+            windowId: windowIdentity,
             confidence: 'full',
             source: 'xdotool',
           }
@@ -1276,6 +1309,7 @@ try { $processName = (Get-Process -Id $processId -ErrorAction Stop).ProcessName 
       scaleFactor: display.scaleFactor,
       foregroundApp: foreground.foregroundApp,
       windowTitle: foreground.windowTitle,
+      windowId: foreground.windowId,
     }
   }
 
