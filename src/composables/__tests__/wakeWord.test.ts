@@ -111,6 +111,27 @@ describe('parseWakeWord', () => {
     })
   })
 
+  it('matches a user-defined Chinese wake phrase and strips punctuation', () => {
+    expect(parseWakeWord('小助手，请打开日历', '小助手')).toEqual({
+      hasWakeWord: true,
+      command: '请打开日历',
+    })
+  })
+
+  it('matches a user-defined English phrase case-insensitively', () => {
+    expect(parseWakeWord('Hey Computer, open calendar', 'computer')).toEqual({
+      hasWakeWord: true,
+      command: 'open calendar',
+    })
+  })
+
+  it('does not match a custom wake phrase inside an ASCII word', () => {
+    expect(parseWakeWord('mycomputer 打开日历', 'computer')).toEqual({
+      hasWakeWord: false,
+      command: '',
+    })
+  })
+
   it('returns the transcript when wake-word mode has no configured word', () => {
     expect(parseWakeWord('直接执行这个任务', '')).toEqual({
       hasWakeWord: true,

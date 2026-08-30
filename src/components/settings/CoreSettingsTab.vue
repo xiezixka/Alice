@@ -367,24 +367,23 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label for="stt-model" class="block mb-1 text-sm"
-              >Whisper 模型 *</label
+              >Whisper 模型（当前版本固定）</label
             >
             <select
               id="stt-model"
               v-model="currentSettings.localSttModel"
               class="select select-bordered w-full focus:select-primary"
+              disabled
+              aria-describedby="stt-model-help"
               @change="
                 e => $emit('update:setting', 'localSttModel', getTargetValue(e))
               "
             >
-              <option value="whisper-tiny.en">Tiny（仅英语，最快）</option>
-              <option value="whisper-base">Base（多语言）</option>
-              <option value="whisper-small">Small（更高准确率）</option>
-              <option value="whisper-medium">Medium（高准确率）</option>
-              <option value="whisper-large">Large（最佳准确率）</option>
+              <option value="whisper-base">Base（多语言，已内置）</option>
             </select>
-            <p class="text-xs text-gray-400 mt-1">
-              模型越大准确率越高，但需要更多系统资源。
+            <p id="stt-model-help" class="text-xs text-gray-400 mt-1">
+              当前安装包只内置多语言 Whisper
+              Base，后台固定使用它；更大模型需要后续下载与资源管理，暂未开放选择。
             </p>
           </div>
           <div>
@@ -397,8 +396,11 @@
               class="select select-bordered w-full focus:select-primary"
               @change="handleLocalSttEnabledChange"
             >
-              <option value="true">启用</option>
-              <option value="false">禁用</option>
+              <!-- Bind booleans instead of the strings "true"/"false" so
+                   v-model never exposes a truthy string to the readiness and
+                   background-listening guards. -->
+              <option :value="true">启用</option>
+              <option :value="false">禁用</option>
             </select>
           </div>
           <div v-show="currentSettings.localSttEnabled">
@@ -505,7 +507,9 @@
                 v-if="isEnablingBackgroundWake"
                 class="loading loading-spinner loading-xs"
               ></span>
-              {{ isEnablingBackgroundWake ? '正在准备后台唤醒…' : '启用后台唤醒' }}
+              {{
+                isEnablingBackgroundWake ? '正在准备后台唤醒…' : '启用后台唤醒'
+              }}
             </button>
             <button
               type="button"
@@ -1081,23 +1085,16 @@ const desktopPermissionMessage = computed(() => {
   const needsScreenCapture = props.currentSettings.assistantTools.includes(
     'capture_desktop_screen'
   )
-  const needsAccessibility = props.currentSettings.assistantTools.includes(
-    'desktop_action'
-  )
+  const needsAccessibility =
+    props.currentSettings.assistantTools.includes('desktop_action')
   if (!needsScreenCapture && !needsAccessibility) return ''
 
   if (desktopPlatform.value === 'darwin') {
     const missing: string[] = []
-    if (
-      needsScreenCapture &&
-      screenCapturePermission.value !== 'granted'
-    ) {
+    if (needsScreenCapture && screenCapturePermission.value !== 'granted') {
       missing.push('屏幕录制')
     }
-    if (
-      needsAccessibility &&
-      accessibilityPermission.value !== 'granted'
-    ) {
+    if (needsAccessibility && accessibilityPermission.value !== 'granted') {
       missing.push('辅助功能')
     }
     return missing.length

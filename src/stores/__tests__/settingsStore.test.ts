@@ -73,9 +73,9 @@ describe('useSettingsStore boolean settings', () => {
       expect(store.settings.backgroundListeningEnabled).toBe(false)
       expect(saveSettings).toHaveBeenCalled()
       expect(
-        (saveSettings.mock.calls as unknown as Array<[Record<string, any>]>).some(
-          ([payload]) => payload.backgroundListeningEnabled === false
-        )
+        (
+          saveSettings.mock.calls as unknown as Array<[Record<string, any>]>
+        ).some(([payload]) => payload.backgroundListeningEnabled === false)
       ).toBe(true)
     } finally {
       vi.unstubAllGlobals()
@@ -86,9 +86,7 @@ describe('useSettingsStore boolean settings', () => {
     const store = useSettingsStore()
 
     expect(store.settings.aiProvider).toBe('deepseek')
-    expect(store.settings.assistantModel).toBe(
-      'deepseek-v4-flash-vision-exp'
-    )
+    expect(store.settings.assistantModel).toBe('deepseek-v4-flash-vision-exp')
     expect(store.settings.sttProvider).toBe('local')
     expect(store.settings.localSttLanguage).toBe('zh')
     expect(store.settings.localSttWakeWord).toBe('alice')
@@ -105,5 +103,33 @@ describe('useSettingsStore boolean settings', () => {
         'create_email_draft',
       ])
     )
+  })
+
+  it('normalizes legacy local STT model choices to the bundled Base model', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({
+          sttProvider: 'local',
+          localSttModel: 'whisper-large',
+        })),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+
+      expect(store.settings.localSttModel).toBe('whisper-base')
+      expect(saveSettings).toHaveBeenCalled()
+      expect(
+        (
+          saveSettings.mock.calls as unknown as Array<[Record<string, any>]>
+        ).some(([payload]) => payload.localSttModel === 'whisper-base')
+      ).toBe(true)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

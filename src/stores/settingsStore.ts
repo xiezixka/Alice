@@ -115,6 +115,11 @@ export interface AliceSettings {
   onboardingCompleted: boolean
 }
 
+// The current desktop bundle ships one multilingual Whisper model.  Keep the
+// setting explicit so the UI and persisted configuration cannot imply that
+// larger models are available when the backend always loads whisper-base.bin.
+export const BUNDLED_LOCAL_STT_MODEL = 'whisper-base'
+
 function hasMinimumConfigForOnboarding(config: AliceSettings): boolean {
   if (config.VITE_OPENAI_API_KEY?.trim()) {
     return true
@@ -458,17 +463,12 @@ export const useSettingsStore = defineStore('settings', () => {
       migrated = true
     }
 
-    if (validated.sttProvider === 'local') {
-      const validModelIds = [
-        'whisper-tiny.en',
-        'whisper-base',
-        'whisper-small',
-        'whisper-medium',
-        'whisper-large',
-      ]
-      if (!validModelIds.includes(validated.localSttModel)) {
-        validated.localSttModel = validModelIds[1] || 'whisper-base'
-      }
+    if (validated.localSttModel !== BUNDLED_LOCAL_STT_MODEL) {
+      // Older builds exposed model IDs that were never wired through to the
+      // Go backend. Normalize them now instead of silently claiming that a
+      // different model is active, and persist the correction once.
+      validated.localSttModel = BUNDLED_LOCAL_STT_MODEL
+      migrated = true
     }
 
     return { settings: validated, migrated }
@@ -834,7 +834,10 @@ export const useSettingsStore = defineStore('settings', () => {
       settings.value[key] = value as 'low' | 'medium' | 'high'
     }
     if (key === 'localSttModel') {
-      settings.value[key] = value as string
+      // Only the bundled multilingual Base model is currently available.
+      // Keep accepting the generic setting key for forward compatibility, but
+      // fail closed rather than persisting a model the backend cannot load.
+      settings.value[key] = BUNDLED_LOCAL_STT_MODEL
     }
     if (key === 'localSttLanguage') {
       settings.value[key] = value as string
