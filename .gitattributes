@@ -1,0 +1,6 @@
+# Keep executable/ESM JavaScript sources LF-only.  A CRLF shebang can survive
+# Vitest's transform as a bare `#` on Windows and fail with
+# "SyntaxError: Invalid or unexpected token" before any tests load.
+*.js text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
