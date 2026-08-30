@@ -26,6 +26,7 @@ import {
   FileOperationJournal,
   type JournalFileOperation,
 } from './fileOperationJournal'
+import { resolvePathThroughExistingParent } from './fileOperationPaths'
 
 const execFileAsync = promisify(execFile)
 
@@ -717,7 +718,17 @@ class DesktopManager {
     requestedPath: string,
     event: Electron.IpcMainInvokeEvent
   ): Promise<{ success: true } | { success: false; error: string }> {
-    const normalized = path.resolve(requestedPath)
+    let normalized: string
+    try {
+      normalized = await resolvePathThroughExistingParent(requestedPath)
+    } catch (error) {
+      return {
+        success: false,
+        error: `无法解析目录真实路径：${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      }
+    }
     const isApproved = [...this.approvedDirectoryRoots].some(root =>
       isPathWithinRoot(root, normalized)
     )
