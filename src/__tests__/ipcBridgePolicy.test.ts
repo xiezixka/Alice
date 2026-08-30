@@ -14,6 +14,7 @@ describe('renderer IPC bridge policy', () => {
     expect(isAllowedInvokeChannel('desktop:observeScreen')).toBe(true)
     expect(isAllowedInvokeChannel('desktop:replyMessage')).toBe(true)
     expect(isAllowedInvokeChannel('desktop:executeCommand')).toBe(true)
+    expect(isAllowedInvokeChannel('main-window:state')).toBe(true)
     expect(isAllowedSendChannel('restart-and-install-update')).toBe(true)
     expect(isAllowedSendChannel('desktop:executeCommand')).toBe(false)
   })

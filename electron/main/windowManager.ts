@@ -54,9 +54,22 @@ let mainWindowRestoreSize = { ...DEFAULT_MAIN_WINDOW_SIZE }
 let mainWindowSilent = false
 let mainWindowCompact = false
 let mainWindowRestoreBounds: Electron.Rectangle | null = null
+// A user choosing “隐藏到后台” must not be overridden by the first
+// background-launch reveal.  Keep this native guard in addition to the
+// renderer timer so a close-to-tray action remains deterministic even when
+// the renderer is still finishing its initial mount.
+let mainWindowHiddenByUser = false
+// `BrowserWindow({ show: false })` can report a visible state while its first
+// paint is still suppressed. Track the intent explicitly so a background
+// launch can reveal the island exactly once without relying on isVisible().
+let mainWindowInitiallyHidden = false
 
-function fitMainWindowSize(width: number, height: number) {
-  const workArea = screen.getPrimaryDisplay().workArea
+function fitMainWindowSize(
+  width: number,
+  height: number,
+  display = screen.getPrimaryDisplay()
+) {
+  const workArea = display.workArea
   const requestedWidth = Number.isFinite(width)
     ? width
     : DEFAULT_MAIN_WINDOW_SIZE.width
@@ -124,11 +137,16 @@ export function getSettingsWindow(): BrowserWindow | null {
   return settingsWindow
 }
 
-export async function createMainWindow(show = true): Promise<BrowserWindow> {
+export async function createMainWindow(
+  show = true,
+  backgroundLaunch = false
+): Promise<BrowserWindow> {
   mainWindowRestoreSize = { ...DEFAULT_MAIN_WINDOW_SIZE }
   mainWindowRestoreBounds = null
   mainWindowSilent = false
   mainWindowCompact = false
+  mainWindowHiddenByUser = false
+  mainWindowInitiallyHidden = !show
   win = new BrowserWindow({
     title: 'Alice',
     icon: path.join(getVitePublic(), 'app_logo.png'),
@@ -151,6 +169,12 @@ export async function createMainWindow(show = true): Promise<BrowserWindow> {
       webSecurity: true,
       offscreen: false,
       backgroundThrottling: false,
+      // Renderer processes do not consistently inherit the main-process
+      // command line on every Electron/macOS combination.  Pass an explicit
+      // marker so the first silent-island reveal is deterministic.
+      additionalArguments: backgroundLaunch
+        ? ['--alice-renderer-background']
+        : [],
     },
   })
 
@@ -162,8 +186,36 @@ export async function createMainWindow(show = true): Promise<BrowserWindow> {
     win.loadFile(getIndexHtmlPath())
   }
 
+  const repositionSilentWindow = () => {
+    if (!win || win.isDestroyed() || !mainWindowSilent) return
+    const display = screen.getDisplayMatching(win.getBounds())
+    const bounds = getMacSilentWindowBounds(display.bounds, {
+      width: MAC_SILENT_WINDOW_SIZE.width,
+      height: MAC_SILENT_WINDOW_SIZE.height,
+    })
+    win.setPosition(bounds.x, bounds.y)
+  }
+  // Keep the simulated island attached to the active display when the user
+  // changes scale/resolution or docks/undocks a monitor.
+  screen.on('display-metrics-changed', repositionSilentWindow)
+  screen.on('display-added', repositionSilentWindow)
+  screen.on('display-removed', repositionSilentWindow)
+
+  const markMainWindowVisible = () => {
+    if (!mainWindowHiddenByUser) {
+      mainWindowInitiallyHidden = false
+    }
+  }
+  const mainWindow = win
+  mainWindow.on('show', markMainWindowVisible)
+
   win.on('closed', () => {
+    screen.off('display-metrics-changed', repositionSilentWindow)
+    screen.off('display-added', repositionSilentWindow)
+    screen.off('display-removed', repositionSilentWindow)
+    mainWindow.off('show', markMainWindowVisible)
     win = null
+    mainWindowInitiallyHidden = false
   })
 
   win.webContents.on('did-finish-load', () => {
@@ -252,13 +304,14 @@ export function setOverlayOpacity(opacity: number): boolean {
 }
 
 export function resizeMainWindow(width: number, height: number): void {
-  if (!win || mainWindowCompact) return
+  if (!win || win.isDestroyed() || mainWindowCompact) return
 
   // Renderer watchers can issue a stale resize immediately after the
   // minimize transition. Never let that asynchronous IPC call stretch the
   // native 240×44 island (or the legacy 210×210 mini window); expansion first
   // clears `mainWindowCompact`, then an explicit resize is allowed.
-  const fittedSize = fitMainWindowSize(width, height)
+  const display = screen.getDisplayMatching(win.getBounds())
+  const fittedSize = fitMainWindowSize(width, height, display)
   if (
     fittedSize.width !== MINI_MAIN_WINDOW_SIZE.width ||
     fittedSize.height !== MINI_MAIN_WINDOW_SIZE.height
@@ -284,9 +337,10 @@ export function resizeMainWindow(width: number, height: number): void {
  */
 export function minimizeMainWindow(
   minimize: boolean,
-  silent = minimize && shouldUseMacSilentWindow(process.platform)
+  silent = minimize && shouldUseMacSilentWindow(process.platform),
+  showWhenHidden = false
 ): void {
-  if (!win) return
+  if (!win || win.isDestroyed()) return
 
   const display = screen.getDisplayMatching(win.getBounds())
   const workArea = display.workArea
@@ -302,6 +356,9 @@ export function minimizeMainWindow(
         width: MAC_SILENT_WINDOW_SIZE.width,
         height: MAC_SILENT_WINDOW_SIZE.height,
       })
+      const shouldRevealHiddenWindow =
+        (showWhenHidden || mainWindowInitiallyHidden) && !mainWindowHiddenByUser
+      const wasInitiallyHidden = mainWindowInitiallyHidden
 
       // BrowserWindow's normal 210px minimum would otherwise clamp the
       // compact island back to a square.  Keep a dedicated minimum while in
@@ -320,8 +377,14 @@ export function minimizeMainWindow(
       win.setPosition(bounds.x, bounds.y)
       mainWindowSilent = true
       mainWindowCompact = true
+      if (shouldRevealHiddenWindow && typeof win.showInactive === 'function') {
+        // Background login launches remain non-activating: the island becomes
+        // visible without stealing focus from the user's current app.
+        win.showInactive()
+      }
       console.log('[WindowManager] Main window moved to macOS silent island', {
         ...bounds,
+        initiallyHidden: wasInitiallyHidden,
       })
       return
     }
@@ -342,6 +405,18 @@ export function minimizeMainWindow(
     mainWindowSilent = false
     mainWindowCompact = true
   } else {
+    // Any explicit expansion (island click, tray/Dock activation, or a
+    // renderer request) means the user is interacting with Alice again. Keep
+    // an explicit close-to-tray guard until the tray/Dock focus path clears
+    // it; otherwise a wake event could immediately undo the user's choice.
+    const wasHiddenByUser = mainWindowHiddenByUser
+    const wasInitiallyHidden = mainWindowInitiallyHidden
+    if (!wasHiddenByUser && win.isMinimized()) {
+      // Wake-word activity may arrive while the user also pressed Cmd+M (or
+      // the Dock minimized the BrowserWindow). Restore the native window
+      // before resizing so the renderer's expanded state is actually visible.
+      win.restore()
+    }
     win.setMinimumSize(
       MINI_MAIN_WINDOW_SIZE.width,
       MINI_MAIN_WINDOW_SIZE.height
@@ -353,7 +428,8 @@ export function minimizeMainWindow(
     }
     const { width, height } = fitMainWindowSize(
       mainWindowRestoreSize.width,
-      mainWindowRestoreSize.height
+      mainWindowRestoreSize.height,
+      display
     )
     const savedBounds = mainWindowRestoreBounds
     const maxX = workArea.x + Math.max(0, workArea.width - width)
@@ -369,6 +445,19 @@ export function minimizeMainWindow(
     mainWindowSilent = false
     mainWindowCompact = false
     mainWindowRestoreBounds = null
+    if (!wasHiddenByUser) {
+      mainWindowHiddenByUser = false
+      mainWindowInitiallyHidden = false
+    }
+    if (
+      (showWhenHidden || wasInitiallyHidden) &&
+      !wasHiddenByUser &&
+      typeof win.showInactive === 'function'
+    ) {
+      // Expand an active background wake without activating Alice over the
+      // user's current application.
+      win.showInactive()
+    }
   }
 }
 
@@ -377,8 +466,30 @@ export function isMainWindowSilent(): boolean {
   return mainWindowSilent
 }
 
+export interface MainWindowPresentationState {
+  silent: boolean
+  hiddenByUser: boolean
+  initiallyHidden: boolean
+}
+
+/**
+ * Return the native presentation state so a renderer that mounted after a
+ * tray/Dock click can reconcile its reactive layout instead of relying on a
+ * one-shot event that may have fired before Vue registered its listener.
+ */
+export function getMainWindowPresentationState(): MainWindowPresentationState {
+  return {
+    silent: mainWindowSilent,
+    hiddenByUser: mainWindowHiddenByUser,
+    initiallyHidden: mainWindowInitiallyHidden,
+  }
+}
+
 export function focusMainWindow(): boolean {
   if (win && !win.isDestroyed()) {
+    const wasSilent = mainWindowSilent
+    const wasInitiallyHidden = mainWindowInitiallyHidden
+    const wasHiddenByUser = mainWindowHiddenByUser
     // A Dock/tray activation can arrive while macOS (or the user) has
     // minimized the native BrowserWindow. Restore that OS-level state before
     // applying the compact-window transition; otherwise `show()`/`focus()`
@@ -386,11 +497,12 @@ export function focusMainWindow(): boolean {
     if (win.isMinimized()) {
       win.restore()
     }
+    mainWindowHiddenByUser = false
+    mainWindowInitiallyHidden = false
     // A tray click / Dock activation is an explicit request to work with
     // Alice. Expand the macOS island before focusing it so the user is never
     // left with an apparently unresponsive 240×44 surface. Keep the legacy
     // square mini window's historical focus-only behaviour unchanged.
-    const wasSilent = mainWindowSilent
     if (wasSilent) {
       minimizeMainWindow(false)
     }
@@ -398,11 +510,14 @@ export function focusMainWindow(): boolean {
     win.focus()
     win.moveTop()
     // Keep the renderer's reactive `isMinimized` state in sync when a tray or
-    // Dock activation expanded the native window.  This event is allowlisted
-    // in the preload bridge and is intentionally emitted only for a real
-    // compact → full transition.
-    if (wasSilent && !win.webContents.isDestroyed()) {
-      win.webContents.send('main-window:expanded')
+    // Dock activation explicitly reveals the app. Do not emit on an ordinary
+    // macOS activate/focus event, otherwise a normal visible launch would be
+    // marked as manually expanded and its idle timer would never run.
+    if (
+      (wasSilent || wasInitiallyHidden || wasHiddenByUser) &&
+      !win.webContents.isDestroyed()
+    ) {
+      win.webContents.send('main-window:expanded', { userInitiated: true })
     }
     console.log('[WindowManager] Main window focused')
     return true
@@ -471,6 +586,20 @@ export function cleanupWindows(): void {
   win = null
   overlayWindow = null
   settingsWindow = null
+  mainWindowHiddenByUser = false
+  mainWindowInitiallyHidden = false
+}
+
+/**
+ * Hide the main window for background listening without quitting the app.
+ * This is intentionally native so a renderer timer cannot accidentally
+ * re-show the window during the same launch.
+ */
+export function hideMainWindowToTray(): boolean {
+  if (!win || win.isDestroyed()) return false
+  mainWindowHiddenByUser = true
+  win.hide()
+  return true
 }
 
 export function registerCustomProtocol(

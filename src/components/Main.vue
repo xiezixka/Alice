@@ -10,6 +10,8 @@
         'assistant-shell--electron': isElectron,
       },
     ]"
+    @pointerdown.capture="handleShellInteraction"
+    @focusin.capture="handleShellInteraction"
   >
     <div
       v-if="uiMode === 'glass' && !isMinimized"
@@ -242,6 +244,9 @@ const isElectron =
 const isMacPlatform = computed(
   () => isElectron && window.electron?.platform === 'darwin'
 )
+const isBackgroundLaunch = computed(
+  () => isElectron && window.electron?.backgroundLaunch === true
+)
 // Opt out only when explicitly disabled. Older settings files do not contain
 // this key, so macOS upgrades receive the notch presentation automatically;
 // Windows and Linux never apply the class.
@@ -273,6 +278,7 @@ let blinkEndTimer: ReturnType<typeof setTimeout> | null = null
 let modeNoticeTimer: ReturnType<typeof setTimeout> | null = null
 let macSilentCollapseTimer: ReturnType<typeof setTimeout> | null = null
 let modeNoticeRestoreStatus: string | null = null
+let backgroundSilentRevealSent = false
 const isBlinking = vueRef(false)
 const macSilentManuallyExpanded = vueRef(false)
 const MAC_SILENT_IDLE_DELAY = 2200
@@ -339,24 +345,54 @@ const collapseIntoMacSilentIsland = async () => {
   if (!shouldAutoCollapseMacSilent.value || isMinimized.value) return
   isMinimized.value = true
   await nextTick()
-  window.electron?.mini({ minimize: true, silent: true })
+  const showWhenHidden = isBackgroundLaunch.value && !backgroundSilentRevealSent
+  window.electron?.mini({
+    minimize: true,
+    silent: true,
+    showWhenHidden,
+  })
+  // Only the first automatic collapse of a background login launch may
+  // reveal the non-activating island. A later user-initiated hide must remain
+  // tray-only and never unexpectedly summon a window.
+  if (showWhenHidden) backgroundSilentRevealSent = true
 }
 
 const scheduleMacSilentCollapse = () => {
   clearMacSilentCollapseTimer()
   if (!shouldAutoCollapseMacSilent.value || isMinimized.value) return
+  // A login-item/background launch starts with the native window hidden. Do
+  // the first collapse immediately so the user can see the passive island
+  // before a wake word arrives; normal visible launches keep the softer delay.
+  const delay =
+    isBackgroundLaunch.value && !backgroundSilentRevealSent
+      ? 0
+      : MAC_SILENT_IDLE_DELAY
   macSilentCollapseTimer = setTimeout(() => {
     macSilentCollapseTimer = null
     void collapseIntoMacSilentIsland()
-  }, MAC_SILENT_IDLE_DELAY)
+  }, delay)
 }
 
 const expandMacSilentForActivity = async (manual = false) => {
-  if (!isMinimized.value || !isMacPlatform.value) return
+  if (!isMacPlatform.value) return
+  // A background login window is created hidden.  A wake word can arrive
+  // before the initial 0ms collapse timer runs, so treat that first active
+  // turn as a reveal request even though Vue still reports `isMinimized=false`.
+  const revealBackgroundWindow =
+    isBackgroundLaunch.value && !backgroundSilentRevealSent
+  if (!isMinimized.value && !revealBackgroundWindow) {
+    if (manual) macSilentManuallyExpanded.value = true
+    return
+  }
   if (manual) macSilentManuallyExpanded.value = true
   isMinimized.value = false
   await nextTick()
-  window.electron?.mini({ minimize: false, silent: false })
+  window.electron?.mini({
+    minimize: false,
+    silent: false,
+    showWhenHidden: revealBackgroundWindow,
+  })
+  if (revealBackgroundWindow) backgroundSilentRevealSent = true
   resizeForUiMode()
 }
 
@@ -396,6 +432,60 @@ const handleManualMinimize = (minimized: boolean) => {
   }
 }
 
+const handleShellInteraction = (event: Event) => {
+  // Any deliberate pointer/keyboard interaction with the full window should
+  // cancel a pending idle collapse. Without this guard a user could open a
+  // menu or start typing just before the 2.2s timer and watch the window fold
+  // away underneath the interaction.
+  if (!isMacPlatform.value || isMinimized.value) return
+  const target = event.target as HTMLElement | null
+  if (
+    target?.closest(
+      'button, a, input, textarea, select, [role="button"], [contenteditable="true"]'
+    )
+  ) {
+    clearMacSilentCollapseTimer()
+    macSilentManuallyExpanded.value = true
+  }
+}
+
+const handleAssistantAttention = (options?: { forceExpand?: boolean }) => {
+  clearMacSilentCollapseTimer()
+  if (options?.forceExpand) {
+    // Update banners live in App.vue outside the compact window, so they must
+    // use the full presentation even when Alice started hidden in the tray.
+    void expandMacSilentForActivity(true)
+    return
+  }
+  if (
+    isMacPlatform.value &&
+    isBackgroundLaunch.value &&
+    !backgroundSilentRevealSent &&
+    !isMinimized.value
+  ) {
+    // An update/notification can arrive while a login-item launch is still
+    // hidden. Surface the compact island once, without opening the full card.
+    void collapseIntoMacSilentIsland()
+    return
+  }
+  if (isMacPlatform.value && isMinimized.value) {
+    void expandMacSilentForActivity(true)
+  } else if (isMacPlatform.value) {
+    // Keep an update/notification readable instead of letting the idle timer
+    // fold the full window away while the user is deciding what to do.
+    macSilentManuallyExpanded.value = true
+  }
+}
+
+const handleAssistantHidden = () => {
+  // The native close-to-tray path deliberately suppresses attention events.
+  // Consume the one-shot background reveal and cancel any renderer timer so
+  // choosing “隐藏到后台” cannot bring the island back on its own.
+  clearMacSilentCollapseTimer()
+  backgroundSilentRevealSent = true
+  macSilentManuallyExpanded.value = false
+}
+
 const isActiveAudioState = (state: string) => {
   if (state === 'LISTENING') {
     // Background VAD is intentionally quiet while it waits for the wake word;
@@ -427,6 +517,12 @@ watch([audioState, isBackgroundWakeListening], ([state]) => {
 watch(
   [openSidebar, macSilentModeEnabled, settingsReady],
   ([sidebarOpen, silentEnabled, ready]) => {
+    if (!silentEnabled) {
+      // Do not let a previous manual expansion veto automatic folding when
+      // the user turns the macOS island off and later enables it again.
+      macSilentManuallyExpanded.value = false
+      clearMacSilentCollapseTimer()
+    }
     if (isMacPlatform.value && isMinimized.value && ready) {
       // Apply a settings toggle immediately to the native window. This also
       // restores the legacy square mini layout when the user opts out.
@@ -463,13 +559,60 @@ const resizeForUiMode = () => {
   })
 }
 
-const handleNativeWindowExpanded = () => {
+const handleNativeWindowExpanded = (payload?: { userInitiated?: boolean }) => {
   // The tray/Dock can expand the native island without going through the
   // renderer's Actions component. Mirror that transition before resizing so
   // the DOM never remains in the 240×44 layout inside a full-size window.
   isMinimized.value = false
-  macSilentManuallyExpanded.value = true
+  if (payload?.userInitiated !== false) {
+    clearMacSilentCollapseTimer()
+    backgroundSilentRevealSent = true
+    macSilentManuallyExpanded.value = true
+  }
   void nextTick().then(() => resizeForUiMode())
+}
+
+const syncNativeWindowPresentation = async () => {
+  if (!isElectron || !window.aliceIPC) return
+  try {
+    const state = await window.aliceIPC.invoke('main-window:state')
+    if (!state || typeof state !== 'object') return
+
+    if (state.hiddenByUser === true) {
+      clearMacSilentCollapseTimer()
+      backgroundSilentRevealSent = true
+      macSilentManuallyExpanded.value = false
+      if (state.silent === true) isMinimized.value = true
+      return
+    }
+
+    if (state.silent === true) {
+      // Avoid fighting an active audio turn while reconciling a renderer that
+      // mounted after the native island had already been placed.
+      if (!isActiveAudioState(audioState.value)) {
+        isMinimized.value = true
+      }
+      return
+    }
+
+    // If a background launch was explicitly opened from the tray before this
+    // component mounted, the one-shot focus event may already be gone. The
+    // native state tells us to consume the first-collapse timer in that case.
+    if (
+      isBackgroundLaunch.value &&
+      state.initiallyHidden !== true &&
+      state.silent !== true
+    ) {
+      backgroundSilentRevealSent = true
+      macSilentManuallyExpanded.value = true
+      clearMacSilentCollapseTimer()
+    }
+  } catch (error) {
+    console.warn(
+      '[Main] Could not reconcile native window presentation:',
+      error
+    )
+  }
 }
 
 const setUiMode = async (nextMode: 'capsule' | 'glass') => {
@@ -602,11 +745,14 @@ onMounted(async () => {
   eventBus.on('processing-complete', handleProcessingComplete)
   eventBus.on('mute-playback-toggle', handleToggleTTS)
   eventBus.on('take-screenshot', handleTakeScreenshot)
+  eventBus.on('assistant-attention', handleAssistantAttention)
+  eventBus.on('assistant-hidden', handleAssistantHidden)
   scheduleBlink()
-  scheduleMacSilentCollapse()
   if (window.aliceIPC) {
     window.aliceIPC.on('main-window:expanded', handleNativeWindowExpanded)
+    await syncNativeWindowPresentation()
   }
+  scheduleMacSilentCollapse()
 })
 
 watch([uiMode, settingsReady], async () => {
@@ -629,6 +775,8 @@ onUnmounted(() => {
   eventBus.off('processing-complete', handleProcessingComplete)
   eventBus.off('mute-playback-toggle', handleToggleTTS)
   eventBus.off('take-screenshot', handleTakeScreenshot)
+  eventBus.off('assistant-attention', handleAssistantAttention)
+  eventBus.off('assistant-hidden', handleAssistantHidden)
   if (window.aliceIPC) {
     window.aliceIPC.off('main-window:expanded', handleNativeWindowExpanded)
   }

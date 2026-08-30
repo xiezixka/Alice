@@ -34,8 +34,13 @@ declare global {
     desktopAPI: AliceDesktopAPI
     electron: {
       resize: (dimensions: { width: number; height: number }) => void
-      mini: (minimize: { minimize: boolean; silent?: boolean }) => void
+      mini: (minimize: {
+        minimize: boolean
+        silent?: boolean
+        showWhenHidden?: boolean
+      }) => void
       platform: NodeJS.Platform
+      backgroundLaunch: boolean
       screenshot: () => void
       showOverlay: () => void
       getScreenshot: () => Promise<string | null>

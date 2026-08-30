@@ -504,7 +504,12 @@ app.whenReady().then(async () => {
   const showMainWindow = !(
     isBackgroundLaunch && initialSettings?.backgroundListeningEnabled === true
   )
-  await createMainWindow(showMainWindow)
+  await createMainWindow(
+    showMainWindow,
+    !showMainWindow &&
+      isBackgroundLaunch &&
+      initialSettings?.backgroundListeningEnabled === true
+  )
   await createOverlayWindow()
   createTray(initialSettings?.backgroundListeningEnabled === true)
   checkForUpdates()

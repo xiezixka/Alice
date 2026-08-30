@@ -49,6 +49,7 @@ import { useSettingsStore } from './stores/settingsStore'
 import { useGeneralStore } from './stores/generalStore'
 import { useConversationStore } from './stores/conversationStore'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import eventBus from './utils/eventBus'
 
 const route = useRoute()
 const settingsStore = useSettingsStore()
@@ -92,8 +93,17 @@ const handleContextAction = async (data: any) => {
   }
 }
 
-const handleShowNotification = (data: { message?: string }) => {
+const handleShowNotification = (data: {
+  message?: string
+  /** Close-to-tray confirmation must not wake the silent island. */
+  attention?: boolean
+}) => {
   if (data?.message) {
+    if (data.attention !== false) {
+      eventBus.emit('assistant-attention')
+    } else {
+      eventBus.emit('assistant-hidden')
+    }
     generalStore.statusMessage = data.message
   }
 }
@@ -103,6 +113,9 @@ onMounted(async () => {
 
   if (window.aliceIPC) {
     window.aliceIPC.on('update-downloaded', info => {
+      // The update alert is rendered outside Main's 44px island. Force the
+      // full window open so the user can read and act on the install prompt.
+      eventBus.emit('assistant-attention', { forceExpand: true })
       updateInfo.value = info
       updateAvailable.value = true
     })

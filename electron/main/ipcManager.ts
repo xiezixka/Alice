@@ -96,6 +96,8 @@ import {
   showOverlay,
   hideOverlay,
   focusMainWindow,
+  hideMainWindowToTray,
+  getMainWindowPresentationState,
   getRendererDist,
   createSettingsWindow,
   closeSettingsWindow,
@@ -192,12 +194,14 @@ export function registerIPCHandlers(): void {
     if (
       arg &&
       typeof arg.minimize === 'boolean' &&
-      (arg.silent === undefined || typeof arg.silent === 'boolean')
+      (arg.silent === undefined || typeof arg.silent === 'boolean') &&
+      (arg.showWhenHidden === undefined ||
+        typeof arg.showWhenHidden === 'boolean')
     ) {
       // `silent` is optional so older renderer bundles retain their existing
       // behaviour.  The main process still defaults to the macOS island when
       // a Darwin renderer sends only `{ minimize: true }`.
-      minimizeMainWindow(arg.minimize, arg.silent)
+      minimizeMainWindow(arg.minimize, arg.silent, arg.showWhenHidden)
     }
   })
 
@@ -218,10 +222,19 @@ export function registerIPCHandlers(): void {
     void (async () => {
       const settings = await loadSettings()
       if (settings?.backgroundListeningEnabled === true) {
+        // Mark the native window as explicitly hidden before notifying the
+        // renderer.  This prevents a pending background-launch reveal timer
+        // from summoning the island again after the user chose “隐藏到后台”.
         const owner = BrowserWindow.fromWebContents(event.sender)
-        owner?.hide()
-        owner?.webContents.send('show-notification', {
+        if (!hideMainWindowToTray()) {
+          owner?.hide()
+        }
+        // Always notify the main renderer so its timer/state is consumed even
+        // when a secondary settings/onboarding window initiated the request.
+        const notificationTarget = getMainWindow() ?? owner
+        notificationTarget?.webContents.send('show-notification', {
           type: 'info',
+          attention: false,
           message: 'Alice 已隐藏到系统托盘，仍在等待唤醒词。可从托盘菜单退出。',
         })
         return
@@ -655,6 +668,15 @@ export function registerIPCHandlers(): void {
 
   ipcMain.handle('focus-main-window', () => {
     return focusMainWindow()
+  })
+
+  ipcMain.handle('main-window:state', event => {
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    const mainWindow = getMainWindow()
+    if (!owner || !mainWindow || owner !== mainWindow) {
+      return null
+    }
+    return getMainWindowPresentationState()
   })
 
   // Settings window management

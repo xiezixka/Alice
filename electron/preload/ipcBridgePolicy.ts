@@ -27,6 +27,7 @@ export const INVOKE_CHANNELS = new Set([
   'save-screenshot',
   'get-screenshot',
   'focus-main-window',
+  'main-window:state',
   'settings-window:open',
   'settings-window:close',
   'settings:notify-main-window',

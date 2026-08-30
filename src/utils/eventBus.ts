@@ -10,6 +10,10 @@ type Events = {
   'take-screenshot': void
   'cancel-tts': void
   'cancel-llm-stream': void
+  /** Surface an external notification/update in the compact macOS island. */
+  'assistant-attention': { forceExpand?: boolean } | undefined
+  /** The native close-to-tray path explicitly suppresses island reveal. */
+  'assistant-hidden': void
 }
 
 const eventBus = mitt<Events>()
