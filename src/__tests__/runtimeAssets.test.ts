@@ -1,13 +1,47 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import {
-  findBackendDirectories,
-  inspectRuntimeAssets,
-} from '../../scripts/verify-runtime-assets.js'
 
 const temporaryDirectories: string[] = []
+const verifierScript = path.join(
+  process.cwd(),
+  'scripts',
+  'verify-runtime-assets.js'
+)
+
+type RuntimePlatform = 'windows' | 'macos'
+
+type VerifyResult = {
+  status: number | null
+  output: string
+}
+
+/**
+ * Keep this test at the process boundary. Importing a setup-style ESM script
+ * into Vitest works on Unix but can produce an invalid transformed token on
+ * the Windows runner. The release workflow invokes the script with Node, so
+ * exercising that same boundary is both portable and closer to CI behavior.
+ */
+function runVerifier(
+  platform: RuntimePlatform,
+  ...arguments_: string[]
+): VerifyResult {
+  const result = spawnSync(
+    process.execPath,
+    [verifierScript, platform, ...arguments_],
+    {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+    }
+  )
+  const output = [result.stdout, result.stderr, result.error?.message]
+    .filter(value => value !== undefined && value !== null)
+    .map(String)
+    .join('\n')
+  return { status: result.status, output }
+}
 
 function createTemporaryDirectory() {
   const directory = fs.mkdtempSync(
@@ -28,13 +62,20 @@ function writeFixtureFile(
   if (executable && process.platform !== 'win32') fs.chmodSync(target, 0o755)
 }
 
-function createMacFixture() {
-  const root = createTemporaryDirectory()
+function hostFixturePlatform(): RuntimePlatform {
+  return process.platform === 'win32' ? 'windows' : 'macos'
+}
+
+function createRuntimeFixture(
+  root: string,
+  platform: RuntimePlatform = hostFixturePlatform()
+) {
+  const suffix = platform === 'windows' ? '.exe' : ''
   for (const relativePath of [
-    'alice-backend',
-    'bin/ffmpeg',
-    'bin/main',
-    'bin/piper',
+    `alice-backend${suffix}`,
+    `bin/ffmpeg${suffix}`,
+    `bin/main${suffix}`,
+    `bin/piper${suffix}`,
     'models/whisper-base.bin',
     'models/piper/zh_CN-huayan-medium.onnx',
     'models/piper/zh_CN-huayan-medium.onnx.json',
@@ -42,10 +83,10 @@ function createMacFixture() {
     writeFixtureFile(
       root,
       relativePath,
-      relativePath.startsWith('bin/') || relativePath === 'alice-backend'
+      platform !== 'windows' &&
+        (relativePath.startsWith('bin/') || relativePath.startsWith('alice-'))
     )
   }
-  return root
 }
 
 afterEach(() => {
@@ -56,109 +97,112 @@ afterEach(() => {
 })
 
 describe('verify-runtime-assets', () => {
-  it('accepts a complete macOS runtime bundle and checks executable bits', () => {
-    const backendDir = createMacFixture()
-    const report = inspectRuntimeAssets({
-      platform: 'macos',
-      backendDir,
-      strict: true,
-    })
+  it('accepts a complete runtime bundle on every CI host', () => {
+    const platform = hostFixturePlatform()
+    const backendDir = createTemporaryDirectory()
+    createRuntimeFixture(backendDir, platform)
 
-    expect(report.ok).toBe(true)
-    expect(report.failures).toHaveLength(0)
-    expect(report.checks.every(check => check.status === 'ok')).toBe(true)
+    const result = runVerifier(
+      platform,
+      '--backend-dir',
+      backendDir,
+      '--strict'
+    )
+
+    expect(result.status, result.output).toBe(0)
+    expect(result.output).toContain('运行时资源预检：')
+    expect(result.output).toContain('✅ alice-backend')
   })
 
-  it('rejects missing voice files and non-executable Unix entrypoints', () => {
-    const backendDir = createMacFixture()
-    fs.rmSync(path.join(backendDir, 'models/piper/zh_CN-huayan-medium.onnx'))
-    fs.chmodSync(path.join(backendDir, 'bin/main'), 0o644)
-
-    const report = inspectRuntimeAssets({
-      platform: 'darwin',
+  it('rejects a missing voice file and Unix mode-bit violations when supported', () => {
+    const platform = hostFixturePlatform()
+    const backendDir = createTemporaryDirectory()
+    createRuntimeFixture(backendDir, platform)
+    const modelPath = path.join(
       backendDir,
-      strict: true,
-    })
-
-    expect(report.ok).toBe(false)
-    expect(report.failures.map(check => check.relativePath)).toEqual(
-      expect.arrayContaining([
-        'models/piper/zh_CN-huayan-medium.onnx',
-        'bin/main',
-      ])
+      'models/piper/zh_CN-huayan-medium.onnx'
     )
+    fs.rmSync(modelPath)
+
+    const expectedMissingPaths = ['models/piper/zh_CN-huayan-medium.onnx']
+    if (platform !== 'windows') {
+      fs.chmodSync(path.join(backendDir, 'bin/main'), 0o644)
+      expectedMissingPaths.push('bin/main')
+    }
+
+    const result = runVerifier(
+      platform,
+      '--backend-dir',
+      backendDir,
+      '--strict'
+    )
+
+    expect(result.status, result.output).toBe(1)
+    for (const relativePath of expectedMissingPaths) {
+      expect(result.output).toContain(relativePath)
+    }
   })
 
   it('does not require Unix mode bits for a Windows bundle', () => {
     const backendDir = createTemporaryDirectory()
-    for (const relativePath of [
-      'alice-backend.exe',
-      'bin/ffmpeg.exe',
-      'bin/main.exe',
-      'bin/piper.exe',
-      'models/whisper-base.bin',
-      'models/piper/zh_CN-huayan-medium.onnx',
-      'models/piper/zh_CN-huayan-medium.onnx.json',
-    ]) {
-      writeFixtureFile(backendDir, relativePath)
-    }
+    createRuntimeFixture(backendDir, 'windows')
 
-    const report = inspectRuntimeAssets({
-      platform: 'windows',
+    const result = runVerifier(
+      'windows',
+      '--backend-dir',
       backendDir,
-      strict: true,
-    })
+      '--strict'
+    )
 
-    expect(report.ok).toBe(true)
+    expect(result.status, result.output).toBe(0)
   })
 
-  it('finds the copied backend directory inside an app bundle', () => {
+  it('discovers and validates a copied backend directory inside a release bundle', () => {
+    const platform = hostFixturePlatform()
     const releaseDir = createTemporaryDirectory()
-    const backendDir = path.join(
-      releaseDir,
-      'mac-arm64',
-      'Alice AI App.app',
-      'Contents',
-      'Resources',
-      'backend'
-    )
+    const backendDir = path.join(releaseDir, 'bundle', 'Resources', 'backend')
     fs.mkdirSync(backendDir, { recursive: true })
+    createRuntimeFixture(backendDir, platform)
 
-    expect(findBackendDirectories(releaseDir)).toEqual([backendDir])
-    expect(
-      inspectRuntimeAssets({ platform: 'macos', releaseDir }).backendDir
-    ).toBe(backendDir)
+    const result = runVerifier(
+      platform,
+      '--release-dir',
+      releaseDir,
+      '--strict'
+    )
+
+    expect(result.status, result.output).toBe(0)
+    expect(result.output).toContain(`资源目录：${backendDir}`)
   })
 
   it('reports leftover extraction staging entries without hiding valid assets', () => {
-    const backendDir = createMacFixture()
+    const platform = hostFixturePlatform()
+    const backendDir = createTemporaryDirectory()
+    createRuntimeFixture(backendDir, platform)
     fs.mkdirSync(path.join(backendDir, 'bin/temp_extract_whisper'), {
       recursive: true,
     })
     writeFixtureFile(backendDir, 'bin/ffmpeg-download.zip')
 
-    const report = inspectRuntimeAssets({
-      platform: 'darwin',
+    const result = runVerifier(
+      platform,
+      '--backend-dir',
       backendDir,
-      strict: true,
-    })
+      '--strict'
+    )
 
-    expect(report.ok).toBe(true)
-    expect(report.stagingEntries).toEqual([
-      'bin/ffmpeg-download.zip',
-      'bin/temp_extract_whisper',
-    ])
-    expect(report.warnings).toEqual(
-      expect.arrayContaining([
-        '发现未清理的构建临时文件 bin/ffmpeg-download.zip',
-        '发现未清理的构建临时文件 bin/temp_extract_whisper',
-      ])
+    expect(result.status, result.output).toBe(0)
+    expect(result.output).toContain(
+      '发现未清理的构建临时文件 bin/ffmpeg-download.zip'
+    )
+    expect(result.output).toContain(
+      '发现未清理的构建临时文件 bin/temp_extract_whisper'
     )
   })
 
   it('fails closed when a release directory contains multiple app bundles', () => {
     const releaseDir = createTemporaryDirectory()
-    for (const architecture of ['mac-arm64', 'mac-x64']) {
+    for (const architecture of ['arm64', 'x64']) {
       fs.mkdirSync(
         path.join(
           releaseDir,
@@ -172,8 +216,9 @@ describe('verify-runtime-assets', () => {
       )
     }
 
-    expect(() =>
-      inspectRuntimeAssets({ platform: 'darwin', releaseDir })
-    ).toThrow('包含多个 Resources/backend')
+    const result = runVerifier('macos', '--release-dir', releaseDir, '--strict')
+
+    expect(result.status, result.output).toBe(2)
+    expect(result.output).toContain('包含多个 Resources/backend')
   })
 })
