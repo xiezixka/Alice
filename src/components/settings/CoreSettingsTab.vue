@@ -452,9 +452,10 @@
               class="toggle toggle-info mt-1 shrink-0"
               :checked="currentSettings.backgroundListeningEnabled"
               :disabled="
-                currentSettings.sttProvider !== 'local' ||
-                !currentSettings.localSttEnabled ||
-                !currentSettings.localSttWakeWord?.trim()
+                !currentSettings.backgroundListeningEnabled &&
+                (currentSettings.sttProvider !== 'local' ||
+                  !currentSettings.localSttEnabled ||
+                  !currentSettings.localSttWakeWord?.trim())
               "
               @change="handleBackgroundListeningToggle"
             />
