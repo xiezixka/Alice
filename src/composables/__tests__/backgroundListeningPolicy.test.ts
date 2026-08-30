@@ -35,6 +35,13 @@ describe('background listening policy', () => {
         localSttWakeWord: '  ',
       })
     ).toBe(false)
+    expect(
+      hasBackgroundListeningPrerequisites({
+        sttProvider: 'local',
+        localSttEnabled: true,
+        localSttWakeWord: '！！！',
+      })
+    ).toBe(false)
   })
 
   it('only asks to disable an already-enabled invalid background session', () => {

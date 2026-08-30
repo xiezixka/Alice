@@ -135,6 +135,127 @@ describe('useSettingsStore boolean settings', () => {
     }
   })
 
+  it('migrates an invalid persisted wake word to the safe default', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({
+          sttProvider: 'local',
+          localSttEnabled: true,
+          localSttWakeWord: '！！！',
+          backgroundListeningEnabled: true,
+        })),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+
+      expect(store.settings.localSttWakeWord).toBe('alice')
+      expect(store.settings.backgroundListeningEnabled).toBe(true)
+      expect(saveSettings).toHaveBeenCalled()
+      expect(
+        (
+          saveSettings.mock.calls as unknown as Array<[Record<string, any>]>
+        ).some(
+          ([payload]) =>
+            payload.localSttWakeWord === 'alice' &&
+            payload.backgroundListeningEnabled === true
+        )
+      ).toBe(true)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('normalizes a valid custom wake phrase before persistence', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({
+          sttProvider: 'local',
+          localSttEnabled: true,
+          localSttWakeWord: '  小助手　 ',
+        })),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+      expect(store.settings.localSttWakeWord).toBe('小助手')
+      expect(saveSettings).toHaveBeenCalled()
+      await store.saveSettingsToFile()
+      expect(
+        (
+          saveSettings.mock.calls as unknown as Array<[Record<string, any>]>
+        ).some(([payload]) => payload.localSttWakeWord === '小助手')
+      ).toBe(true)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('rejects an invalid custom wake phrase instead of writing it', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({})),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+      store.updateSetting('localSttWakeWord', '！！！')
+      const saved = await store.saveSettingsToFile()
+      expect(saved).toBe(false)
+      expect(store.error).toContain('至少要包含')
+      expect(saveSettings).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('fail-closes background listening when an invalid draft is auto-persisted', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({})),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+      store.updateSetting('localSttWakeWord', '！！！')
+      // Simulate a stale enabled flag arriving from an older caller; the
+      // auto-disable path normally prevents this combination in the UI.
+      store.settings.backgroundListeningEnabled = true
+
+      const saved = await store.saveSettingsToFile({
+        allowInvalidWakeWord: true,
+      })
+
+      expect(saved).toBe(true)
+      expect(store.settings.localSttWakeWord).toBe('')
+      expect(store.settings.backgroundListeningEnabled).toBe(false)
+      expect(saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          localSttWakeWord: '',
+          backgroundListeningEnabled: false,
+        })
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('migrates the old avatar persona without overwriting custom wording', async () => {
     const saveSettings = vi.fn(async () => ({ success: true }))
     vi.stubGlobal('window', {

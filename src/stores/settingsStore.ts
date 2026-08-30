@@ -14,6 +14,10 @@ import {
   type AIProviderKey,
 } from '../services/llmProviders/providerCatalog'
 import { shouldDisableBackgroundListening } from '../composables/backgroundListeningPolicy'
+import {
+  DEFAULT_WAKE_WORD,
+  validateWakeWord,
+} from '../composables/wakeWordConfig'
 
 export const DEFAULT_ASSISTANT_PERSONA_PROMPT = DEFAULT_PERSONA_PROMPT
 
@@ -180,7 +184,7 @@ const defaultSettings: AliceSettings = {
   localSttModel: 'whisper-base',
   localSttLanguage: 'zh',
   localSttEnabled: true,
-  localSttWakeWord: 'alice',
+  localSttWakeWord: DEFAULT_WAKE_WORD,
   backgroundListeningEnabled: false,
   launchAtLogin: false,
 
@@ -454,6 +458,30 @@ export const useSettingsStore = defineStore('settings', () => {
 
     if (!Array.isArray(validated.ragPaths)) {
       validated.ragPaths = []
+      migrated = true
+    }
+
+    // Normalize legacy/user-edited wake words before they reach the runtime.
+    // A non-empty invalid value is migrated to the safe default rather than
+    // silently turning a malformed wake configuration into direct command
+    // mode. An intentionally blank value is preserved so users can disable
+    // wake-word gating while keeping push-to-talk available.
+    const rawWakeWord = validated.localSttWakeWord
+    const wakeWordValidation = validateWakeWord(rawWakeWord)
+    if (typeof rawWakeWord !== 'string') {
+      validated.localSttWakeWord = ''
+      migrated = true
+    } else if (rawWakeWord.length > 0 && !wakeWordValidation.valid) {
+      validated.localSttWakeWord = DEFAULT_WAKE_WORD
+      migrated = true
+      console.log(
+        '🔄 Replaced invalid persisted wake word with the safe default Alice wake word'
+      )
+    } else if (
+      wakeWordValidation.valid &&
+      wakeWordValidation.value !== rawWakeWord
+    ) {
+      validated.localSttWakeWord = wakeWordValidation.value
       migrated = true
     }
 
@@ -873,6 +901,15 @@ export const useSettingsStore = defineStore('settings', () => {
       Array.isArray(value)
     ) {
       settings.value[key] = value as string[]
+    } else if (key === 'localSttWakeWord') {
+      // Keep invalid draft text visible to the settings UI so it can explain
+      // what needs fixing; save/background-enable paths reject it before it
+      // can become persisted runtime configuration.
+      const rawWakeWord = typeof value === 'string' ? value : String(value)
+      const wakeWordValidation = validateWakeWord(rawWakeWord)
+      ;(settings.value as any)[key] = wakeWordValidation.valid
+        ? wakeWordValidation.value
+        : rawWakeWord
     } else if (typeof value === 'boolean') {
       // Preserve boolean settings as booleans.  Converting them to strings
       // makes values such as "false" truthy, which can leave the microphone
@@ -982,7 +1019,26 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  async function saveSettingsToFile(): Promise<boolean> {
+  async function saveSettingsToFile(
+    options: { allowInvalidWakeWord?: boolean } = {}
+  ): Promise<boolean> {
+    const rawWakeWord = settings.value.localSttWakeWord
+    const wakeWordValidation = validateWakeWord(rawWakeWord)
+    if (rawWakeWord !== '' && !wakeWordValidation.valid) {
+      if (!options.allowInvalidWakeWord) {
+        error.value = wakeWordValidation.error || '唤醒词格式无效。'
+        return false
+      }
+
+      // This option is used only while fail-closing an already-enabled
+      // background session after the user entered an invalid draft. Persist an
+      // empty value so the next launch cannot reactivate that invalid trigger.
+      settings.value.localSttWakeWord = ''
+      settings.value.backgroundListeningEnabled = false
+    } else if (wakeWordValidation.valid) {
+      settings.value.localSttWakeWord = wakeWordValidation.value
+    }
+
     if (!isProduction.value && !window.settingsAPI?.saveSettings) {
       successMessage.value =
         'Settings updated (Dev Mode - Not saved to file unless IPC available)'

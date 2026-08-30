@@ -1,3 +1,5 @@
+import { validateWakeWord } from './wakeWordConfig'
+
 export interface WakeWordMatch {
   hasWakeWord: boolean
   command: string
@@ -83,13 +85,21 @@ export function parseWakeWord(
 ): WakeWordMatch {
   const original = typeof transcription === 'string' ? transcription : ''
   const normalizedTranscript = normalizeForMatching(original)
-  const normalizedWakeWord = normalizeForMatching(wakeWord)
+  const rawWakeWord = typeof wakeWord === 'string' ? wakeWord : ''
+  const wakeWordValidation = validateWakeWord(rawWakeWord)
+  const normalizedWakeWord = normalizeForMatching(wakeWordValidation.value)
 
   if (!normalizedTranscript) {
     return { hasWakeWord: false, command: '' }
   }
-  if (!normalizedWakeWord) {
+  // An exactly empty value is used by the push-to-talk path to mean “no
+  // wake-word gate”. Whitespace/control/punctuation values are invalid and
+  // must fail closed instead of accidentally enabling direct command mode.
+  if (!rawWakeWord) {
     return { hasWakeWord: true, command: original.trim() }
+  }
+  if (!wakeWordValidation.valid || !normalizedWakeWord) {
+    return { hasWakeWord: false, command: '' }
   }
   if (sessionActive) {
     return { hasWakeWord: true, command: cleanCommand(original) }

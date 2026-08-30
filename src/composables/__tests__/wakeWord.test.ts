@@ -132,6 +132,17 @@ describe('parseWakeWord', () => {
     })
   })
 
+  it('fails closed for invalid non-empty custom wake words', () => {
+    expect(parseWakeWord('！！！，打开日历', '！！！')).toEqual({
+      hasWakeWord: false,
+      command: '',
+    })
+    expect(parseWakeWord('小助手，打开日历', '  ')).toEqual({
+      hasWakeWord: false,
+      command: '',
+    })
+  })
+
   it('returns the transcript when wake-word mode has no configured word', () => {
     expect(parseWakeWord('直接执行这个任务', '')).toEqual({
       hasWakeWord: true,

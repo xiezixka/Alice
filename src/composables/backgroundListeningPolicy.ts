@@ -5,6 +5,8 @@
  * backgroundListeningEnabled can only be true when local STT + a wake word
  * are configured.
  */
+import { isValidWakeWord } from './wakeWordConfig'
+
 export interface BackgroundListeningConfig {
   sttProvider?: string
   localSttEnabled?: boolean
@@ -18,8 +20,7 @@ export function hasBackgroundListeningPrerequisites(
   return (
     config.sttProvider === 'local' &&
     config.localSttEnabled === true &&
-    typeof config.localSttWakeWord === 'string' &&
-    config.localSttWakeWord.trim().length > 0
+    isValidWakeWord(config.localSttWakeWord)
   )
 }
 

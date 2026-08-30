@@ -8,6 +8,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { storeToRefs } from 'pinia'
 import eventBus from '../utils/eventBus'
 import { parseWakeWord } from './wakeWord'
+import { isValidWakeWord } from './wakeWordConfig'
 import {
   isBlockedMicrophonePermissionStatus,
   isMicrophonePermissionError,
@@ -60,10 +61,25 @@ export function useAudioProcessing() {
   // Async STT results from an older generation must never become commands.
   let recordingGeneration = 0
 
-  const isWakeWordModeEnabled = () =>
-    settingsStore.config.sttProvider === 'local' &&
-    settingsStore.config.localSttEnabled &&
-    Boolean(settingsStore.config.localSttWakeWord?.trim())
+  const isWakeWordModeEnabled = () => {
+    const configuredWakeWord = settingsStore.config.localSttWakeWord
+
+    // An exactly empty value intentionally keeps push-to-talk in direct
+    // command mode. Any non-empty value (including an invalid draft) must
+    // stay behind the wake-word gate so malformed settings cannot silently
+    // turn microphone input into commands. The parser fails closed for the
+    // invalid values, while the settings UI/store rejects them at save time.
+    const hasWakeWordInput =
+      typeof configuredWakeWord === 'string'
+        ? configuredWakeWord.length > 0
+        : configuredWakeWord != null
+
+    return (
+      settingsStore.config.sttProvider === 'local' &&
+      settingsStore.config.localSttEnabled &&
+      hasWakeWordInput
+    )
+  }
 
   const resetWakeSession = () => {
     wakeSessionExpiresAt = 0
@@ -644,7 +660,7 @@ export function useAudioProcessing() {
       backgroundEnabled &&
       settingsStore.config.sttProvider === 'local' &&
       settingsStore.config.localSttEnabled &&
-      Boolean(settingsStore.config.localSttWakeWord?.trim())
+      isValidWakeWord(settingsStore.config.localSttWakeWord)
 
     if (backgroundEnabled && !canRunBackground) {
       generalStore.statusMessage =

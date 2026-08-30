@@ -412,14 +412,36 @@
               type="text"
               v-model="currentSettings.localSttWakeWord"
               class="input input-bordered w-full focus:input-primary"
+              :aria-invalid="
+                currentSettings.localSttWakeWord !== '' &&
+                !wakeWordValidation.valid
+              "
+              :aria-describedby="
+                currentSettings.localSttWakeWord !== '' &&
+                !wakeWordValidation.valid
+                  ? 'stt-wakeword-error'
+                  : 'stt-wakeword-help'
+              "
               @change="handleWakeWordChange"
-              placeholder="alice"
+              :placeholder="DEFAULT_WAKE_WORD"
             />
-            <p class="text-xs text-gray-400 mt-1">
+            <p id="stt-wakeword-help" class="text-xs text-gray-400 mt-1">
               说出此词即可激活录音；使用简单、常见的词语可提升识别效果。
             </p>
+            <p
+              v-if="
+                currentSettings.localSttWakeWord !== '' &&
+                !wakeWordValidation.valid
+              "
+              id="stt-wakeword-error"
+              class="text-xs text-amber-300 mt-1"
+              role="alert"
+            >
+              {{ wakeWordValidation.error }}
+            </p>
             <p class="text-xs text-cyan-300/80 mt-1">
-              修改后请点击页面底部“保存并重新加载”使新唤醒词生效；后台监听开关的切换会即时保存。
+              支持中文、英文或混合短语（最多 40
+              个字符）。修改后请点击页面底部“保存并重新加载”使新唤醒词生效；后台监听开关的切换会即时保存。
             </p>
           </div>
         </div>
@@ -448,7 +470,7 @@
                 !currentSettings.backgroundListeningEnabled &&
                 (currentSettings.sttProvider !== 'local' ||
                   !currentSettings.localSttEnabled ||
-                  !currentSettings.localSttWakeWord?.trim())
+                  !wakeWordValidation.valid)
               "
               @change="handleBackgroundListeningToggle"
             />
@@ -893,6 +915,10 @@ import {
   shouldDisableBackgroundListening,
   type BackgroundListeningConfig,
 } from '../../composables/backgroundListeningPolicy'
+import {
+  DEFAULT_WAKE_WORD,
+  validateWakeWord,
+} from '../../composables/wakeWordConfig'
 
 // Type for service status
 interface ServiceStatus {
@@ -935,6 +961,9 @@ const showVoiceHelp = ref(false)
 const ragStats = ref({ documents: 0, chunks: 0 })
 const isIndexingRag = ref(false)
 const ragStatusMessage = ref('')
+const wakeWordValidation = computed(() =>
+  validateWakeWord(props.currentSettings.localSttWakeWord)
+)
 
 // Surface an automatic fail-closed transition when a prerequisite is changed
 // by another settings control or by a migrated settings file.
@@ -1007,7 +1036,14 @@ const handleLocalSttEnabledChange = (event: Event) => {
 
 const handleWakeWordChange = (event: Event) => {
   const wakeWord = getTargetValue(event)
-  emit('update:setting', 'localSttWakeWord', wakeWord)
+  const validation = validateWakeWord(wakeWord)
+  // Keep invalid draft text visible so the inline message can explain what
+  // needs fixing; the shared settings store rejects it again at persistence.
+  emit(
+    'update:setting',
+    'localSttWakeWord',
+    validation.valid ? validation.value : wakeWord
+  )
   maybeDisableBackgroundListening({ localSttWakeWord: wakeWord })
 }
 
@@ -1035,6 +1071,12 @@ const backgroundListeningReadiness = computed(() => {
   }
   if (!props.currentSettings.localSttWakeWord?.trim()) {
     return { ready: false, message: '请设置唤醒词。' }
+  }
+  if (!wakeWordValidation.value.valid) {
+    return {
+      ready: false,
+      message: wakeWordValidation.value.error || '唤醒词格式无效。',
+    }
   }
   if (serviceStatus.value.stt.status !== 'ready') {
     return {
@@ -1183,6 +1225,16 @@ const enableBackgroundWake = async () => {
 
   isEnablingBackgroundWake.value = true
   try {
+    const configuredWakeWord = props.currentSettings.localSttWakeWord || ''
+    if (configuredWakeWord.trim()) {
+      const wakeWordValidationResult = validateWakeWord(configuredWakeWord)
+      if (!wakeWordValidationResult.valid) {
+        microphoneCheckResult.value =
+          wakeWordValidationResult.error || '请先修正唤醒词格式。'
+        return
+      }
+    }
+
     // Request and verify access before changing the persisted setting. This
     // prevents a denied permission from leaving the UI in a misleading
     // "background listening enabled" state.
@@ -1203,7 +1255,7 @@ const enableBackgroundWake = async () => {
     }
     emit('update:setting', 'localSttEnabled', true)
     if (!props.currentSettings.localSttWakeWord?.trim()) {
-      emit('update:setting', 'localSttWakeWord', 'alice')
+      emit('update:setting', 'localSttWakeWord', DEFAULT_WAKE_WORD)
     }
     emit('update:setting', 'backgroundListeningEnabled', true)
     microphoneCheckResult.value =

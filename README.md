@@ -13,7 +13,7 @@ Alice is more than a chatbot; she’s built to feel present, responsive, emotion
 
 语音链路可以完全在本机运行：VAD 负责检测说话，Go 后端的 Whisper 负责语音转文字，Piper 负责中文语音播报。语音片段会先经过前后端能量门控，静音不会被送进 Whisper，避免静音幻觉触发指令。后台唤醒是显式开关：开启“后台语音监听”并授权麦克风后，Alice 隐藏到系统托盘仍会等待唤醒词；未开启时不会占用麦克风。
 
-桌面写操作默认需要逐次确认。文件整理先生成预览，执行后提供撤销 ID；屏幕截图只作为当前视觉请求的临时上下文，不写入长期聊天记录。微信、QQ、Slack 等没有内置账号接口时，只能操作已经打开且由用户确认的窗口，不会声称能在后台读取或发送消息。
+桌面写操作默认需要逐次确认。文件整理先生成预览，执行后提供撤销 ID；屏幕截图只作为当前视觉请求的临时上下文，不写入长期聊天记录。微信、QQ、Slack 等没有内置账号接口时，可先观察已打开会话，再用 `desktop_reply_message` 在一次确认中核对收件人和正文后发送；不会声称能在后台读取或发送消息。
 
 ## Quick showcase
 
@@ -57,6 +57,9 @@ While the OpenAI cloud API is preferred and provides the best user experience, A
 Alice can interact with your local system with user-approved permissions:
 
 - 📂 File system browsing (e.g., listing folders)
+- 💬 Safe replies in an already-open chat: `desktop_observe` binds the
+  foreground window, then `desktop_reply_message` shows the recipient/body in
+  one confirmation before typing and sending; no background chat access
 - 💻 Shell command execution (`ls`, `mv`, `mkdir`, etc)
 - 🔐 Granular command approvals:
 
@@ -82,10 +85,13 @@ Alice can interact with your local system with user-approved permissions:
 
 With the local STT model, you can set a **wake-up word** (like "Hey, Siri").
 
+- 自定义唤醒词支持中文、英文或混合短语，保存时会统一 Unicode 格式并合并多余空格；唤醒词最多 40 个字符，仅含空白、纯标点或控制字符的值会被拒绝（清空输入则表示关闭唤醒词门控）。
 - When **后台语音监听** is enabled, Alice keeps the local VAD session active while hidden in the system tray, but only processes requests after the wake word is spoken.
 - Default mode is **auto language detection**, but you can also select a specific language in settings.
 - In **Core Settings**, enable **后台语音监听** to keep VAD active while the avatar is hidden in the system tray. This requires local STT + wake word mode; closing the avatar hides it instead of quitting, and **退出 Alice** remains available from the tray menu.
 - **开机启动 Alice** uses the operating system login-item mechanism. When paired with background listening, Alice starts hidden and waits for the wake word.
+- 修改唤醒词后点击“保存并重新加载”即可生效；如果后台监听已开启，重启会继续携带后台启动参数并保持窗口隐藏，手动打开 Alice 仍会显示主窗口。
+- 后台唤醒基于本地 Whisper 转写和 VAD，并非低功耗专用关键词芯片；Alice 进程必须保持运行且系统必须授予麦克风权限。
 
 ### 中文快速启用
 

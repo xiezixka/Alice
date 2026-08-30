@@ -56,6 +56,11 @@ import {
 import DesktopManager from './desktopManager'
 import { backendManager } from './backendManager'
 import { setupDependencies } from '../../scripts/setup-dependencies.js'
+import {
+  BACKGROUND_LAUNCH_ARG,
+  buildRelaunchArgs,
+  shouldKeepWindowHiddenForSecondInstance,
+} from './backgroundLaunch'
 
 // Global state for hot reload persistence
 declare global {
@@ -74,7 +79,7 @@ const GENERATED_IMAGES_FULL_PATH = path.join(USER_DATA_PATH, 'generated_images')
 
 let isHandlingQuit = false
 let wss: any | null = null
-const isBackgroundLaunch = process.argv.includes('--alice-background')
+const isBackgroundLaunch = process.argv.includes(BACKGROUND_LAUNCH_ARG)
 // Use global variables to persist across hot reloads
 if (!global.aliceAppState) {
   global.aliceAppState = {
@@ -108,7 +113,7 @@ function configureLaunchAtLogin(enabled: boolean): void {
   try {
     app.setLoginItemSettings({
       openAtLogin: enabled,
-      args: ['--alice-background'],
+      args: [BACKGROUND_LAUNCH_ARG],
     })
     console.log(
       `[Main Index] Launch at login ${enabled ? 'enabled' : 'disabled'}`
@@ -602,12 +607,45 @@ app.on('window-all-closed', () => {
 })
 
 app.on('second-instance', (event, commandLine, workingDirectory) => {
-  const win = getMainWindow()
-  if (win) {
-    if (win.isMinimized()) win.restore()
-    win.show()
-    win.focus()
-  }
+  // A login-item launch can race with an already-running instance (for
+  // example after a user logs in twice or an installer retries). Do not
+  // surface the capsule for that background launch; a normal manual launch
+  // still reveals/focuses the existing window below.
+  void loadSettings()
+    .then(settings => {
+      if (
+        shouldKeepWindowHiddenForSecondInstance(
+          commandLine,
+          settings?.backgroundListeningEnabled === true
+        )
+      ) {
+        console.log(
+          '[Main Index] Ignoring duplicate background launch; keeping Alice hidden.'
+        )
+        return
+      }
+
+      const win = getMainWindow()
+      if (win) {
+        if (win.isMinimized()) win.restore()
+        win.show()
+        win.focus()
+      }
+    })
+    .catch(error => {
+      // If settings cannot be read, prefer the manual-launch behavior so the
+      // user is not left with an apparently missing application window.
+      console.warn(
+        '[Main Index] Could not inspect duplicate-launch mode; showing Alice:',
+        error
+      )
+      const win = getMainWindow()
+      if (win) {
+        if (win.isMinimized()) win.restore()
+        win.show()
+        win.focus()
+      }
+    })
 })
 
 app.on('activate', () => {

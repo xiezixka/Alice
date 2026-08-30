@@ -130,6 +130,7 @@ import {
   validateHttpBridgeUrl,
 } from './securityBoundaries'
 import { setTrayBackgroundListening } from './trayManager'
+import { buildRelaunchArgs } from './backgroundLaunch'
 
 const USER_DATA_PATH = app.getPath('userData')
 const GENERATED_IMAGES_DIR_NAME = 'generated_images'
@@ -688,7 +689,16 @@ export function registerIPCHandlers(): void {
   // App restart
   ipcMain.handle('app:restart', async () => {
     try {
-      app.relaunch()
+      // Preserve the user's background-listening intent across a settings
+      // restart. Without this, saving a custom wake word while background
+      // listening is enabled would relaunch the app visibly and break the
+      // tray-only workflow. Keep all unrelated dev/installer arguments.
+      const settings = await loadSettings()
+      const relaunchArgs = buildRelaunchArgs(
+        process.argv.slice(1),
+        settings?.backgroundListeningEnabled === true
+      )
+      app.relaunch({ args: relaunchArgs })
       app.exit(0)
       return { success: true }
     } catch (error: any) {
