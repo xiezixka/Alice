@@ -117,7 +117,10 @@ const getDefaultModels = (provider: AIProviderKey) => {
   }
 }
 
-const openaiDefaults = getDefaultModels('openai')
+// Alice is shipped as a Chinese, vision-capable desktop agent. Keep the
+// first-run wizard aligned with that product configuration instead of making
+// users switch away from the upstream OpenAI/cloud defaults manually.
+const deepseekDefaults = getDefaultModels('deepseek')
 
 const formData = reactive({
   VITE_OPENAI_API_KEY: '',
@@ -127,12 +130,12 @@ const formData = reactive({
   VITE_DEEPSEEK_API_KEY: '',
   codexAuthConnected: false,
   codexAccountLabel: '',
-  aiProvider: 'openai' as AIProviderKey,
-  assistantModel: openaiDefaults.assistantModel as string,
-  summarizationModel: openaiDefaults.summarizationModel as string,
-  sttProvider: 'openai' as 'openai' | 'groq' | 'google' | 'local',
-  ttsProvider: 'openai' as 'openai' | 'google' | 'local',
-  embeddingProvider: 'openai' as 'openai' | 'local',
+  aiProvider: 'deepseek' as AIProviderKey,
+  assistantModel: deepseekDefaults.assistantModel as string,
+  summarizationModel: deepseekDefaults.summarizationModel as string,
+  sttProvider: 'local' as 'openai' | 'groq' | 'google' | 'local',
+  ttsProvider: 'local' as 'openai' | 'google' | 'local',
+  embeddingProvider: 'local' as 'openai' | 'local',
   VITE_GROQ_API_KEY: '',
   VITE_GOOGLE_API_KEY: '',
   ollamaBaseUrl: 'http://localhost:11434',
@@ -140,7 +143,7 @@ const formData = reactive({
   zaiBaseUrl: ZAI_CODING_BASE_URL,
   minimaxBaseUrl: MINIMAX_OPENAI_BASE_URL,
   deepseekBaseUrl: DEEPSEEK_OPENAI_BASE_URL,
-  useLocalModels: false,
+  useLocalModels: true,
   availableModels: [] as string[],
   localSttLanguage: 'zh',
 })
