@@ -85,6 +85,7 @@
           :is-tool-configured="isToolConfigured"
           @refresh-models="refreshModels"
           @reset-system-prompt="resetSystemPrompt"
+          @persist-settings="persistAssistantSettings"
         />
 
         <HotkeysTab
@@ -559,6 +560,24 @@ const persistBackgroundWakeSettings = async () => {
   const success = await settingsStore.saveSettingsToFile()
   if (success) {
     settingsStore.successMessage = '后台唤醒配置已保存。'
+    if (window.aliceIPC && window.location.hash === '#settings') {
+      await window.aliceIPC.invoke('settings:notify-main-window', {
+        type: 'settings-saved',
+        success: true,
+        validationComplete: true,
+        settingsChanged: true,
+      })
+    }
+  }
+}
+
+const persistAssistantSettings = async () => {
+  // Tool preset buttons are explicit user actions. Persist them immediately
+  // so closing the settings window does not discard the selected capabilities.
+  await nextTick()
+  const success = await settingsStore.saveSettingsToFile()
+  if (success) {
+    settingsStore.successMessage = '工具配置已保存。'
     if (window.aliceIPC && window.location.hash === '#settings') {
       await window.aliceIPC.invoke('settings:notify-main-window', {
         type: 'settings-saved',

@@ -552,9 +552,10 @@ const props = defineProps<{
   isToolConfigured: (toolName: string) => boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'refresh-models': []
   'reset-system-prompt': []
+  'persist-settings': []
 }>()
 
 const settingsStore = useSettingsStore()
@@ -581,18 +582,24 @@ const emailReplyToolPreset = [
 ]
 
 const enableDesktopAgentTools = () => {
-  props.currentSettings.assistantTools = Array.from(
+  const nextTools = Array.from(
     new Set([
       ...props.currentSettings.assistantTools,
       ...desktopAgentToolPreset,
     ])
   )
+  if (nextTools.length === props.currentSettings.assistantTools.length) return
+  props.currentSettings.assistantTools = nextTools
+  emit('persist-settings')
 }
 
 const enableEmailReplyTools = () => {
-  props.currentSettings.assistantTools = Array.from(
+  const nextTools = Array.from(
     new Set([...props.currentSettings.assistantTools, ...emailReplyToolPreset])
   )
+  if (nextTools.length === props.currentSettings.assistantTools.length) return
+  props.currentSettings.assistantTools = nextTools
+  emit('persist-settings')
 }
 
 onMounted(() => {
