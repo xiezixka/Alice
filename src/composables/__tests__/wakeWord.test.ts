@@ -51,6 +51,13 @@ describe('parseWakeWord', () => {
     })
   })
 
+  it('accepts the latest local TTS-to-STT transcript variant', () => {
+    expect(parseWakeWord('艾利斯傾打開日曆', 'alice')).toEqual({
+      hasWakeWord: true,
+      command: '傾打開日曆',
+    })
+  })
+
   it('accepts mixed-script aliases emitted by ASR', () => {
     expect(parseWakeWord('艾莉斯請告訴我今天的安排', 'alice')).toEqual({
       hasWakeWord: true,
