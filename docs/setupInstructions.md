@@ -47,6 +47,24 @@ The GitHub Actions build and PR workflows run this check automatically. It
 rejects missing, empty, or mis-versioned installer files before they are
 uploaded as downloadable artifacts.
 
+### 打包后的运行时资源预检
+
+安装包生成后，发布流水线还会检查 `Resources/backend`（Windows/Linux 为
+`resources/backend`）是否包含 Go 后端、FFmpeg、Whisper、Piper 以及中文语音
+模型，并确认 macOS/Linux 可执行文件保留了执行权限。这个检查直接读取
+electron-builder 复制后的目录，能够发现“安装包文件存在但启动后缺少语音资源”
+的情况：
+
+```bash
+# 在对应平台完成打包后执行；<version> 替换为 package.json 的版本
+npm run verify:runtime -- macos --release-dir release/<version> --strict
+npm run verify:runtime -- windows --release-dir release/<version> --strict
+npm run verify:runtime -- linux --release-dir release/<version> --strict
+```
+
+架构和动态库来源仍由 `npm run verify:native`（发布时可加 `--strict`）单独
+核验；两项检查都通过后再上传 DMG、NSIS 或 AppImage。
+
 ### macOS 原生语音资源检查
 
 打包前可以单独检查随安装包带入的 FFmpeg、Whisper 和 Piper 资源：

@@ -140,6 +140,10 @@ jobs:
         run: node scripts/verify-release-artifacts.js "${{ matrix.os }}"
         shell: bash
 
+      - name: Verify packaged runtime assets
+        run: npm run verify:runtime -- "${{ matrix.os }}" --release-dir "release/${{ env.APP_VERSION }}" --strict
+        shell: bash
+
       - name: Upload Release Artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@v4
         with:

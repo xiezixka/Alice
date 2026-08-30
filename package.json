@@ -36,6 +36,7 @@
     "verify:release": "node scripts/verify-release-artifacts.js",
     "verify:native": "node scripts/verify-native-assets.js",
     "verify:native:strict": "node scripts/verify-native-assets.js --strict",
+    "verify:runtime": "node scripts/verify-runtime-assets.js",
     "setup:dependencies": "node scripts/setup-dependencies.js",
     "setup:embeddings": "node scripts/setup-embeddings.js",
     "rebuild": "npx electron-rebuild -f -w better-sqlite3,hnswlib-node",
