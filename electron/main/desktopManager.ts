@@ -953,6 +953,8 @@ class DesktopManager {
       const displayAfter = screen.getPrimaryDisplay()
       const displayStable =
         String(displayAfter.id) === String(primaryDisplay.id) &&
+        displayAfter.bounds.x === primaryDisplay.bounds.x &&
+        displayAfter.bounds.y === primaryDisplay.bounds.y &&
         displayAfter.size.width === displaySize.width &&
         displayAfter.size.height === displaySize.height &&
         displayAfter.scaleFactor === primaryDisplay.scaleFactor
