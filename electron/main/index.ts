@@ -369,17 +369,27 @@ export function restartWebSocketServer() {
 
 app.on('ready', () => {
   console.log(`[Main Index ${initId}] App 'ready' event fired`)
+  const rendererIndexPath = path.join(getRendererDist(), 'index.html')
+  const getCurrentRendererUrl = (webContents: Electron.WebContents): string => {
+    try {
+      return webContents.getURL()
+    } catch (error) {
+      console.warn('[Media Permission] Could not read renderer URL:', error)
+      return ''
+    }
+  }
+
   session.defaultSession.setPermissionCheckHandler(
     (webContents, permission, requestingOrigin, details) => {
       if (!webContents || webContents.isDestroyed()) return false
       return shouldAllowMicrophonePermissionCheck({
         permission,
-        mediaType: details.mediaType,
-        isMainFrame: details.isMainFrame,
+        mediaType: details?.mediaType,
+        isMainFrame: details?.isMainFrame,
         requestingOrigin,
-        requestingUrl: details.requestingUrl,
-        currentUrl: webContents.getURL(),
-        rendererIndexPath: path.join(getRendererDist(), 'index.html'),
+        requestingUrl: details?.requestingUrl,
+        currentUrl: getCurrentRendererUrl(webContents),
+        rendererIndexPath,
       })
     }
   )
@@ -390,7 +400,7 @@ app.on('ready', () => {
         return
       }
 
-      const mediaDetails = details as {
+      const mediaDetails = (details || {}) as {
         mediaTypes?: string[]
         isMainFrame?: boolean
         requestingUrl?: string
@@ -403,8 +413,8 @@ app.on('ready', () => {
           isMainFrame: mediaDetails.isMainFrame,
           requestingOrigin: mediaDetails.securityOrigin,
           requestingUrl: mediaDetails.requestingUrl,
-          currentUrl: webContents.getURL(),
-          rendererIndexPath: path.join(getRendererDist(), 'index.html'),
+          currentUrl: getCurrentRendererUrl(webContents),
+          rendererIndexPath,
         })
       )
     }
