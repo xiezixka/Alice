@@ -1527,7 +1527,7 @@ export function registerGoogleIPCHandlers(): void {
     if (!authClient) {
       return {
         success: false,
-        error: `User not authenticated with ${serviceName}. Please authenticate in settings.`,
+        error: `尚未登录 ${serviceName}。请先在设置中完成授权。`,
         unauthenticated: true,
       }
     }

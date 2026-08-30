@@ -86,7 +86,7 @@ function startAuthServer(): Promise<void> {
       try {
         if (!req.url) {
           res.writeHead(400, { 'Content-Type': 'text/plain' })
-          res.end('Bad Request: URL is missing.')
+          res.end('请求无效：缺少 URL。')
           return
         }
         const requestUrl = new URL(
@@ -102,46 +102,46 @@ function startAuthServer(): Promise<void> {
           if (error) {
             res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' })
             res.end(
-              `<h1>Authentication Failed</h1><p>${error}</p><p>You can close this window.</p>`
+              `<h1>授权失败</h1><p>${error}</p><p>现在可以关闭此窗口。</p>`
             )
-            closeAuthWindowAndNotify(false, `OAuth error: ${error}`)
+            closeAuthWindowAndNotify(false, `OAuth 错误：${error}`)
             stopAuthServer()
           } else if (code) {
             await googleAuthManager.getTokensFromCode(code)
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
             res.end(
-              '<h1>Authentication Successful!</h1><p>You can close this browser window/tab now and return to Alice.</p>'
+              '<h1>授权成功！</h1><p>现在可以关闭此浏览器窗口或标签页，然后返回 Alice。</p>'
             )
             closeAuthWindowAndNotify(
               true,
-              'Successfully authenticated with Google.'
+              'Google 授权成功。'
             )
             stopAuthServer()
           } else {
             res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' })
             res.end(
-              '<h1>Authentication Failed</h1><p>No authorization code or error received on callback.</p><p>You can close this window.</p>'
+              '<h1>授权失败</h1><p>回调中没有收到授权码或错误信息。</p><p>现在可以关闭此窗口。</p>'
             )
             closeAuthWindowAndNotify(
               false,
-              'No authorization code or error received on callback.'
+              '回调中没有收到授权码或错误信息。'
             )
             stopAuthServer()
           }
         } else {
           console.log(`[AuthServer] Ignoring request for path: ${pathName}`)
           res.writeHead(404, { 'Content-Type': 'text/plain' })
-          res.end('Not Found')
+          res.end('未找到请求的页面。')
         }
       } catch (e: any) {
         console.error('[AuthServer] Error processing auth request:', e)
         res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' })
         res.end(
-          '<h1>Internal Server Error</h1><p>An error occurred while processing your authentication. Please try again.</p>'
+          '<h1>服务器内部错误</h1><p>处理授权时发生错误，请稍后重试。</p>'
         )
         closeAuthWindowAndNotify(
           false,
-          `Server error during authentication: ${e.message}`
+          `处理授权时发生服务器错误：${e.message}`
         )
         stopAuthServer()
       }
@@ -153,7 +153,7 @@ function startAuthServer(): Promise<void> {
         console.error(
           `[AuthServer] Port ${OAUTH_SERVER_PORT} is already in use. Cannot start auth server.`
         )
-        reject(new Error(`Port ${OAUTH_SERVER_PORT} is already in use.`))
+        reject(new Error(`端口 ${OAUTH_SERVER_PORT} 已被占用。`))
       } else {
         reject(e)
       }

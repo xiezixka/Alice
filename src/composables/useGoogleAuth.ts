@@ -27,7 +27,7 @@ export function useGoogleAuth() {
       if (result.success)
         googleAuthStatus.isAuthenticated = result.isAuthenticated
     } catch (e: any) {
-      googleAuthStatus.error = 'Error checking auth status: ' + e.message
+      googleAuthStatus.error = '检查 Google 授权状态失败：' + e.message
     } finally {
       googleAuthStatus.isLoading = false
     }
@@ -49,7 +49,7 @@ export function useGoogleAuth() {
         googleAuthStatus.authInProgress = false
       }
     } catch (e: any) {
-      googleAuthStatus.error = 'Error initiating auth: ' + e.message
+      googleAuthStatus.error = '发起 Google 授权失败：' + e.message
       googleAuthStatus.authInProgress = false
     } finally {
       googleAuthStatus.isLoading = false
@@ -59,7 +59,7 @@ export function useGoogleAuth() {
   async function disconnectGoogleServices() {
     googleAuthStatus.isLoading = true
     googleAuthStatus.error = null
-    googleAuthStatus.message = 'Disconnecting...'
+    googleAuthStatus.message = '正在断开 Google 连接…'
     try {
       const result = await window.aliceIPC.invoke(
         'google-calendar:disconnect'
@@ -74,7 +74,7 @@ export function useGoogleAuth() {
         googleAuthStatus.message = null
       }
     } catch (e: any) {
-      googleAuthStatus.error = 'Error disconnecting: ' + e.message
+      googleAuthStatus.error = '断开 Google 连接失败：' + e.message
       googleAuthStatus.message = null
     } finally {
       googleAuthStatus.isLoading = false
@@ -91,7 +91,7 @@ export function useGoogleAuth() {
   function handleGoogleAuthError(errorMsg: string) {
     googleAuthStatus.isAuthenticated = false
     googleAuthStatus.authInProgress = false
-    googleAuthStatus.error = `Authentication failed: ${errorMsg}`
+    googleAuthStatus.error = `Google 授权失败：${errorMsg}`
     googleAuthStatus.message = null
   }
 

@@ -32,7 +32,7 @@ export function useCodexAuth() {
 
   function syncSettings(status: CodexAccountStatusPayload) {
     const connected = Boolean(status.connected)
-    const accountLabel = connected ? status.accountLabel || 'Connected' : ''
+    const accountLabel = connected ? status.accountLabel || '已连接' : ''
     codexAuthStatus.available = status.available !== false
     codexAuthStatus.isAuthenticated = connected
     codexAuthStatus.accountLabel = accountLabel
@@ -54,7 +54,7 @@ export function useCodexAuth() {
       codexAuthStatus.available = false
       codexAuthStatus.isAuthenticated = false
       codexAuthStatus.error =
-        'Error checking ChatGPT Codex auth status: ' + error.message
+        '检查 ChatGPT Codex 授权状态失败：' + error.message
       settingsStore.updateSetting('codexAuthConnected', false)
       settingsStore.updateSetting('codexAccountLabel', '')
     } finally {
@@ -71,7 +71,7 @@ export function useCodexAuth() {
       const result = await window.aliceIPC.invoke('codex-auth:start-login')
       if (result?.success) {
         codexAuthStatus.message =
-          'ChatGPT authorization opened in your browser.'
+          '已在浏览器中打开 ChatGPT 授权页面。'
       } else {
         codexAuthStatus.error =
           result?.error || '无法启动 ChatGPT Codex 授权。'
@@ -79,7 +79,7 @@ export function useCodexAuth() {
       }
     } catch (error: any) {
       codexAuthStatus.error =
-        'Error starting ChatGPT Codex authorization: ' + error.message
+        '启动 ChatGPT Codex 授权失败：' + error.message
       codexAuthStatus.authInProgress = false
     } finally {
       codexAuthStatus.isLoading = false
@@ -89,13 +89,13 @@ export function useCodexAuth() {
   async function disconnectCodex() {
     codexAuthStatus.isLoading = true
     codexAuthStatus.error = null
-    codexAuthStatus.message = 'Disconnecting ChatGPT Codex...'
+    codexAuthStatus.message = '正在断开 ChatGPT Codex 连接…'
     try {
       const result = await window.aliceIPC.invoke('codex-auth:disconnect')
       if (result?.success) {
         syncSettings({ available: true, connected: false })
         codexAuthStatus.authInProgress = false
-        codexAuthStatus.message = 'ChatGPT Codex disconnected.'
+        codexAuthStatus.message = 'ChatGPT Codex 已断开。'
       } else {
         codexAuthStatus.error =
           result?.error || '无法断开 ChatGPT Codex 连接。'
@@ -103,7 +103,7 @@ export function useCodexAuth() {
       }
     } catch (error: any) {
       codexAuthStatus.error =
-        'Error disconnecting ChatGPT Codex: ' + error.message
+        '断开 ChatGPT Codex 连接失败：' + error.message
       codexAuthStatus.message = null
     } finally {
       codexAuthStatus.isLoading = false
@@ -115,11 +115,11 @@ export function useCodexAuth() {
     if (payload?.success === false) {
       codexAuthStatus.isAuthenticated = false
       codexAuthStatus.error =
-        payload?.error || 'ChatGPT Codex authorization failed.'
+        payload?.error || 'ChatGPT Codex 授权失败。'
       codexAuthStatus.message = null
       return
     }
-    codexAuthStatus.message = 'ChatGPT Codex authorization completed.'
+    codexAuthStatus.message = 'ChatGPT Codex 授权已完成。'
     codexAuthStatus.error = null
     void checkCodexAuthStatus()
   }
@@ -131,7 +131,7 @@ export function useCodexAuth() {
     syncSettings(payload || {})
     codexAuthStatus.error = payload?.error || null
     codexAuthStatus.message = payload?.connected
-      ? 'ChatGPT Codex connected.'
+      ? 'ChatGPT Codex 已连接。'
       : null
   }
 
