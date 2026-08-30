@@ -36,9 +36,11 @@ export interface DesktopScreenshot {
 
 export interface DesktopObservationContextMetadata {
   displayId?: string | number
+  screenId?: string | number
   width?: number
   height?: number
   scaleFactor?: number
+  windowId?: string | number
   foregroundApp?: string
   windowTitle?: string
   windowFingerprint?: string
@@ -94,7 +96,7 @@ export interface DesktopActionArgs {
 }
 
 export interface DesktopActionVerification {
-  status: 'captured' | 'unavailable' | 'failed'
+  status: 'captured' | 'verified' | 'unavailable' | 'failed'
   message?: string
   observationId?: string
   observedAt?: string
