@@ -16,7 +16,7 @@ To activate all tools, you need to get your API credentials for each tool.
 ## 桌面操作
 
 - `desktop_capabilities`：查看当前系统支持的桌面动作。
-- `desktop_observe`：在用户授权后只读观察当前主屏幕，返回截图、显示器坐标元数据和短期 `observationId`。令牌会在约 30 秒后、前台窗口变化时或显示器上下文变化时失效；截图像素不会写入长期聊天记录。macOS 需要“屏幕录制”权限。
+- `desktop_observe`：在用户授权后只读观察当前主屏幕，返回截图、显示器坐标元数据和短期 `observationId`。如果目标应用尚未在前台，应先用 `open_app` 或 `focus_window`，再观察；令牌会在约 30 秒后、前台窗口变化时或显示器上下文变化时失效。截图像素不会写入长期聊天记录。macOS 需要“屏幕录制”权限。
 - `capture_desktop_screen`：兼容旧流程的读取入口；新版桌面桥接同样返回观察元数据和 `observationId`。新的点击、输入和快捷键流程优先使用 `desktop_observe`。
 - `desktop_action`：在确认弹窗后打开应用、聚焦窗口、点击坐标、输入文本或发送快捷键。`click`、`type`、`hotkey` 必须携带刚刚观察得到的 `observationId`；截图像素坐标需要传 `coordinateSpace: "image"`，主进程会根据显示器位置和缩放映射到真实屏幕。令牌过期或上下文变化时，操作会中止并要求重新观察。执行后会尽量返回新的屏幕观察供模型验证。Windows 文本输入使用 Unicode `SendInput`，可稳定输入中文、emoji 和多行内容；macOS 需要给 Alice 开启“辅助功能”权限；Linux 需要 `xdotool`。
 - 观察令牌不会绕过权限或确认：它只证明“执行时的桌面上下文仍与模型刚刚看到的一致”。
