@@ -376,7 +376,7 @@
                   桌面智能体基础工具
                 </p>
                 <p class="text-xs text-gray-300 mt-1">
-                  启用屏幕观察、桌面操作和文件整理工具；发送邮件、删除日历等不可逆操作不会被一键开启。
+                  启用打开应用/网址、屏幕观察、桌面操作和文件整理工具；发送邮件、删除日历等不可逆操作不会被一键开启。
                 </p>
               </div>
               <button
@@ -562,6 +562,7 @@ const settingsStore = useSettingsStore()
 const customToolsStore = useCustomToolsStore()
 
 const desktopAgentToolPreset = [
+  'open_path',
   'desktop_capabilities',
   'capture_desktop_screen',
   'desktop_action',

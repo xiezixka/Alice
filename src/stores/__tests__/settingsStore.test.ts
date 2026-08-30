@@ -47,6 +47,7 @@ describe('useSettingsStore boolean settings', () => {
     expect(store.settings.localTtsVoice).toBe('zh_CN-huayan-medium')
     expect(store.settings.assistantTools).toEqual(
       expect.arrayContaining([
+        'open_path',
         'capture_desktop_screen',
         'desktop_action',
         'organize_files',
