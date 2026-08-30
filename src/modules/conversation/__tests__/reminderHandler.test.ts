@@ -3,11 +3,13 @@ import { createReminderHandler } from '../reminderHandler'
 import type { ReminderHandlerDependencies } from '../reminderHandler'
 
 function setup() {
-  let storedHandler: ((data: any) => void) | null = null
+  let storedHandler: ((data: any) => void | Promise<void>) | null = null
+  let subscriptionCount = 0
   const unsubscribe = vi.fn()
 
   const deps: ReminderHandlerDependencies = {
     subscribe: handler => {
+      subscriptionCount += 1
       storedHandler = handler
       return unsubscribe
     },
@@ -19,14 +21,22 @@ function setup() {
 
   const handler = createReminderHandler(deps)
 
-  return { deps, handler, trigger: (data: any) => storedHandler?.(data), unsubscribe }
+  return {
+    deps,
+    handler,
+    subscriptionCount: () => subscriptionCount,
+    trigger: async (data: any) => {
+      await storedHandler?.(data)
+    },
+    unsubscribe,
+  }
 }
 
 describe('createReminderHandler', () => {
   it('adds reminder message and enqueues speech', async () => {
     const { deps, trigger } = setup()
 
-    await trigger?.({
+    await trigger({
       message: 'Time for a break',
       taskName: 'Break',
       timestamp: 'now',
@@ -47,9 +57,19 @@ describe('createReminderHandler', () => {
     expect(deps.enqueueSpeech).toHaveBeenCalledWith('Time for a break')
   })
 
+  it('delivers one scheduler event exactly once', async () => {
+    const { deps, trigger, subscriptionCount } = setup()
+
+    await trigger({ message: 'Stand up and stretch' })
+
+    expect(subscriptionCount()).toBe(1)
+    expect(deps.addMessage).toHaveBeenCalledTimes(1)
+    expect(deps.enqueueSpeech).toHaveBeenCalledTimes(1)
+  })
+
   it('skips speech when message is empty', async () => {
     const { deps, trigger } = setup()
-    await trigger?.({ message: '   ' })
+    await trigger({ message: '   ' })
     expect(deps.enqueueSpeech).not.toHaveBeenCalled()
   })
 
@@ -57,7 +77,7 @@ describe('createReminderHandler', () => {
     const { deps, trigger } = setup()
     deps.enqueueSpeech = vi.fn().mockRejectedValue(new Error('fail'))
 
-    await trigger?.({ message: 'Hello' })
+    await trigger({ message: 'Hello' })
 
     expect(deps.logError).toHaveBeenCalledWith(
       '[ReminderHandler] Failed to deliver scheduler reminder:',
@@ -71,4 +91,3 @@ describe('createReminderHandler', () => {
     expect(unsubscribe).toHaveBeenCalled()
   })
 })
-

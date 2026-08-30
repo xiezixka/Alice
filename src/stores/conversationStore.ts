@@ -379,54 +379,6 @@ export const useConversationStore = defineStore('conversation', () => {
     currentResponseId.value = null
     currentConversationTurnId.value = `turn-${Date.now()}`
 
-    if (window.aliceIPC) {
-      window.aliceIPC.on('scheduler:reminder', async reminderData => {
-        console.log(
-          '[ConversationStore] Received scheduler reminder:',
-          reminderData
-        )
-        try {
-          const reminderMessage: ChatMessage = {
-            id: `reminder-${Date.now()}`,
-            role: 'assistant',
-            content: [
-              {
-                type: 'app_text',
-                text: reminderData.message,
-                isScheduledReminder: true,
-                taskName: reminderData.taskName,
-                timestamp: reminderData.timestamp,
-              },
-            ],
-            created_at: Date.now(),
-          }
-
-          generalStore.chatHistory.unshift(reminderMessage)
-
-          if (reminderData.message && reminderData.message.trim()) {
-            ttsAbortController.value = new AbortController()
-            const ttsResponse = await api.ttsStream(
-              reminderData.message,
-              ttsAbortController.value.signal
-            )
-            if (
-              queueAudioForPlayback(ttsResponse) &&
-              audioState.value !== 'SPEAKING'
-            ) {
-              setAudioState('SPEAKING')
-            }
-          }
-        } catch (error: any) {
-          if (!isExpectedAbortError(error)) {
-            console.error(
-              '[ConversationStore] Failed to speak scheduler reminder:',
-              error
-            )
-          }
-        }
-      })
-    }
-
     return true
   }
 
