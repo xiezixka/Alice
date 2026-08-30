@@ -64,10 +64,17 @@ const minimumBytes = 1024 * 1024
 
 function listDirectFiles(directory) {
   if (!fs.existsSync(directory)) return []
-  return fs
-    .readdirSync(directory, { withFileTypes: true })
-    .filter(entry => entry.isFile())
-    .map(entry => path.join(directory, entry.name))
+  return (
+    fs
+      .readdirSync(directory, { withFileTypes: true })
+      // electron-builder can leave hidden staging files such as
+      // `.temp123...dmg` behind when a DMG is mounted or a previous build is
+      // interrupted.  They are not distributable artifacts and may be much
+      // larger than the final installer.  Ignore hidden entries here while
+      // keeping the directory listing below intact for useful diagnostics.
+      .filter(entry => entry.isFile() && !entry.name.startsWith('.'))
+      .map(entry => path.join(directory, entry.name))
+  )
 }
 
 if (!fs.existsSync(releaseDirectory)) {
