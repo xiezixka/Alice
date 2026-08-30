@@ -7,6 +7,19 @@ interface TimePattern {
   cronGenerator: (match: RegExpMatchArray) => string
 }
 
+/**
+ * A normalized schedule understood by both the renderer tool bridge and the
+ * main-process scheduler.  Recurring schedules use a five-field cron
+ * expression; one-time schedules carry an absolute ISO timestamp instead.
+ */
+export type ScheduleType = 'once' | 'recurring'
+
+export interface ParsedSchedule {
+  scheduleType: ScheduleType
+  cronExpression?: string
+  runAt?: string
+}
+
 const timePatterns: TimePattern[] = [
   // "every hour"
   {
@@ -274,6 +287,13 @@ export function parseNaturalLanguageToCron(input: string): string | null {
     return cleanInput
   }
 
+  // The renderer is localized for Chinese users, so keep common Chinese
+  // recurring phrases on the same cron path as their English equivalents.
+  // One-time Chinese phrases (今天/明天/…后) are handled by parseSchedule
+  // before this legacy recurring parser is called.
+  const chineseRecurring = parseChineseRecurringToCron(cleanInput)
+  if (chineseRecurring) return chineseRecurring
+
   if (input.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
     try {
       const date = new Date(input)
@@ -300,6 +320,322 @@ export function parseNaturalLanguageToCron(input: string): string | null {
         continue
       }
     }
+  }
+
+  return null
+}
+
+type ClockParts = { hour: number; minute: number }
+
+function parseClockParts(
+  hourText: string,
+  minuteText?: string,
+  periodText?: string
+): ClockParts | null {
+  let hour = Number.parseInt(hourText, 10)
+  const minute = minuteText ? Number.parseInt(minuteText, 10) : 0
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null
+  if (minute < 0 || minute > 59) return null
+
+  const period = periodText?.toLowerCase()
+  if (period) {
+    if (hour < 1 || hour > 12) return null
+    if (period === 'pm' && hour !== 12) hour += 12
+    if (period === 'am' && hour === 12) hour = 0
+  } else if (hour < 0 || hour > 23) {
+    return null
+  }
+
+  return { hour, minute }
+}
+
+function buildLocalDate(now: Date, dayOffset: number, clock: ClockParts): Date {
+  const result = new Date(now)
+  result.setDate(result.getDate() + dayOffset)
+  result.setHours(clock.hour, clock.minute, 0, 0)
+  return result
+}
+
+function isValidDate(date: Date): boolean {
+  return Number.isFinite(date.getTime())
+}
+
+function chineseClockToParts(
+  hourText: string,
+  minuteText?: string,
+  periodText?: string
+): ClockParts | null {
+  let hour = Number.parseInt(hourText, 10)
+  const minute =
+    minuteText === '半' ? 30 : Number.parseInt(minuteText || '0', 10)
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null
+  if (minute < 0 || minute > 59) return null
+
+  if (
+    periodText &&
+    ['下午', '晚上', '今晚'].includes(periodText) &&
+    hour < 12
+  ) {
+    hour += 12
+  } else if (periodText === '中午' && hour < 11) {
+    hour += 12
+  } else if (
+    periodText &&
+    ['早上', '上午', '凌晨'].includes(periodText) &&
+    hour === 12
+  ) {
+    hour = 0
+  }
+
+  return hour >= 0 && hour <= 23 ? { hour, minute } : null
+}
+
+function parseChineseRecurringToCron(input: string): string | null {
+  const normalized = input.replace(/\s+/g, '').replace(/：/g, ':')
+
+  if (/^每(?:隔)?(?:一|1)?小时(?:一次)?$/.test(normalized)) {
+    return '0 * * * *'
+  }
+
+  const everyHours = normalized.match(/^每(?:隔)?(\d{1,2})小时(?:一次)?$/)
+  if (everyHours) {
+    const hours = Number.parseInt(everyHours[1], 10)
+    return hours >= 1 && hours <= 23 ? `0 */${hours} * * *` : null
+  }
+
+  if (/^每(?:隔)?半小时(?:一次)?$/.test(normalized)) {
+    return '*/30 * * * *'
+  }
+
+  const interval = normalized.match(
+    /^每(?:隔)?(\d{1,3})(?:分钟|分)(?:钟)?(?:一次)?$/
+  )
+  if (interval) {
+    const minutes = Number.parseInt(interval[1], 10)
+    if (minutes >= 1 && minutes <= 59) return `*/${minutes} * * * *`
+    return null
+  }
+
+  const clockPattern =
+    /^(早上|上午|中午|下午|晚上|今晚|凌晨)?(\d{1,2})(?:(?::|点|时)(\d{1,2}|半)?)?(?:分|分钟)?$/
+  const parseClock = (value: string): ClockParts | null => {
+    const match = value.match(clockPattern)
+    return match ? chineseClockToParts(match[2], match[3], match[1]) : null
+  }
+
+  const daily = normalized.match(/^(?:每天|每日)(.+)$/)
+  if (daily) {
+    const clock = parseClock(daily[1])
+    return clock ? `${clock.minute} ${clock.hour} * * *` : null
+  }
+
+  const weekdays = normalized.match(/^(?:每个?工作日|工作日)(.+)$/)
+  if (weekdays) {
+    const clock = parseClock(weekdays[1])
+    return clock ? `${clock.minute} ${clock.hour} * * 1-5` : null
+  }
+
+  const weekend = normalized.match(/^(?:每周末|每个周末)(.+)$/)
+  if (weekend) {
+    const clock = parseClock(weekend[1])
+    return clock ? `${clock.minute} ${clock.hour} * * 0,6` : null
+  }
+
+  const weekly = normalized.match(/^每(?:周|星期)([一二三四五六日天1-7])(.+)$/)
+  if (weekly) {
+    const dayMap: Record<string, number> = {
+      一: 1,
+      二: 2,
+      三: 3,
+      四: 4,
+      五: 5,
+      六: 6,
+      日: 0,
+      天: 0,
+      '1': 1,
+      '2': 2,
+      '3': 3,
+      '4': 4,
+      '5': 5,
+      '6': 6,
+      '7': 0,
+    }
+    const clock = parseClock(weekly[2])
+    const day = dayMap[weekly[1]]
+    return clock === null || day === undefined
+      ? null
+      : `${clock.minute} ${clock.hour} * * ${day}`
+  }
+
+  return null
+}
+
+/**
+ * Parse an ISO/date-like timestamp without letting JavaScript interpret a
+ * date-only value as UTC. Date-only and local date-time inputs are intended
+ * to represent the user's local wall clock time; explicit offsets retain
+ * their normal ISO semantics.
+ */
+function parseDateLike(input: string): Date | null {
+  const match = input.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[tT ](\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(\s*(?:z|[+-]\d{2}:?\d{2}))?)?$/
+  )
+  if (!match) return null
+
+  const year = Number.parseInt(match[1], 10)
+  const month = Number.parseInt(match[2], 10)
+  const day = Number.parseInt(match[3], 10)
+  const hour = match[4] ? Number.parseInt(match[4], 10) : 0
+  const minute = match[5] ? Number.parseInt(match[5], 10) : 0
+  const second = match[6] ? Number.parseInt(match[6], 10) : 0
+  if (
+    month < 1 ||
+    month > 12 ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59 ||
+    second < 0 ||
+    second > 59
+  ) {
+    return null
+  }
+
+  const timezone = match[7]?.trim()
+  if (timezone) {
+    const parsed = new Date(input.replace(' ', 'T'))
+    return isValidDate(parsed) ? parsed : null
+  }
+
+  const parsed = new Date(year, month - 1, day, hour, minute, second, 0)
+  // Date's constructor normalizes invalid days (e.g. February 31). Reject
+  // those instead of silently scheduling a different date.
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day ||
+    parsed.getHours() !== hour ||
+    parsed.getMinutes() !== minute ||
+    parsed.getSeconds() !== second
+  ) {
+    return null
+  }
+  return parsed
+}
+
+function parseOneTimeSchedule(input: string, now: Date): string | null {
+  // Explicit ISO/local timestamps, e.g. 2026-08-30T16:45:00+08:00.
+  const dateLike = parseDateLike(input)
+  if (dateLike) return dateLike.toISOString()
+
+  // Relative English and Chinese forms, e.g. "in 5 minutes" / "5分钟后".
+  const relative = input.match(
+    /^in\s+(\d+)\s+(seconds?|minutes?|hours?|days?)$/i
+  )
+  const chineseRelative = input.match(
+    /^(\d+)\s*(秒钟?|秒|分钟?|分|小时?|天)后$/i
+  )
+  if (relative || chineseRelative) {
+    const amount = Number.parseInt((relative || chineseRelative)![1], 10)
+    const unit = (relative || chineseRelative)![2].toLowerCase()
+    if (!Number.isSafeInteger(amount) || amount < 0) return null
+    const multiplier = unit.startsWith('秒')
+      ? 1_000
+      : unit.startsWith('分') || unit.startsWith('minute')
+        ? 60_000
+        : unit.startsWith('小时') || unit.startsWith('hour')
+          ? 3_600_000
+          : unit.startsWith('天') || unit.startsWith('day')
+            ? 86_400_000
+            : 1_000
+    const target = new Date(now.getTime() + amount * multiplier)
+    return isValidDate(target) ? target.toISOString() : null
+  }
+
+  // English clock forms with an explicit one-time day marker. Recurring
+  // phrases such as "at 4 PM daily" intentionally do not match here.
+  const englishClock =
+    input.match(
+      /^(today|tomorrow)\s+at\s+(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?$/i
+    ) ||
+    input.match(
+      /^at\s+(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?\s+(today|tomorrow)$/i
+    )
+  if (englishClock) {
+    const first = englishClock[1].toLowerCase()
+    const dayWord =
+      first === 'today' || first === 'tomorrow' ? first : englishClock[4]
+    const hourText =
+      first === 'today' || first === 'tomorrow'
+        ? englishClock[2]
+        : englishClock[1]
+    const minuteText =
+      first === 'today' || first === 'tomorrow'
+        ? englishClock[3]
+        : englishClock[2]
+    const periodText =
+      first === 'today' || first === 'tomorrow'
+        ? englishClock[4]
+        : englishClock[3]
+    const clock = parseClockParts(hourText, minuteText, periodText)
+    if (!clock) return null
+    return buildLocalDate(
+      now,
+      dayWord.toLowerCase() === 'tomorrow' ? 1 : 0,
+      clock
+    ).toISOString()
+  }
+
+  // Chinese clock forms, e.g. "今天下午4点30分" or "明天 09:00".
+  const chineseClock = input.match(
+    /^(今天|明天)\s*(早上|上午|中午|下午|晚上|今晚|凌晨)?\s*(\d{1,2})\s*(?:(?::|点|时)\s*(\d{1,2}|半)?)?\s*(?:分|分钟)?$/
+  )
+  if (chineseClock) {
+    const dayOffset = chineseClock[1] === '明天' ? 1 : 0
+    const period = chineseClock[2]
+    const clock = chineseClockToParts(chineseClock[3], chineseClock[4], period)
+    if (!clock) return null
+    return buildLocalDate(now, dayOffset, clock).toISOString()
+  }
+
+  // A small, deterministic subset of English calendar dates supported by the
+  // legacy parser: "July 13, 2025 at 4:45 PM" (optionally prefixed by "on").
+  const namedDate = input.match(
+    /^(?:on\s+)?([a-z]+\s+\d{1,2},\s*\d{4})\s+at\s+(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?$/i
+  )
+  if (namedDate) {
+    const clock = parseClockParts(namedDate[2], namedDate[3], namedDate[4])
+    if (!clock) return null
+    const base = new Date(namedDate[1])
+    if (!isValidDate(base)) return null
+    base.setHours(clock.hour, clock.minute, 0, 0)
+    return base.toISOString()
+  }
+
+  return null
+}
+
+/**
+ * Parse either a one-time or recurring schedule. This is the preferred API
+ * for callers that create tasks; the legacy parseNaturalLanguageToCron
+ * function remains available for recurring-only consumers.
+ */
+export function parseSchedule(
+  input: string,
+  now: Date = new Date()
+): ParsedSchedule | null {
+  if (typeof input !== 'string') return null
+  const cleanInput = input.trim()
+  if (!cleanInput || !isValidDate(now)) return null
+
+  const runAt = parseOneTimeSchedule(cleanInput, now)
+  if (runAt) {
+    return { scheduleType: 'once', runAt }
+  }
+
+  const cronExpression = parseNaturalLanguageToCron(cleanInput)
+  if (cronExpression && validateCronExpression(cronExpression)) {
+    return { scheduleType: 'recurring', cronExpression }
   }
 
   return null

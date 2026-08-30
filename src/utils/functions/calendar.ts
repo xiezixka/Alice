@@ -1,7 +1,4 @@
-import {
-  parseNaturalLanguageToCron,
-  validateCronExpression,
-} from '../cronParser'
+import { parseSchedule, validateCronExpression } from '../cronParser'
 
 interface FunctionResult {
   success: boolean
@@ -14,6 +11,10 @@ export interface ScheduleTaskArgs {
   schedule: string
   action_type: 'command' | 'reminder'
   details: string
+  /** Optional explicit override for callers that already normalized a plan. */
+  scheduleType?: 'once' | 'recurring'
+  /** Required when scheduleType is explicitly once. */
+  runAt?: string
 }
 
 export interface ManageScheduledTasksArgs {
@@ -34,31 +35,90 @@ export async function schedule_task(
   args: ScheduleTaskArgs
 ): Promise<FunctionResult> {
   try {
-    let cronExpression = parseNaturalLanguageToCron(args.schedule)
+    if (
+      !args ||
+      typeof args.name !== 'string' ||
+      typeof args.schedule !== 'string' ||
+      typeof args.details !== 'string' ||
+      !['command', 'reminder'].includes(args.action_type)
+    ) {
+      return {
+        success: false,
+        error: '创建计划任务需要提供名称、时间表达式、动作类型和内容。',
+      }
+    }
+    const explicitType = args.scheduleType
+    if (explicitType && !['once', 'recurring'].includes(explicitType)) {
+      return { success: false, error: '计划类型必须是 once 或 recurring。' }
+    }
+    let parsed = parseSchedule(args.schedule)
 
-    if (!cronExpression) {
-      if (validateCronExpression(args.schedule)) {
-        cronExpression = args.schedule
-      } else {
+    // Permit structured callers to provide an absolute one-time timestamp.
+    // Natural-language schedules still go through the parser above.
+    if (explicitType === 'once') {
+      if (!args.runAt || !Number.isFinite(new Date(args.runAt).getTime())) {
         return {
           success: false,
-          error: `无法解析计划“${args.schedule}”。可以使用“每天早上 8 点”“每小时”“每天 18 点”等表达，或直接使用 cron 格式（例如“0 8 * * *”）。`,
+          error: '一次性计划必须提供有效的 runAt 时间。',
         }
+      }
+      parsed = {
+        scheduleType: 'once',
+        runAt: new Date(args.runAt).toISOString(),
+      }
+    } else if (
+      explicitType === 'recurring' &&
+      parsed?.scheduleType === 'once'
+    ) {
+      return {
+        success: false,
+        error: '该计划包含具体日期或相对时间，不能标记为周期任务。',
       }
     }
 
-    if (!validateCronExpression(cronExpression)) {
+    // A raw five-field cron expression is still accepted for backwards
+    // compatibility with existing callers and saved prompts.
+    if (!parsed && validateCronExpression(args.schedule)) {
+      parsed = {
+        scheduleType: 'recurring',
+        cronExpression: args.schedule.trim(),
+      }
+    }
+
+    if (!parsed) {
       return {
         success: false,
-        error: `生成的 cron 表达式“${cronExpression}”无效。`,
+        error:
+          `无法解析计划“${args.schedule}”。可以使用“5 分钟后”“今天 16:45”等一次性时间，` +
+          '或使用“每天早上 8 点”“每小时”等周期表达，也可以直接使用 cron 格式（例如“0 8 * * *”）。',
+      }
+    }
+
+    if (parsed.scheduleType === 'once') {
+      const runAtMs = new Date(parsed.runAt || '').getTime()
+      if (!Number.isFinite(runAtMs) || runAtMs <= Date.now()) {
+        return {
+          success: false,
+          error: '一次性提醒时间必须晚于当前时间。',
+        }
+      }
+    } else if (
+      !parsed.cronExpression ||
+      !validateCronExpression(parsed.cronExpression)
+    ) {
+      return {
+        success: false,
+        error: `生成的 cron 表达式“${parsed.cronExpression || ''}”无效。`,
       }
     }
 
     const result = await window.aliceIPC.invoke('scheduler:create-task', {
       name: args.name,
-      cronExpression,
+      cronExpression: parsed.cronExpression || '',
       actionType: args.action_type,
       details: args.details,
+      scheduleType: parsed.scheduleType,
+      runAt: parsed.runAt,
     })
 
     if (result.success) {
@@ -67,7 +127,9 @@ export async function schedule_task(
         data: {
           message: `已成功创建计划任务“${args.name}”。`,
           taskId: result.taskId,
-          cronExpression,
+          scheduleType: parsed.scheduleType,
+          cronExpression: parsed.cronExpression,
+          runAt: parsed.runAt,
           schedule: args.schedule,
         },
       }
@@ -93,10 +155,14 @@ export async function manage_scheduled_tasks(
           const tasks = result.tasks.map((task: any) => ({
             id: task.id,
             name: task.name,
-            schedule: task.cronExpression,
+            scheduleType: task.scheduleType || 'recurring',
+            schedule:
+              task.scheduleType === 'once' ? task.runAt : task.cronExpression,
+            runAt: task.runAt,
             actionType: task.actionType,
             details: task.details,
             isActive: task.isActive,
+            status: task.status,
             createdAt: task.createdAt,
             lastRun: task.lastRun,
             nextRun: task.nextRun,

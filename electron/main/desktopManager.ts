@@ -1,4 +1,5 @@
 import {
+  clipboard,
   BrowserWindow,
   app,
   desktopCapturer,
@@ -1049,7 +1050,12 @@ class DesktopManager {
         const clickVerb = action.button === 'right' ? 'right click' : 'click'
         script = `tell application "System Events" to ${clickVerb} at {${action.x}, ${action.y}}`
       } else if (action.action === 'type') {
-        script = `tell application "System Events" to keystroke "${this.escapeAppleScript(action.text)}"`
+        // System Events' `keystroke` is layout-dependent and can silently
+        // drop Chinese characters or emoji in some target applications. Use
+        // the native pasteboard for non-empty text instead; the helper
+        // restores the user's previous plain-text clipboard after the paste.
+        await this.typeMacUnicodeText(action.text)
+        return { message: 'macOS 桌面操作已执行。' }
       } else if (action.action === 'hotkey') {
         script = buildAppleScriptHotkey(action.keys)
       }
@@ -1103,6 +1109,30 @@ class DesktopManager {
             ]
     await execFileAsync('xdotool', command)
     return { message: 'Linux 桌面操作已执行。' }
+  }
+
+  /**
+   * Paste text through the macOS pasteboard so Chinese, emoji, and multiline
+   * content are delivered as Unicode regardless of the active keyboard
+   * layout. The existing desktop-action confirmation happens before this
+   * helper is called. The clipboard is restored even when the paste fails.
+   */
+  private async typeMacUnicodeText(text: string): Promise<void> {
+    if (!text) return
+
+    const previousClipboardText = clipboard.readText()
+    clipboard.writeText(text)
+    try {
+      await execFileAsync('osascript', [
+        '-e',
+        'tell application "System Events" to keystroke "v" using {command down}',
+      ])
+      // Give the target application one event-loop turn to consume the
+      // pasteboard before restoring it for the user.
+      await new Promise(resolve => setTimeout(resolve, 80))
+    } finally {
+      clipboard.writeText(previousClipboardText)
+    }
   }
 
   private escapeAppleScript(value: string): string {

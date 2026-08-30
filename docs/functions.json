@@ -277,7 +277,7 @@
   {
     "type": "function",
     "name": "schedule_task",
-    "description": "Schedules a command or a verbal reminder to run on a recurring basis. IMPORTANT: Use recurring patterns, not specific dates or times. Examples: 'every morning at 8 AM', 'every hour', 'daily at 6 PM', 'every Friday at 11 PM'.",
+    "description": "Schedules a command or verbal reminder. Use one-time phrases such as 'in 5 minutes', '5 分钟后', '今天 16:45', or an ISO timestamp for a single run; use recurring patterns such as 'every morning at 8 AM', '每天早上 8 点', 'every hour', '每小时', 'daily at 6 PM', or '每周五晚上 11 点' for repeated runs. One-time tasks are automatically marked complete after execution.",
     "strict": false,
     "parameters": {
       "type": "object",
@@ -288,7 +288,7 @@
         },
         "schedule": {
           "type": "string",
-          "description": "RECURRING schedule pattern. Use phrases like: 'every morning at 8 AM', 'every hour', 'daily at 9:30 PM', 'every Monday at 2 PM', 'every weekday at 9 AM'. Avoid specific dates - use recurring patterns instead."
+          "description": "A natural-language schedule. Use one-time phrases such as 'in 5 minutes', '5 分钟后', 'today at 4:45 PM', '明天 09:00', or an ISO 8601 timestamp for a single run; use recurring phrases such as 'every morning at 8 AM', '每天早上 8 点', 'every hour', '每小时', 'daily at 9:30 PM', 'every Monday at 2 PM', '每周一下午 2 点', or 'every weekday at 9 AM' for repeated runs."
         },
         "action_type": {
           "type": "string",
@@ -298,6 +298,15 @@
         "details": {
           "type": "string",
           "description": "For 'command': the shell command to execute. For 'reminder': the message for Alice to speak."
+        },
+        "scheduleType": {
+          "type": "string",
+          "enum": ["once", "recurring"],
+          "description": "Optional explicit schedule type. Omit this when the natural-language schedule is sufficient."
+        },
+        "runAt": {
+          "type": "string",
+          "description": "Optional ISO 8601 timestamp for an explicit one-time task. Required when scheduleType is 'once'."
         }
       },
       "required": ["name", "schedule", "action_type", "details"],

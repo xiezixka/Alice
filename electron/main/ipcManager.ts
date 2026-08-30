@@ -161,6 +161,13 @@ function broadcastCustomToolsUpdate() {
   })
 }
 
+function formatSchedulerPlanForConfirmation(args: any): string {
+  if (args?.scheduleType === 'once' && typeof args.runAt === 'string') {
+    return `一次性：${args.runAt}`
+  }
+  return `周期：${typeof args?.cronExpression === 'string' ? args.cronExpression : '未指定'}`
+}
+
 export function registerIPCHandlers(): void {
   if (ipcHandlersRegistered) {
     return
@@ -1803,7 +1810,7 @@ export function registerGoogleIPCHandlers(): void {
           noLink: true,
           title: '确认创建定时命令',
           message: `Alice 将按计划执行：${commandName}`,
-          detail: `${command}\n\n计划：${args.cronExpression}`,
+          detail: `${command}\n\n计划：${formatSchedulerPlanForConfirmation(args)}`,
         }
         const confirmation = owner
           ? await dialog.showMessageBox(owner, options)
@@ -1811,7 +1818,7 @@ export function registerGoogleIPCHandlers(): void {
         if (confirmation.response !== 1) {
           return {
             success: false,
-            error: 'Scheduled command creation cancelled by user.',
+            error: '用户取消了定时命令创建。',
           }
         }
       }
@@ -1819,7 +1826,11 @@ export function registerGoogleIPCHandlers(): void {
         args.name,
         args.cronExpression,
         args.actionType,
-        args.details
+        args.details,
+        {
+          scheduleType: args.scheduleType,
+          runAt: args.runAt,
+        }
       )
       return result
     } catch (error: any) {
