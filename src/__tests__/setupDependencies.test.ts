@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import process from 'node:process'
 import { resolveFFmpegPaths } from '../../scripts/setup-dependencies.js'
+import packageJson from '../../package.json'
+
+const packageScripts = (
+  packageJson as unknown as {
+    scripts: Record<string, string>
+  }
+).scripts
 
 describe('resolveFFmpegPaths', () => {
   it('uses packaged resources first and the Windows executable name', () => {
@@ -43,5 +50,10 @@ describe('resolveFFmpegPaths', () => {
         { cwd: process.cwd(), stdio: 'pipe' }
       )
     ).not.toThrow()
+  })
+
+  it('builds macOS backend with the native build pipeline', () => {
+    expect(packageScripts['build:go:mac']).toContain('scripts/build-go.js')
+    expect(packageScripts['build:go:mac']).not.toContain('GOARCH=amd64')
   })
 })
