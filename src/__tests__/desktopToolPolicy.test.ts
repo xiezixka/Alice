@@ -115,6 +115,35 @@ describe('execution-time tool policy', () => {
     expect(captureScreen).toHaveBeenCalledTimes(1)
   })
 
+  it('normalizes a legacy direct capture frame without duplicating pixels', async () => {
+    const captureScreen = vi.fn().mockResolvedValue({
+      success: true,
+      data: {
+        imageDataUrl: 'data:image/jpeg;base64,legacy',
+        width: 800,
+        height: 500,
+        displayId: 'primary',
+      },
+    })
+    ;(globalThis as any).window = { desktopAPI: { captureScreen } }
+
+    const result = await executeFunction(
+      'capture_desktop_screen',
+      {},
+      {
+        assistantTools: ['capture_desktop_screen'],
+        aiProvider: 'deepseek',
+        assistantModel: 'deepseek-v4-flash-vision-exp',
+      }
+    )
+
+    const payload = JSON.parse(result) as Record<string, any>
+    expect(payload.imageDataUrl).toBeUndefined()
+    expect(payload.screenshot.imageDataUrl).toBe(
+      'data:image/jpeg;base64,legacy'
+    )
+  })
+
   it('returns an observation token and screenshot to a vision model', async () => {
     const observeScreen = vi.fn().mockResolvedValue({
       success: true,
