@@ -28,6 +28,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     environment: Prod
     strategy:
+      # Let every platform finish its own diagnostics and artifact checks even
+      # when another matrix job fails. This keeps Mac/Windows failures visible
+      # instead of cancelling them behind the first failing runner.
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
