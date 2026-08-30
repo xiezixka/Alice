@@ -1130,8 +1130,10 @@ const enableBackgroundWake = async () => {
     // Request and verify access before changing the persisted setting. This
     // prevents a denied permission from leaving the UI in a misleading
     // "background listening enabled" state.
-    const microphoneReady =
-      microphonePermission.value === 'granted' || (await checkMicrophone())
+    // Always perform a short live-device check, even when the native status is
+    // already "granted". A permission grant does not guarantee that an input
+    // device is present or available (for example, another app may hold it).
+    const microphoneReady = await checkMicrophone()
     if (!microphoneReady) {
       if (!microphoneCheckResult.value) {
         microphoneCheckResult.value =
