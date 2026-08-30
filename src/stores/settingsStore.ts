@@ -81,6 +81,8 @@ export interface AliceSettings {
   assistantVerbosity: 'low' | 'medium' | 'high'
   /** Main-window presentation: compact floating capsule or glass card. */
   assistantUiMode: 'capsule' | 'glass'
+  /** macOS-only notch / Dynamic Island presentation when the window is mini. */
+  macSilentModeEnabled: boolean
   assistantTools: string[]
   assistantAvatar: string
   mcpServersConfig?: string
@@ -203,6 +205,10 @@ const defaultSettings: AliceSettings = {
   assistantReasoningEffort: 'medium',
   assistantVerbosity: 'medium',
   assistantUiMode: 'capsule',
+  // macOS gets the requested silent notch treatment by default. The renderer
+  // and native window manager gate this flag by platform, so other systems
+  // retain their existing 210×210 mini window.
+  macSilentModeEnabled: true,
   assistantTools: [
     'get_current_datetime',
     'perform_web_search',
@@ -296,6 +302,7 @@ const settingKeyToLabelMap: Record<keyof AliceSettings, string> = {
   assistantTools: '已启用的助手工具',
   assistantAvatar: '助手形象',
   assistantUiMode: '主界面样式',
+  macSilentModeEnabled: 'macOS 静默灵动岛',
   MAX_HISTORY_MESSAGES_FOR_API: 'API 最大历史消息数',
   SUMMARIZATION_MESSAGE_COUNT: '摘要消息数量',
   SUMMARIZATION_MODEL: '摘要模型',
@@ -532,6 +539,7 @@ export const useSettingsStore = defineStore('settings', () => {
     for (const key of [
       'backgroundListeningEnabled',
       'launchAtLogin',
+      'macSilentModeEnabled',
     ] as const) {
       if (typeof validated[key] !== 'boolean') {
         validated[key] = defaultSettings[key]
@@ -1084,6 +1092,7 @@ export const useSettingsStore = defineStore('settings', () => {
         assistantReasoningEffort: settings.value.assistantReasoningEffort,
         assistantVerbosity: settings.value.assistantVerbosity,
         assistantUiMode: settings.value.assistantUiMode,
+        macSilentModeEnabled: settings.value.macSilentModeEnabled,
         assistantTools: Array.from(settings.value.assistantTools || []),
         assistantAvatar: settings.value.assistantAvatar,
         mcpServersConfig: settings.value.mcpServersConfig,

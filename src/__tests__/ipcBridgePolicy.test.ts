@@ -28,4 +28,8 @@ describe('renderer IPC bridge policy', () => {
     )
     expect(isAllowedEventChannel('unknown:event')).toBe(false)
   })
+
+  it('allows the native compact-window expansion notification', () => {
+    expect(isAllowedEventChannel('main-window:expanded')).toBe(true)
+  })
 })

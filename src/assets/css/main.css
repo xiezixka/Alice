@@ -482,6 +482,110 @@
   height: 200px;
 }
 
+/* -------------------------------------------------------------------------- */
+/* macOS silent notch / Dynamic Island presentation                           */
+/* -------------------------------------------------------------------------- */
+
+/* The native window is resized to 240×44 by windowManager.  Keep the
+ * renderer's root and avatar geometry in lock-step so no square mini layout
+ * flashes while Vue applies the new state. */
+.assistant-shell--mac-silent {
+  width: 240px;
+  height: 44px;
+  min-width: 240px;
+  min-height: 44px;
+  max-width: 240px;
+  max-height: 44px;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.assistant-shell--mac-silent .avatar-wrapper {
+  width: 240px;
+  height: 44px !important;
+  min-height: 44px;
+  justify-content: center;
+  padding: 0;
+  overflow: visible;
+}
+
+.assistant-shell--mac-silent .avatar {
+  box-sizing: border-box;
+  display: flex;
+  width: 232px;
+  height: 36px;
+  min-height: 36px;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 7px 2px 2px;
+  overflow: visible;
+  border: 1px solid rgba(214, 231, 255, 0.52);
+  border-radius: 999px;
+  background:
+    radial-gradient(
+      circle at 9% 50%,
+      rgba(106, 204, 255, 0.25),
+      transparent 28%
+    ),
+    linear-gradient(110deg, rgba(7, 13, 28, 0.98), rgba(18, 26, 48, 0.94));
+  box-shadow:
+    0 8px 26px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(108, 170, 255, 0.17),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(22px) saturate(140%);
+  isolation: isolate;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.assistant-shell--mac-silent .avatar::before {
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: inherit;
+  content: '';
+  pointer-events: none;
+}
+
+.assistant-shell--mac-silent .avatar-ring {
+  flex: 0 0 30px;
+  width: 30px !important;
+  height: 30px !important;
+  margin: 0;
+  border-width: 1px;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-color: rgba(106, 185, 255, 0.96);
+  box-shadow:
+    0 0 0 1px rgba(102, 182, 255, 0.48),
+    0 0 16px rgba(76, 157, 255, 0.36),
+    0 5px 14px rgba(1, 7, 20, 0.42);
+  -webkit-app-region: no-drag;
+}
+
+.assistant-shell--mac-silent .avatar-video {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  object-fit: cover;
+}
+
+.assistant-shell--mac-silent .sidebar-wrapper,
+.assistant-shell--mac-silent .assistant-mode-switch,
+.assistant-shell--mac-silent .capsule-brand,
+.assistant-shell--mac-silent .glass-header,
+.assistant-shell--mac-silent .glass-insight {
+  display: none !important;
+}
+
+.assistant-shell--mac-silent .actions-bar,
+.assistant-shell--mac-silent .inside-actions,
+.assistant-shell--mac-silent .status-message-container,
+.assistant-shell--mac-silent .status-message-text {
+  -webkit-app-region: no-drag;
+}
+
 /* The capsule body is the window's drag surface. Interactive children opt
  * out below so a click never turns into an accidental window move. */
 .assistant-shell--capsule:not(.assistant-shell--mini) .avatar {

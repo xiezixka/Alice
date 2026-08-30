@@ -5,6 +5,11 @@ import {
   resolvePathWithinRoot,
   validateExternalOpenUrl,
 } from './securityBoundaries'
+import {
+  getMacSilentWindowBounds,
+  MAC_SILENT_WINDOW_SIZE,
+  shouldUseMacSilentWindow,
+} from './macSilentWindow'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -46,6 +51,9 @@ let settingsWindow: BrowserWindow | null = null
 const DEFAULT_MAIN_WINDOW_SIZE = { width: 900, height: 300 }
 const MINI_MAIN_WINDOW_SIZE = { width: 210, height: 210 }
 let mainWindowRestoreSize = { ...DEFAULT_MAIN_WINDOW_SIZE }
+let mainWindowSilent = false
+let mainWindowCompact = false
+let mainWindowRestoreBounds: Electron.Rectangle | null = null
 
 function fitMainWindowSize(width: number, height: number) {
   const workArea = screen.getPrimaryDisplay().workArea
@@ -118,6 +126,9 @@ export function getSettingsWindow(): BrowserWindow | null {
 
 export async function createMainWindow(show = true): Promise<BrowserWindow> {
   mainWindowRestoreSize = { ...DEFAULT_MAIN_WINDOW_SIZE }
+  mainWindowRestoreBounds = null
+  mainWindowSilent = false
+  mainWindowCompact = false
   win = new BrowserWindow({
     title: 'Alice',
     icon: path.join(getVitePublic(), 'app_logo.png'),
@@ -241,45 +252,151 @@ export function setOverlayOpacity(opacity: number): boolean {
 }
 
 export function resizeMainWindow(width: number, height: number): void {
-  if (win) {
-    const fittedSize = fitMainWindowSize(width, height)
-    if (
-      fittedSize.width !== MINI_MAIN_WINDOW_SIZE.width ||
-      fittedSize.height !== MINI_MAIN_WINDOW_SIZE.height
-    ) {
-      mainWindowRestoreSize = fittedSize
-    }
-    win.setSize(fittedSize.width, fittedSize.height)
+  if (!win || mainWindowCompact) return
+
+  // Renderer watchers can issue a stale resize immediately after the
+  // minimize transition. Never let that asynchronous IPC call stretch the
+  // native 240×44 island (or the legacy 210×210 mini window); expansion first
+  // clears `mainWindowCompact`, then an explicit resize is allowed.
+  const fittedSize = fitMainWindowSize(width, height)
+  if (
+    fittedSize.width !== MINI_MAIN_WINDOW_SIZE.width ||
+    fittedSize.height !== MINI_MAIN_WINDOW_SIZE.height
+  ) {
+    mainWindowRestoreSize = fittedSize
+  }
+  win.setSize(fittedSize.width, fittedSize.height)
+  const current = win.getBounds()
+  mainWindowRestoreBounds = {
+    ...current,
+    width: fittedSize.width,
+    height: fittedSize.height,
   }
 }
 
-export function minimizeMainWindow(minimize: boolean): void {
+/**
+ * Move the main window into (or out of) the macOS silent notch island.
+ *
+ * The renderer still owns the `isMinimized` state; this function only applies
+ * native geometry and window-level flags.  The optional `silent` argument is
+ * intentionally backwards-compatible with older renderers that only sent
+ * `{ minimize: boolean }`.
+ */
+export function minimizeMainWindow(
+  minimize: boolean,
+  silent = minimize && shouldUseMacSilentWindow(process.platform)
+): void {
   if (!win) return
 
-  const display = screen.getPrimaryDisplay()
+  const display = screen.getDisplayMatching(win.getBounds())
   const workArea = display.workArea
   if (minimize) {
+    if (!mainWindowCompact) {
+      const currentBounds = win.getBounds()
+      mainWindowRestoreBounds = { ...currentBounds }
+    }
+    const useMacSilentWindow =
+      silent && shouldUseMacSilentWindow(process.platform, true)
+    if (useMacSilentWindow) {
+      const bounds = getMacSilentWindowBounds(display.bounds, {
+        width: MAC_SILENT_WINDOW_SIZE.width,
+        height: MAC_SILENT_WINDOW_SIZE.height,
+      })
+
+      // BrowserWindow's normal 210px minimum would otherwise clamp the
+      // compact island back to a square.  Keep a dedicated minimum while in
+      // silent mode and restore the regular minimum on expansion.
+      win.setMinimumSize(
+        MAC_SILENT_WINDOW_SIZE.width,
+        MAC_SILENT_WINDOW_SIZE.height
+      )
+      win.setResizable(false)
+      win.setSkipTaskbar(true)
+      win.setAlwaysOnTop(true, 'floating')
+      if (typeof win.setVisibleOnAllWorkspaces === 'function') {
+        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+      }
+      win.setSize(bounds.width, bounds.height)
+      win.setPosition(bounds.x, bounds.y)
+      mainWindowSilent = true
+      mainWindowCompact = true
+      console.log('[WindowManager] Main window moved to macOS silent island', {
+        ...bounds,
+      })
+      return
+    }
+
     const x = workArea.x + workArea.width - MINI_MAIN_WINDOW_SIZE.width - 20
     const y = workArea.y + workArea.height - MINI_MAIN_WINDOW_SIZE.height - 20
+    win.setMinimumSize(
+      MINI_MAIN_WINDOW_SIZE.width,
+      MINI_MAIN_WINDOW_SIZE.height
+    )
+    win.setResizable(false)
+    win.setSkipTaskbar(false)
+    if (typeof win.setVisibleOnAllWorkspaces === 'function') {
+      win.setVisibleOnAllWorkspaces(false)
+    }
     win.setPosition(x, y)
     win.setSize(MINI_MAIN_WINDOW_SIZE.width, MINI_MAIN_WINDOW_SIZE.height)
+    mainWindowSilent = false
+    mainWindowCompact = true
   } else {
+    win.setMinimumSize(
+      MINI_MAIN_WINDOW_SIZE.width,
+      MINI_MAIN_WINDOW_SIZE.height
+    )
+    win.setResizable(true)
+    win.setSkipTaskbar(false)
+    if (typeof win.setVisibleOnAllWorkspaces === 'function') {
+      win.setVisibleOnAllWorkspaces(false)
+    }
     const { width, height } = fitMainWindowSize(
       mainWindowRestoreSize.width,
       mainWindowRestoreSize.height
     )
-    const x = Math.round(workArea.x + workArea.width / 2 - width / 2)
-    const y = Math.round(workArea.y + workArea.height / 2 - height / 2)
+    const savedBounds = mainWindowRestoreBounds
+    const maxX = workArea.x + Math.max(0, workArea.width - width)
+    const maxY = workArea.y + Math.max(0, workArea.height - height)
+    const x = savedBounds
+      ? Math.min(maxX, Math.max(workArea.x, Math.round(savedBounds.x)))
+      : Math.round(workArea.x + workArea.width / 2 - width / 2)
+    const y = savedBounds
+      ? Math.min(maxY, Math.max(workArea.y, Math.round(savedBounds.y)))
+      : Math.round(workArea.y + workArea.height / 2 - height / 2)
     win.setPosition(x, y)
     win.setSize(width, height)
+    mainWindowSilent = false
+    mainWindowCompact = false
+    mainWindowRestoreBounds = null
   }
+}
+
+/** Return whether the native window is currently in the macOS silent island. */
+export function isMainWindowSilent(): boolean {
+  return mainWindowSilent
 }
 
 export function focusMainWindow(): boolean {
   if (win && !win.isDestroyed()) {
+    // A tray click / Dock activation is an explicit request to work with
+    // Alice. Expand the macOS island before focusing it so the user is never
+    // left with an apparently unresponsive 240×44 surface. Keep the legacy
+    // square mini window's historical focus-only behaviour unchanged.
+    const wasSilent = mainWindowSilent
+    if (wasSilent) {
+      minimizeMainWindow(false)
+    }
     win.show()
     win.focus()
     win.moveTop()
+    // Keep the renderer's reactive `isMinimized` state in sync when a tray or
+    // Dock activation expanded the native window.  This event is allowlisted
+    // in the preload bridge and is intentionally emitted only for a real
+    // compact → full transition.
+    if (wasSilent && !win.webContents.isDestroyed()) {
+      win.webContents.send('main-window:expanded')
+    }
     console.log('[WindowManager] Main window focused')
     return true
   }

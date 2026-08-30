@@ -291,6 +291,148 @@
   gap: 0.75rem;
 }
 
+/* In the macOS silent island, the avatar is the identity anchor and the
+ * action rail becomes a quiet status readout.  Keep the microphone and TTS
+ * controls available through the expanded window instead of placing tiny,
+ * easy-to-hit controls in the notch. */
+.assistant-shell--mac-silent .actions-bar--mini {
+  top: 0;
+  right: 31px;
+  bottom: 0;
+  left: 42px;
+  width: auto;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.assistant-shell--mac-silent .actions-bar--mini > .pb-2 {
+  display: flex;
+  width: auto;
+  height: 36px;
+  min-height: 36px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 0;
+}
+
+.assistant-shell--mac-silent .actions-bar--mini .capsule-control {
+  display: none;
+}
+
+.assistant-shell--mac-silent .actions-bar--mini .capsule-waveform {
+  display: inline-flex;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 18px;
+  gap: 2px;
+  opacity: 0.72;
+}
+
+.assistant-shell--mac-silent .actions-bar--mini .capsule-waveform > span {
+  width: 1px;
+  flex-basis: 1px;
+  height: 4px;
+  opacity: 0.48;
+}
+
+.assistant-shell--mac-silent .actions-bar--mini .status-message-container {
+  position: static;
+  display: flex;
+  width: auto;
+  max-width: 94px;
+  height: 18px;
+  min-width: 0;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  margin: 0;
+  color: rgba(230, 239, 255, 0.78);
+  font-size: 0.58rem;
+  text-align: left;
+  transform: none;
+}
+
+.assistant-shell--mac-silent
+  .actions-bar--mini
+  .status-message-container
+  .status-message-text {
+  position: static !important;
+  display: block;
+  min-width: 0;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: none !important;
+  animation: none !important;
+}
+
+.assistant-shell--mac-silent
+  .actions-bar--mini
+  .status-message-container
+  .status-message-text[aria-hidden='true'] {
+  display: none;
+}
+
+.assistant-shell--mac-silent .actions-bar--mini .capsule-status-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+}
+
+.assistant-shell--mac-silent .inside-actions--utility {
+  top: 0 !important;
+  right: 2px;
+  bottom: auto;
+  left: auto;
+  width: 27px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  opacity: 0.56;
+}
+
+.assistant-shell--mac-silent .inside-actions--utility > button:first-child,
+.assistant-shell--mac-silent .inside-actions--menu {
+  display: none !important;
+}
+
+.assistant-shell--mac-silent .inside-actions--utility > button:last-child {
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 3px;
+  border: 1px solid rgba(202, 224, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.assistant-shell--mac-silent .inside-actions--utility:hover,
+.assistant-shell--mac-silent .inside-actions--utility:focus-within {
+  opacity: 1;
+}
+
+.assistant-shell--mac-silent .inside-actions--utility .indicator {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
 .actions-bar .indicator:focus-visible,
 .actions-bar button:focus-visible {
   outline: 2px solid rgba(118, 231, 255, 0.9);

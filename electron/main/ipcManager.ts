@@ -189,8 +189,15 @@ export function registerIPCHandlers(): void {
   })
 
   ipcMain.on('mini', (event, arg) => {
-    if (arg && typeof arg.minimize === 'boolean') {
-      minimizeMainWindow(arg.minimize)
+    if (
+      arg &&
+      typeof arg.minimize === 'boolean' &&
+      (arg.silent === undefined || typeof arg.silent === 'boolean')
+    ) {
+      // `silent` is optional so older renderer bundles retain their existing
+      // behaviour.  The main process still defaults to the macOS island when
+      // a Darwin renderer sends only `{ minimize: true }`.
+      minimizeMainWindow(arg.minimize, arg.silent)
     }
   })
 

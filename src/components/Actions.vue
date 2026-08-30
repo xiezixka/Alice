@@ -202,7 +202,12 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['takeScreenShot', 'togglePlaying', 'toggleRecording'])
+const emit = defineEmits([
+  'takeScreenShot',
+  'togglePlaying',
+  'toggleRecording',
+  'manualMinimize',
+])
 
 const generalStore = useGeneralStore()
 const settingsStore = useSettingsStore()
@@ -351,6 +356,21 @@ const toggleSidebar = async () => {
 
 const toggleMinimize = async () => {
   const willMinimize = !isMinimized.value
+  const macSilentEnabled =
+    props.isElectron &&
+    window.electron?.platform === 'darwin' &&
+    settingsStore.config.macSilentModeEnabled !== false
+  const isBusy = [
+    'PROCESSING_AUDIO',
+    'WAITING_FOR_RESPONSE',
+    'SPEAKING',
+    'GENERATING_IMAGE',
+  ].includes(props.audioState)
+  // Keep an active voice turn visible.  The main renderer also expands when
+  // activity starts, but rejecting this reverse transition avoids a native
+  // mini→full race if the user clicks the utility control mid-response.
+  if (willMinimize && macSilentEnabled && isBusy) return
+  emit('manualMinimize', willMinimize)
   isMinimized.value = willMinimize
 
   if (props.isElectron) {
@@ -361,11 +381,26 @@ const toggleMinimize = async () => {
       openSidebar.value = false
       setTimeout(() => {
         console.log('Minimizing window after closing sidebar.')
-        ;(window as any).electron.mini({ minimize: true })
+        ;(window as any).electron.mini({
+          minimize: true,
+          silent:
+            window.electron?.platform === 'darwin' &&
+            settingsStore.config.macSilentModeEnabled !== false,
+        })
       }, 300)
     } else {
       console.log(`Toggling minimize state: ${willMinimize}`)
-      ;(window as any).electron.mini({ minimize: willMinimize })
+      ;(window as any).electron.mini({
+        minimize: willMinimize,
+        // On macOS the native window manager places this state at the top
+        // center of the display, underneath the notch-safe island treatment.
+        // Keep the flag explicit while preserving compatibility with older
+        // main processes that only read `minimize`.
+        silent:
+          willMinimize &&
+          window.electron?.platform === 'darwin' &&
+          settingsStore.config.macSilentModeEnabled !== false,
+      })
       if (!willMinimize) {
         await nextTick()
         ;(window as any).electron.resize({

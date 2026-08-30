@@ -66,6 +66,7 @@ export interface AppSettings {
   assistantReasoningEffort?: 'minimal' | 'low' | 'medium' | 'high'
   assistantVerbosity?: 'low' | 'medium' | 'high'
   assistantUiMode?: 'capsule' | 'glass'
+  macSilentModeEnabled?: boolean
   assistantTools?: string[]
   assistantAvatar?: string
   mcpServersConfig?: string

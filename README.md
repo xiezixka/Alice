@@ -121,6 +121,7 @@ Fully customizable settings interface:
 - Prompt and summarization tuning
 - Audio/mic toggles & hotkeys
 - Switchable main-window styles: **悬浮胶囊** (A) and **玻璃对话卡片** (B); use the toggle in the top-right corner or **Settings → AI 助手 → 主界面样式**.
+- macOS 可选 **静默灵动岛**：最小化后自动收纳到当前屏幕顶部中央的 240×44 窄胶囊；待命/后台等待唤醒词时约 2.2 秒后自动收起，开始处理或播报会立即展开。点击胶囊或按 Enter/空格可恢复完整窗口；在 **设置 → AI 助手** 关闭后恢复原来的 210×210 小窗（Windows/Linux 不受影响）。这是基于屏幕顶部安全区的跨版本布局，不依赖特定机型的物理灵动岛 API。
 - Available tools & MCP configuration
 - Google integrations
 

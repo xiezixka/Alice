@@ -174,6 +174,34 @@
         </div>
 
         <div
+          v-if="isMacDesktop"
+          class="rounded-box border border-indigo-400/30 bg-indigo-950/20 p-3"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <label
+                for="mac-silent-mode"
+                class="block text-sm font-semibold text-white"
+              >
+                macOS 静默灵动岛
+              </label>
+              <p class="mt-1 text-xs leading-5 text-gray-300">
+                待命约 2.2 秒后，或点击主窗口的最小化后，Alice
+                会收纳到屏幕顶部中央的窄胶囊中；开始录音、识别、思考或播报时会自动展开。点击胶囊即可恢复完整界面。此功能仅在
+                macOS 生效，默认开启。
+              </p>
+            </div>
+            <input
+              id="mac-silent-mode"
+              type="checkbox"
+              class="toggle toggle-info mt-1 shrink-0"
+              :checked="currentSettings.macSilentModeEnabled"
+              @change="handleMacSilentModeChange"
+            />
+          </div>
+        </div>
+
+        <div
           v-if="currentSettings.assistantModel.startsWith('gpt-5')"
           class="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
@@ -624,6 +652,18 @@ const uiModeOptions = [
     description: '显示状态、识别内容和快捷上下文。',
   },
 ]
+
+const isMacDesktop =
+  typeof window !== 'undefined' && window.electron?.platform === 'darwin'
+
+const handleMacSilentModeChange = (event: Event) => {
+  props.currentSettings.macSilentModeEnabled = (
+    event.target as HTMLInputElement
+  ).checked
+  // Persist immediately so the next minimize action and next launch use the
+  // same presentation, even when the user closes Settings right away.
+  emit('persist-settings')
+}
 
 const desktopAgentToolPreset = [
   'open_path',

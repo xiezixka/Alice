@@ -144,6 +144,12 @@ Alice supports OpenAI, OpenRouter, DeepSeek, MiniMax, Z.ai, and local LLM infere
 - After changing the wake phrase, click **保存并重新加载**. A restart preserves the background launch argument when background listening remains enabled, so the avatar stays hidden; launching Alice manually still reveals the main window.
 - This is a transcript-based wake-word flow, not a dedicated low-power keyword engine. Alice must remain running and the operating system must grant microphone permission.
 
+### macOS 静默灵动岛
+
+- macOS 默认启用 **设置 → AI 助手 → macOS 静默灵动岛**。最小化后，窗口会变为当前显示器顶部中央约 **240×44** 的窄胶囊；Windows/Linux 保留原来的 210×210 小窗。
+- 待命或后台监听等待唤醒词时，胶囊会在约 2.2 秒无活动后自动收起；手动录音、识别、思考和播报期间保持展开。点击胶囊主体或按 **Enter/空格** 可手动展开，托盘/Dock 点击 Alice 也会恢复完整窗口。
+- 关闭该开关后立即恢复传统小窗布局。该功能使用屏幕顶部安全区定位，不能检测或控制具体 Mac 机型的物理灵动岛；多显示器时按窗口所在显示器定位。
+
 Before enabling it, grant the normal desktop permissions for your platform:
 
 - **macOS**: System Settings → Privacy & Security → Microphone. If you use

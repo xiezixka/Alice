@@ -627,9 +627,10 @@ app.on('second-instance', (event, commandLine, workingDirectory) => {
 
       const win = getMainWindow()
       if (win) {
-        if (win.isMinimized()) win.restore()
-        win.show()
-        win.focus()
+        // Route manual relaunches through the same focus helper as tray/Dock
+        // activation so a compact macOS silent island is expanded before the
+        // user is shown the full assistant window.
+        focusMainWindow()
       }
     })
     .catch(error => {
@@ -641,9 +642,7 @@ app.on('second-instance', (event, commandLine, workingDirectory) => {
       )
       const win = getMainWindow()
       if (win) {
-        if (win.isMinimized()) win.restore()
-        win.show()
-        win.focus()
+        focusMainWindow()
       }
     })
 })

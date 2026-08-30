@@ -109,6 +109,9 @@ export const SEND_CHANNELS = new Set([
 
 export const EVENT_CHANNELS = new Set([
   'main-process-message',
+  // Sent by the native window manager when a tray/Dock activation expands a
+  // compact (including macOS silent-island) window without a renderer click.
+  'main-window:expanded',
   'overlay-shown',
   'overlay-closed',
   'screenshot-captured',

@@ -92,7 +92,11 @@ const aliceIPC = {
 contextBridge.exposeInMainWorld('electron', {
   resize: (dimensions: { width: number; height: number }) =>
     ipcRenderer.send('resize', dimensions),
-  mini: (minimize: { minimize: boolean }) => ipcRenderer.send('mini', minimize),
+  mini: (minimize: { minimize: boolean; silent?: boolean }) =>
+    ipcRenderer.send('mini', minimize),
+  // Exposing the platform keeps the renderer's visual state in sync with the
+  // native window policy without opening a general-purpose IPC channel.
+  platform: process.platform,
   screenshot: () => ipcRenderer.send('screenshot'),
   showOverlay: () => ipcRenderer.send('show-overlay'),
   getScreenshot: () => ipcRenderer.send('get-screenshot'),

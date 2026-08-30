@@ -5,6 +5,7 @@
       `assistant-shell--${uiMode}`,
       {
         'assistant-shell--mini': isMinimized,
+        'assistant-shell--mac-silent': isMacSilent,
         'assistant-shell--sidebar-open': openSidebar,
         'assistant-shell--electron': isElectron,
       },
@@ -97,7 +98,15 @@
       class="avatar-wrapper flex container h-full items-center justify-center relative z-2"
       :class="{ mini: isMinimized }"
     >
-      <div class="avatar" :class="{ open: openSidebar }">
+      <div
+        class="avatar"
+        :class="{ open: openSidebar, 'mac-silent-avatar': isMacSilent }"
+        :role="isMacSilent ? 'button' : undefined"
+        :tabindex="isMacSilent ? 0 : undefined"
+        :aria-label="isMacSilent ? '展开 Alice' : undefined"
+        @click="handleSilentIslandClick"
+        @keydown="handleSilentIslandKeydown"
+      >
         <div
           class="avatar-ring"
           :style="avatarRingStyle"
@@ -152,6 +161,7 @@
           @takeScreenShot="handleTakeScreenshot"
           @togglePlaying="handleToggleTTS"
           @toggleRecording="handleToggleRecording"
+          @manualMinimize="handleManualMinimize"
           :isElectron="isElectron"
           :isTTSEnabled="isTTSEnabled"
           :audioState="audioState"
@@ -222,11 +232,24 @@ const {
   avatarFallbackImage,
   recognizedText,
   statusMessage,
+  awaitingWakeWord,
 } = storeToRefs(generalStore)
 const { setAudioState } = generalStore
 
 const isElectron =
   typeof window !== 'undefined' && Boolean((window as any).electron)
+const isMacPlatform = computed(
+  () => isElectron && window.electron?.platform === 'darwin'
+)
+// Opt out only when explicitly disabled. Older settings files do not contain
+// this key, so macOS upgrades receive the notch presentation automatically;
+// Windows and Linux never apply the class.
+const macSilentModeEnabled = computed(
+  () => settingsStore.config.macSilentModeEnabled !== false
+)
+const isMacSilent = computed(
+  () => isMinimized.value && isMacPlatform.value && macSilentModeEnabled.value
+)
 const uiMode = computed<'capsule' | 'glass'>(() =>
   settingsStore.config.assistantUiMode === 'glass' ? 'glass' : 'capsule'
 )
@@ -247,8 +270,11 @@ let isProcessingRequest = false
 let blinkTimer: ReturnType<typeof setTimeout> | null = null
 let blinkEndTimer: ReturnType<typeof setTimeout> | null = null
 let modeNoticeTimer: ReturnType<typeof setTimeout> | null = null
+let macSilentCollapseTimer: ReturnType<typeof setTimeout> | null = null
 let modeNoticeRestoreStatus: string | null = null
 const isBlinking = vueRef(false)
+const macSilentManuallyExpanded = vueRef(false)
+const MAC_SILENT_IDLE_DELAY = 2200
 
 const baseWindowSize = computed(() =>
   uiMode.value === 'glass'
@@ -283,6 +309,144 @@ const glassWaveActive = computed(() =>
   ].includes(audioState.value)
 )
 
+const clearMacSilentCollapseTimer = () => {
+  if (macSilentCollapseTimer) {
+    clearTimeout(macSilentCollapseTimer)
+    macSilentCollapseTimer = null
+  }
+}
+
+const isBackgroundWakeListening = computed(
+  () =>
+    settingsStore.config.backgroundListeningEnabled === true &&
+    isRecordingRequested.value &&
+    awaitingWakeWord.value
+)
+
+const shouldAutoCollapseMacSilent = computed(
+  () =>
+    isMacPlatform.value &&
+    macSilentModeEnabled.value &&
+    settingsReady.value &&
+    !openSidebar.value &&
+    !macSilentManuallyExpanded.value &&
+    ((audioState.value === 'IDLE' && !isRecordingRequested.value) ||
+      (audioState.value === 'LISTENING' && isBackgroundWakeListening.value))
+)
+
+const collapseIntoMacSilentIsland = async () => {
+  if (!shouldAutoCollapseMacSilent.value || isMinimized.value) return
+  isMinimized.value = true
+  await nextTick()
+  window.electron?.mini({ minimize: true, silent: true })
+}
+
+const scheduleMacSilentCollapse = () => {
+  clearMacSilentCollapseTimer()
+  if (!shouldAutoCollapseMacSilent.value || isMinimized.value) return
+  macSilentCollapseTimer = setTimeout(() => {
+    macSilentCollapseTimer = null
+    void collapseIntoMacSilentIsland()
+  }, MAC_SILENT_IDLE_DELAY)
+}
+
+const expandMacSilentForActivity = async (manual = false) => {
+  if (!isMinimized.value || !isMacPlatform.value) return
+  if (manual) macSilentManuallyExpanded.value = true
+  isMinimized.value = false
+  await nextTick()
+  window.electron?.mini({ minimize: false, silent: false })
+  resizeForUiMode()
+}
+
+const handleSilentIslandClick = (event: MouseEvent) => {
+  if (!isMacSilent.value) return
+  const target = event.target as HTMLElement | null
+  // Controls inside the island (currently the expand affordance) keep their
+  // own click semantics; only the pill surface itself expands the window.
+  const control = target?.closest('button, a, input, [role="button"]')
+  // The avatar itself carries role="button" for keyboard accessibility.  A
+  // click on its image/ring therefore resolves to the current target and must
+  // still expand the island; only nested controls should stop propagation.
+  if (control && control !== event.currentTarget) return
+  void expandMacSilentForActivity(true)
+}
+
+const handleSilentIslandKeydown = (event: KeyboardEvent) => {
+  if (!isMacSilent.value || (event.key !== 'Enter' && event.key !== ' ')) {
+    return
+  }
+  const target = event.target as HTMLElement | null
+  const control = target?.closest('button, a, input, [role="button"]')
+  if (control && control !== event.currentTarget) return
+  event.preventDefault()
+  void expandMacSilentForActivity(true)
+}
+
+const handleManualMinimize = (minimized: boolean) => {
+  if (!isMacPlatform.value || !macSilentModeEnabled.value) return
+  clearMacSilentCollapseTimer()
+  // A user expansion is an explicit opt-out until the next active voice turn;
+  // this prevents the island from immediately swallowing a window the user
+  // just opened to work in the chat panel.
+  macSilentManuallyExpanded.value = !minimized
+  if (minimized) {
+    macSilentManuallyExpanded.value = false
+  }
+}
+
+const isActiveAudioState = (state: string) => {
+  if (state === 'LISTENING') {
+    // Background VAD is intentionally quiet while it waits for the wake word;
+    // a manual microphone session (or a post-wake command) must expand the
+    // island so the user can see and control the live interaction.
+    return !isBackgroundWakeListening.value
+  }
+  return [
+    'PROCESSING_AUDIO',
+    'WAITING_FOR_RESPONSE',
+    'SPEAKING',
+    'GENERATING_IMAGE',
+  ].includes(state)
+}
+
+// Re-enter automatic silent mode only after an actual active turn. A manual
+// expansion while idle remains open, which keeps the chat usable and avoids a
+// window collapsing underneath a click the user just made.
+watch([audioState, isBackgroundWakeListening], ([state]) => {
+  if (isActiveAudioState(state)) {
+    macSilentManuallyExpanded.value = false
+    clearMacSilentCollapseTimer()
+    void expandMacSilentForActivity()
+    return
+  }
+  scheduleMacSilentCollapse()
+})
+
+watch(
+  [openSidebar, macSilentModeEnabled, settingsReady],
+  ([sidebarOpen, silentEnabled, ready]) => {
+    if (isMacPlatform.value && isMinimized.value && ready) {
+      // Apply a settings toggle immediately to the native window. This also
+      // restores the legacy square mini layout when the user opts out.
+      window.electron?.mini({
+        minimize: true,
+        silent: Boolean(silentEnabled && !sidebarOpen),
+      })
+    }
+    scheduleMacSilentCollapse()
+  },
+  { immediate: true }
+)
+
+watch(isMinimized, minimized => {
+  if (minimized && isActiveAudioState(audioState.value)) {
+    void expandMacSilentForActivity()
+  } else if (!minimized) {
+    scheduleMacSilentCollapse()
+  }
+})
+
 const resizeForUiMode = () => {
   if (!isElectron || isMinimized.value || !settingsReady.value) return
   // Sidebar starts 380px from the left and can be 960px wide.
@@ -296,6 +460,15 @@ const resizeForUiMode = () => {
     width,
     height,
   })
+}
+
+const handleNativeWindowExpanded = () => {
+  // The tray/Dock can expand the native island without going through the
+  // renderer's Actions component. Mirror that transition before resizing so
+  // the DOM never remains in the 240×44 layout inside a full-size window.
+  isMinimized.value = false
+  macSilentManuallyExpanded.value = true
+  void nextTick().then(() => resizeForUiMode())
 }
 
 const setUiMode = async (nextMode: 'capsule' | 'glass') => {
@@ -429,6 +602,10 @@ onMounted(async () => {
   eventBus.on('mute-playback-toggle', handleToggleTTS)
   eventBus.on('take-screenshot', handleTakeScreenshot)
   scheduleBlink()
+  scheduleMacSilentCollapse()
+  if (window.aliceIPC) {
+    window.aliceIPC.on('main-window:expanded', handleNativeWindowExpanded)
+  }
 })
 
 watch([uiMode, settingsReady], async () => {
@@ -442,6 +619,7 @@ onUnmounted(() => {
   }
   aiVideo.value = null
   clearBlinkTimers()
+  clearMacSilentCollapseTimer()
   if (modeNoticeTimer) {
     clearTimeout(modeNoticeTimer)
     modeNoticeTimer = null
@@ -450,6 +628,9 @@ onUnmounted(() => {
   eventBus.off('processing-complete', handleProcessingComplete)
   eventBus.off('mute-playback-toggle', handleToggleTTS)
   eventBus.off('take-screenshot', handleTakeScreenshot)
+  if (window.aliceIPC) {
+    window.aliceIPC.off('main-window:expanded', handleNativeWindowExpanded)
+  }
 })
 
 const handleTakeScreenshot = () => {

@@ -29,6 +29,7 @@ describe('useSettingsStore boolean settings', () => {
     store.updateSetting('backgroundListeningEnabled', false)
 
     expect(store.settings.backgroundListeningEnabled).toBe(false)
+    expect(store.settings.macSilentModeEnabled).toBe(true)
     expect(store.settings.assistantUiMode).toBe('capsule')
     expect(Boolean(store.settings.backgroundListeningEnabled)).toBe(false)
   })
@@ -340,6 +341,49 @@ describe('useSettingsStore boolean settings', () => {
           saveSettings.mock.calls as unknown as Array<[Record<string, any>]>
         ).some(([payload]) => payload.assistantUiMode === 'glass')
       ).toBe(true)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('persists and validates the macOS silent island preference', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({ macSilentModeEnabled: false })),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+      expect(store.settings.macSilentModeEnabled).toBe(false)
+      await store.saveSettingsToFile()
+      expect(saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ macSilentModeEnabled: false })
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('fails closed to the macOS default for malformed island preferences', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({ macSilentModeEnabled: 'yes' })),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+      expect(store.settings.macSilentModeEnabled).toBe(true)
+      expect(saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ macSilentModeEnabled: true })
+      )
     } finally {
       vi.unstubAllGlobals()
     }

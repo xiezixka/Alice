@@ -25,6 +25,7 @@ interface ElectronAppSettings {
   VITE_OPENAI_API_KEY?: string
   VITE_GOOGLE_API_KEY?: string
   assistantUiMode?: 'capsule' | 'glass'
+  macSilentModeEnabled?: boolean
 }
 
 declare global {
@@ -33,7 +34,8 @@ declare global {
     desktopAPI: AliceDesktopAPI
     electron: {
       resize: (dimensions: { width: number; height: number }) => void
-      mini: (minimize: { minimize: boolean }) => void
+      mini: (minimize: { minimize: boolean; silent?: boolean }) => void
+      platform: NodeJS.Platform
       screenshot: () => void
       showOverlay: () => void
       getScreenshot: () => Promise<string | null>
