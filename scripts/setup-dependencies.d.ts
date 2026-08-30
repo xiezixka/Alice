@@ -1,4 +1,4 @@
-export function setupDependencies(): Promise<void>
+export function setupDependencies(): boolean
 export interface FFmpegPathOptions {
   platform?: string
   homeDir?: string
