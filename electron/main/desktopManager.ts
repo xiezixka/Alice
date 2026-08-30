@@ -17,7 +17,9 @@ import { isPathWithinRoot } from './securityBoundaries'
 import {
   buildAppleScriptHotkey,
   buildWindowsSendKeys,
+  buildWindowsUnicodeTypeScript,
   buildXdotoolHotkey,
+  splitWindowsUnicodeInput,
 } from './desktopHotkeys'
 
 const execFileAsync = promisify(execFile)
@@ -728,8 +730,7 @@ class DesktopManager {
   }
 
   private ensureAccessibilityApproved():
-    | { success: true }
-    | { success: false; error: string } {
+    { success: true } | { success: false; error: string } {
     if (process.platform !== 'darwin') return { success: true }
 
     try {
@@ -993,15 +994,31 @@ class DesktopManager {
     }
 
     if (process.platform === 'win32') {
-      const powershellScript = this.windowsPowerShellAction(action)
-      await execFileAsync('powershell.exe', [
-        '-NoProfile',
-        '-NonInteractive',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-Command',
-        powershellScript,
-      ])
+      if (action.action === 'type') {
+        // WScript.Shell.SendKeys is not Unicode-safe. SendInput is invoked in
+        // bounded chunks so even a long Chinese message stays below Windows'
+        // command-line length limit while preserving surrogate pairs.
+        for (const chunk of splitWindowsUnicodeInput(action.text)) {
+          await execFileAsync('powershell.exe', [
+            '-NoProfile',
+            '-NonInteractive',
+            '-ExecutionPolicy',
+            'Bypass',
+            '-Command',
+            buildWindowsUnicodeTypeScript(chunk),
+          ])
+        }
+      } else {
+        const powershellScript = this.windowsPowerShellAction(action)
+        await execFileAsync('powershell.exe', [
+          '-NoProfile',
+          '-NonInteractive',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-Command',
+          powershellScript,
+        ])
+      }
       return { message: 'Windows 桌面操作已执行。' }
     }
 
@@ -1036,10 +1053,9 @@ class DesktopManager {
       return `$ws = New-Object -ComObject WScript.Shell; if (-not $ws.AppActivate('${value}')) { throw 'Window not found' }`
     }
     if (action.action === 'type') {
-      const value = this.escapePowerShell(
-        action.text.replace(/[+^%~(){}]/g, char => `{${char}}`)
-      )
-      return `$ws = New-Object -ComObject WScript.Shell; $ws.SendKeys('${value}')`
+      // This branch is kept for callers that build a Windows action script
+      // directly; executeDesktopAction uses the chunked Unicode path above.
+      return buildWindowsUnicodeTypeScript(action.text)
     }
     if (action.action === 'hotkey') {
       const value = this.escapePowerShell(buildWindowsSendKeys(action.keys))

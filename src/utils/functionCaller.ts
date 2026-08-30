@@ -28,6 +28,7 @@ import {
   reply_to_email,
   send_email,
 } from './functions/gmail'
+import { isAssistantToolEnabled } from './assistantTools'
 import axios from 'axios'
 
 interface FunctionResult {
@@ -822,6 +823,29 @@ export async function executeFunction(
   argsString: any,
   settings?: any
 ): Promise<string> {
+  // Enforce the configured tool policy at execution time as well as when
+  // schemas are assembled. A model response may arrive after the user
+  // disabled a tool, or a provider may return a call that was not advertised
+  // in the request. Known predefined tools therefore fail closed here;
+  // custom tools are checked against their own enabled/valid state below.
+  let effectiveSettings = settings
+  if (!effectiveSettings) {
+    try {
+      // Resolve lazily so functionCaller does not introduce a static cycle:
+      // settingsStore imports conversationStore, which in turn imports this
+      // module for tool execution.
+      const { useSettingsStore } = await import('../stores/settingsStore')
+      effectiveSettings = useSettingsStore().config
+    } catch {
+      // Unit/embedded callers may execute a pure function without Pinia. In
+      // that legacy context there is no policy object to evaluate.
+      effectiveSettings = undefined
+    }
+  }
+  if (!isAssistantToolEnabled(name, effectiveSettings)) {
+    return `Error executing ${name}: 工具当前未启用，请先在助手设置中启用后重试。`
+  }
+
   const func = functionRegistry[name]
   const schema = functionSchemas[name as keyof typeof functionSchemas]
 
@@ -838,8 +862,15 @@ export async function executeFunction(
     if (!func) {
       const customToolsStore = useCustomToolsStore()
       await customToolsStore.ensureInitialized()
-      if (customToolsStore.toolsByName[name]) {
+      const customTool = customToolsStore.toolsByName[name]
+      if (customTool && customTool.enabled && customTool.isValid) {
         return await executeCustomToolViaIPC(name, args)
+      }
+      if (customTool) {
+        const reason = customTool.enabled
+          ? '自定义工具校验未通过'
+          : '自定义工具当前未启用'
+        return `Error executing ${name}: ${reason}，请先在设置中修复或启用。`
       }
       console.error(`Function ${name} not found in registry.`)
       return `Error: Function ${name} not found.`

@@ -17,7 +17,7 @@ To activate all tools, you need to get your API credentials for each tool.
 
 - `desktop_capabilities`：查看当前系统支持的桌面动作。
 - `capture_desktop_screen`：在用户授权后读取当前主屏幕，作为视觉模型的临时上下文；macOS 需要“屏幕录制”权限，截图不会写入长期聊天记录。
-- `desktop_action`：在确认弹窗后打开应用、聚焦窗口、点击坐标、输入文本或发送快捷键。macOS 需要给 Alice 开启“辅助功能”权限；Linux 需要 `xdotool`。
+- `desktop_action`：在确认弹窗后打开应用、聚焦窗口、点击坐标、输入文本或发送快捷键。Windows 文本输入使用 Unicode `SendInput`，可稳定输入中文、emoji 和多行内容；macOS 需要给 Alice 开启“辅助功能”权限；Linux 需要 `xdotool`。
 - 核心设置页会根据已启用的工具提供“打开屏幕录制设置”和“打开辅助功能设置”快捷入口，完成授权后再重试对应操作。
 
 ## 文件整理
@@ -34,4 +34,4 @@ To activate all tools, you need to get your API credentials for each tool.
 - 微信、QQ、Slack 等聊天应用目前通过 `capture_desktop_screen` + `desktop_action` 辅助操作；这要求聊天窗口已打开、模型支持视觉输入，并且每次发送前都要确认收件人和正文。
 - `plan_itinerary`：读取 Google 日历并生成避开冲突的时间草案，不会自动写入日历。
 
-所有写操作都应先展示目标、影响和内容。工具失败或平台不支持时必须如实反馈，不得声称已完成。
+所有写操作都应先展示目标、影响和内容。工具在执行时还会再次校验助手设置中的启用状态；即使模型返回了未启用的工具调用，也会拒绝执行。工具失败或平台不支持时必须如实反馈，不得声称已完成。
