@@ -31,4 +31,28 @@ describe('useSettingsStore boolean settings', () => {
     expect(store.settings.backgroundListeningEnabled).toBe(false)
     expect(Boolean(store.settings.backgroundListeningEnabled)).toBe(false)
   })
+
+  it('ships Chinese desktop-agent defaults without enabling the microphone', () => {
+    const store = useSettingsStore()
+
+    expect(store.settings.aiProvider).toBe('deepseek')
+    expect(store.settings.assistantModel).toBe(
+      'deepseek-v4-flash-vision-exp'
+    )
+    expect(store.settings.sttProvider).toBe('local')
+    expect(store.settings.localSttLanguage).toBe('zh')
+    expect(store.settings.localSttWakeWord).toBe('alice')
+    expect(store.settings.localSttEnabled).toBe(true)
+    expect(store.settings.backgroundListeningEnabled).toBe(false)
+    expect(store.settings.localTtsVoice).toBe('zh_CN-huayan-medium')
+    expect(store.settings.assistantTools).toEqual(
+      expect.arrayContaining([
+        'capture_desktop_screen',
+        'desktop_action',
+        'organize_files',
+        'plan_itinerary',
+        'create_email_draft',
+      ])
+    )
+  })
 })
