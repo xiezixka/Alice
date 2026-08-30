@@ -13,6 +13,7 @@ import {
   getSafeProviderModel,
   type AIProviderKey,
 } from '../services/llmProviders/providerCatalog'
+import { shouldDisableBackgroundListening } from '../composables/backgroundListeningPolicy'
 
 export const DEFAULT_ASSISTANT_PERSONA_PROMPT = DEFAULT_PERSONA_PROMPT
 
@@ -433,6 +434,17 @@ export const useSettingsStore = defineStore('settings', () => {
       }
     }
 
+    // A persisted background-listening flag must never survive without the
+    // local STT + wake-word prerequisites. Otherwise the tray and launch-at-
+    // login path appear active while no valid wake session can be started.
+    if (shouldDisableBackgroundListening(validated)) {
+      validated.backgroundListeningEnabled = false
+      migrated = true
+      console.log(
+        '🔇 Disabled background listening because local STT/wake-word prerequisites are missing'
+      )
+    }
+
     if (!Number.isFinite(validated.ragTopK) || validated.ragTopK < 1) {
       validated.ragTopK = defaultSettings.ragTopK
       migrated = true
@@ -844,6 +856,14 @@ export const useSettingsStore = defineStore('settings', () => {
     }
     if (key === 'embeddingProvider') {
       settings.value[key] = value as 'openai' | 'local'
+    }
+
+    // Keep the persisted/runtime setting fail-closed when a voice prerequisite
+    // is changed (including an external caller attempting to enable the flag
+    // directly). The settings UI will show the corresponding notice and ask
+    // the user to re-enable it after completing local voice setup.
+    if (shouldDisableBackgroundListening(settings.value)) {
+      settings.value.backgroundListeningEnabled = false
     }
 
     successMessage.value = null

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 let createPinia: typeof import('pinia').createPinia
 let setActivePinia: typeof import('pinia').setActivePinia
@@ -30,6 +30,56 @@ describe('useSettingsStore boolean settings', () => {
 
     expect(store.settings.backgroundListeningEnabled).toBe(false)
     expect(Boolean(store.settings.backgroundListeningEnabled)).toBe(false)
+  })
+
+  it('automatically disables background listening when voice prerequisites change', () => {
+    const store = useSettingsStore()
+
+    store.updateSetting('backgroundListeningEnabled', true)
+    expect(store.settings.backgroundListeningEnabled).toBe(true)
+
+    store.updateSetting('localSttEnabled', false)
+    expect(store.settings.backgroundListeningEnabled).toBe(false)
+
+    // Direct attempts to re-enable the flag while local wake words are off
+    // must fail closed as well.
+    store.updateSetting('backgroundListeningEnabled', true)
+    expect(store.settings.backgroundListeningEnabled).toBe(false)
+
+    store.updateSetting('localSttEnabled', true)
+    store.updateSetting('sttProvider', 'groq')
+    store.updateSetting('backgroundListeningEnabled', true)
+    expect(store.settings.backgroundListeningEnabled).toBe(false)
+  })
+
+  it('migrates an invalid persisted background flag during settings load', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({
+          sttProvider: 'groq',
+          localSttEnabled: true,
+          localSttWakeWord: 'alice',
+          backgroundListeningEnabled: true,
+        })),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+
+      expect(store.settings.backgroundListeningEnabled).toBe(false)
+      expect(saveSettings).toHaveBeenCalled()
+      expect(
+        (saveSettings.mock.calls as unknown as Array<[Record<string, any>]>).some(
+          ([payload]) => payload.backgroundListeningEnabled === false
+        )
+      ).toBe(true)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('ships Chinese desktop-agent defaults without enabling the microphone', () => {

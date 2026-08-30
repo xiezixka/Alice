@@ -33,9 +33,7 @@
             id="stt-provider"
             v-model="currentSettings.sttProvider"
             class="select select-bordered w-full focus:select-primary"
-            @change="
-              e => $emit('update:setting', 'sttProvider', getTargetValue(e))
-            "
+            @change="handleSttProviderChange"
           >
             <option value="openai">OpenAI (gpt-4o-transcribe)</option>
             <option value="groq">Groq (whisper-large-v3)</option>
@@ -397,14 +395,7 @@
               id="stt-wake-enable"
               v-model="currentSettings.localSttEnabled"
               class="select select-bordered w-full focus:select-primary"
-              @change="
-                e =>
-                  $emit(
-                    'update:setting',
-                    'localSttEnabled',
-                    getTargetValue(e) === 'true'
-                  )
-              "
+              @change="handleLocalSttEnabledChange"
             >
               <option value="true">启用</option>
               <option value="false">禁用</option>
@@ -419,10 +410,7 @@
               type="text"
               v-model="currentSettings.localSttWakeWord"
               class="input input-bordered w-full focus:input-primary"
-              @change="
-                e =>
-                  $emit('update:setting', 'localSttWakeWord', getTargetValue(e))
-              "
+              @change="handleWakeWordChange"
               placeholder="alice"
             />
             <p class="text-xs text-gray-400 mt-1">
@@ -894,6 +882,10 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { AliceSettings } from '../../stores/settingsStore'
 import { backendApi, type Voice } from '../../services/backendApi'
 import { useCodexAuth } from '../../composables/useCodexAuth'
+import {
+  shouldDisableBackgroundListening,
+  type BackgroundListeningConfig,
+} from '../../composables/backgroundListeningPolicy'
 
 // Type for service status
 interface ServiceStatus {
@@ -937,6 +929,30 @@ const ragStats = ref({ documents: 0, chunks: 0 })
 const isIndexingRag = ref(false)
 const ragStatusMessage = ref('')
 
+// Surface an automatic fail-closed transition when a prerequisite is changed
+// by another settings control or by a migrated settings file.
+watch(
+  () => [
+    props.currentSettings.sttProvider,
+    props.currentSettings.localSttEnabled,
+    props.currentSettings.localSttWakeWord,
+    props.currentSettings.backgroundListeningEnabled,
+  ],
+  (next, previous) => {
+    const wasEnabled = previous?.[3] === true
+    const nextConfig: BackgroundListeningConfig = {
+      sttProvider: next[0] as string,
+      localSttEnabled: next[1] as boolean,
+      localSttWakeWord: next[2] as string,
+      backgroundListeningEnabled: next[3] as boolean,
+    }
+    if (wasEnabled && shouldDisableBackgroundListening(nextConfig)) {
+      microphoneCheckResult.value =
+        '当前语音识别配置不满足本地唤醒条件，后台监听已自动关闭。完成本地语音设置后可重新启用。'
+    }
+  }
+)
+
 let statusInterval: NodeJS.Timeout | null = null
 
 const {
@@ -948,6 +964,44 @@ const {
 
 const getTargetValue = (event: Event): string => {
   return (event.target as HTMLInputElement | HTMLSelectElement).value
+}
+
+const maybeDisableBackgroundListening = (
+  overrides: Partial<BackgroundListeningConfig> = {}
+) => {
+  const nextConfig: BackgroundListeningConfig = {
+    sttProvider: props.currentSettings.sttProvider,
+    localSttEnabled: props.currentSettings.localSttEnabled,
+    localSttWakeWord: props.currentSettings.localSttWakeWord,
+    backgroundListeningEnabled:
+      props.currentSettings.backgroundListeningEnabled,
+    ...overrides,
+  }
+
+  if (!shouldDisableBackgroundListening(nextConfig)) return
+
+  emit('update:setting', 'backgroundListeningEnabled', false)
+  microphoneCheckResult.value =
+    '当前语音识别配置不满足本地唤醒条件，后台监听已自动关闭。完成本地语音设置后可重新启用。'
+  emit('persist-settings')
+}
+
+const handleSttProviderChange = (event: Event) => {
+  const provider = getTargetValue(event)
+  emit('update:setting', 'sttProvider', provider)
+  maybeDisableBackgroundListening({ sttProvider: provider })
+}
+
+const handleLocalSttEnabledChange = (event: Event) => {
+  const enabled = getTargetValue(event) === 'true'
+  emit('update:setting', 'localSttEnabled', enabled)
+  maybeDisableBackgroundListening({ localSttEnabled: enabled })
+}
+
+const handleWakeWordChange = (event: Event) => {
+  const wakeWord = getTargetValue(event)
+  emit('update:setting', 'localSttWakeWord', wakeWord)
+  maybeDisableBackgroundListening({ localSttWakeWord: wakeWord })
 }
 
 const emitCheckboxChange = (key: keyof AliceSettings, event: Event): void => {
