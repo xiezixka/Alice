@@ -33,6 +33,7 @@
     "build:mac": "node scripts/assert-native-build.js mac && npm run build:go && npm run build:web && npx electron-builder --mac --publish never",
     "build:win": "node scripts/assert-native-build.js windows && npm run build:go && npm run build:web && npx electron-builder --win --x64 --publish never",
     "build:linux": "node scripts/assert-native-build.js linux && npm run build:go && npm run build:web && npx electron-builder --linux --x64 --publish never",
+    "verify:release": "node scripts/verify-release-artifacts.js",
     "setup:dependencies": "node scripts/setup-dependencies.js",
     "setup:embeddings": "node scripts/setup-embeddings.js",
     "rebuild": "npx electron-rebuild -f -w better-sqlite3,hnswlib-node",

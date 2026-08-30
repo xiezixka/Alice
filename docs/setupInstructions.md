@@ -33,6 +33,20 @@ cross-OS Electron build can finish while silently bundling unusable ffmpeg,
 Whisper or Piper binaries, which would break local voice monitoring or TTS on
 the target computer.
 
+After a build, verify that electron-builder produced the actual installer
+before sharing it:
+
+```bash
+# Run on the matching operating system
+npm run verify:release -- macos   # release/<version>/*.dmg
+npm run verify:release -- windows # release/<version>/*.exe
+npm run verify:release -- linux   # release/<version>/*.AppImage
+```
+
+The GitHub Actions build and PR workflows run this check automatically. It
+rejects missing, empty, or mis-versioned installer files before they are
+uploaded as downloadable artifacts.
+
 # AI Provider Setup
 
 Alice supports OpenAI, OpenRouter, DeepSeek, MiniMax, Z.ai, and local LLM inference.

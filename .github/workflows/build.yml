@@ -86,7 +86,7 @@ jobs:
         run: go test ./...
 
       - name: Install Node Dependencies
-        run: npm install
+        run: npm ci
         env:
           PYTHON: ${{ steps.setup_python.outputs.python-path }}
           npm_config_python: ${{ steps.setup_python.outputs.python-path }}
@@ -136,6 +136,10 @@ jobs:
         run: npm run build:web && npx electron-builder --publish never
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify installer artifact
+        run: node scripts/verify-release-artifacts.js "${{ matrix.os }}"
+        shell: bash
 
       - name: Upload Release Artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@v4
