@@ -73,6 +73,7 @@
           v-if="activeTab === 'core'"
           :current-settings="currentSettings"
           @update:setting="updateCurrentSetting"
+          @persist-settings="persistBackgroundWakeSettings"
         />
 
         <AssistantSettingsTab
@@ -207,7 +208,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onMounted, computed, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSettingsStore, type AliceSettings } from '../stores/settingsStore'
 import { useConversationStore } from '../stores/conversationStore'
@@ -490,15 +491,14 @@ const handleSaveAndTestSettings = async () => {
     try {
       const parsedMcpConfig = JSON.parse(currentSettings.value.mcpServersConfig)
       if (!Array.isArray(parsedMcpConfig)) {
-        settingsStore.error =
-          'MCP Servers Configuration must be a valid JSON array.'
+        settingsStore.error = 'MCP 服务器配置必须是有效的 JSON 数组。'
         settingsStore.successMessage = null
         settingsStore.isSaving = false
         return
       }
     } catch (e) {
       settingsStore.error =
-        'MCP Servers Configuration is not valid JSON. Please check for errors like trailing commas or unquoted keys.'
+        'MCP 服务器配置不是有效的 JSON。请检查末尾逗号、未加引号的键等格式问题。'
       settingsStore.successMessage = null
       settingsStore.isSaving = false
       return
@@ -507,7 +507,7 @@ const handleSaveAndTestSettings = async () => {
 
   if (
     settingsStore.error &&
-    settingsStore.error.startsWith('MCP Servers Configuration')
+    settingsStore.error.startsWith('MCP 服务器配置')
   ) {
     settingsStore.error = null
   }
@@ -516,7 +516,7 @@ const handleSaveAndTestSettings = async () => {
     currentSettings.value.sttProvider === 'groq' &&
     !currentSettings.value.VITE_GROQ_API_KEY?.trim()
   ) {
-    settingsStore.error = `Groq STT is selected, but the Groq API Key is missing.`
+    settingsStore.error = '已选择 Groq 语音识别，但尚未填写 Groq API 密钥。'
     settingsStore.successMessage = null
     settingsStore.isSaving = false
     return
@@ -527,7 +527,7 @@ const handleSaveAndTestSettings = async () => {
       currentSettings.value.ttsProvider === 'google') &&
     !currentSettings.value.VITE_GOOGLE_API_KEY?.trim()
   ) {
-    settingsStore.error = `Google is selected, but the Google API Key is missing.`
+    settingsStore.error = '已选择 Google 服务，但尚未填写 Google API 密钥。'
     settingsStore.successMessage = null
     settingsStore.isSaving = false
     return
@@ -547,6 +547,25 @@ const handleSaveAndTestSettings = async () => {
       })
     } catch (error) {
       console.error('Failed to notify main window of settings changes:', error)
+    }
+  }
+}
+
+const persistBackgroundWakeSettings = async () => {
+  // CoreSettingsTab updates the draft object and emits this event in the same
+  // tick. Wait for the existing draft watcher to copy those values into the
+  // Pinia store, then persist without requiring an unrelated API-key test.
+  await nextTick()
+  const success = await settingsStore.saveSettingsToFile()
+  if (success) {
+    settingsStore.successMessage = '后台唤醒配置已保存。'
+    if (window.aliceIPC && window.location.hash === '#settings') {
+      await window.aliceIPC.invoke('settings:notify-main-window', {
+        type: 'settings-saved',
+        success: true,
+        validationComplete: true,
+        settingsChanged: true,
+      })
     }
   }
 }

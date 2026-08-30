@@ -74,7 +74,7 @@ export function useCodexAuth() {
           'ChatGPT authorization opened in your browser.'
       } else {
         codexAuthStatus.error =
-          result?.error || 'Failed to start ChatGPT Codex authorization.'
+          result?.error || '无法启动 ChatGPT Codex 授权。'
         codexAuthStatus.authInProgress = false
       }
     } catch (error: any) {
@@ -98,7 +98,7 @@ export function useCodexAuth() {
         codexAuthStatus.message = 'ChatGPT Codex disconnected.'
       } else {
         codexAuthStatus.error =
-          result?.error || 'Failed to disconnect ChatGPT Codex.'
+          result?.error || '无法断开 ChatGPT Codex 连接。'
         codexAuthStatus.message = null
       }
     } catch (error: any) {

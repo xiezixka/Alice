@@ -738,7 +738,7 @@ export const useSettingsStore = defineStore('settings', () => {
         }
       }
     } catch (e: any) {
-      error.value = `Failed to load settings: ${e.message}`
+      error.value = `加载设置失败：${e.message}`
       settings.value = { ...defaultSettings }
       coreOpenAISettingsValid.value = false
     } finally {
@@ -962,7 +962,7 @@ export const useSettingsStore = defineStore('settings', () => {
         isSaving.value = false
         return true
       } else {
-        error.value = `Failed to save settings to file: ${saveResult.error || 'Unknown error'}`
+        error.value = `保存设置文件失败：${saveResult.error || '未知错误'}`
         console.error(
           '[SettingsStore saveSettingsToFile] IPC save failed:',
           saveResult.error
@@ -971,7 +971,7 @@ export const useSettingsStore = defineStore('settings', () => {
         return false
       }
     } catch (e: any) {
-      error.value = `Error during settings save: ${e.message}`
+      error.value = `保存设置时发生错误：${e.message}`
       console.error(
         '[SettingsStore saveSettingsToFile] Exception during save:',
         e
@@ -994,7 +994,7 @@ export const useSettingsStore = defineStore('settings', () => {
       requiresOpenAIKey(currentConfigForTest) &&
       !currentConfigForTest.VITE_OPENAI_API_KEY?.trim()
     ) {
-      error.value = `Essential setting '${settingKeyToLabelMap.VITE_OPENAI_API_KEY}' is missing.`
+      error.value = `缺少必要设置：“${settingKeyToLabelMap.VITE_OPENAI_API_KEY}”。`
       generalStore.statusMessage = '需要 OpenAI API 密钥。'
       isSaving.value = false
       return
@@ -1002,67 +1002,67 @@ export const useSettingsStore = defineStore('settings', () => {
 
     if (currentConfigForTest.aiProvider === 'openrouter') {
       if (!currentConfigForTest.VITE_OPENROUTER_API_KEY?.trim()) {
-        error.value = `Essential setting '${settingKeyToLabelMap.VITE_OPENROUTER_API_KEY}' is missing.`
+        error.value = `缺少必要设置：“${settingKeyToLabelMap.VITE_OPENROUTER_API_KEY}”。`
         generalStore.statusMessage = '需要 OpenRouter API 密钥。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'zai') {
       if (!currentConfigForTest.VITE_ZAI_API_KEY?.trim()) {
-        error.value = `Essential setting '${settingKeyToLabelMap.VITE_ZAI_API_KEY}' is missing.`
+        error.value = `缺少必要设置：“${settingKeyToLabelMap.VITE_ZAI_API_KEY}”。`
         generalStore.statusMessage = '需要 Z.ai API 密钥。'
         isSaving.value = false
         return
       }
       if (!currentConfigForTest.zaiBaseUrl?.trim()) {
-        error.value = `Essential setting '${settingKeyToLabelMap.zaiBaseUrl}' is missing.`
+        error.value = `缺少必要设置：“${settingKeyToLabelMap.zaiBaseUrl}”。`
         generalStore.statusMessage = '需要 Z.ai 基础地址。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'minimax') {
       if (!currentConfigForTest.VITE_MINIMAX_API_KEY?.trim()) {
-        error.value = `Essential setting '${settingKeyToLabelMap.VITE_MINIMAX_API_KEY}' is missing.`
+        error.value = `缺少必要设置：“${settingKeyToLabelMap.VITE_MINIMAX_API_KEY}”。`
         generalStore.statusMessage = '需要 MiniMax API 密钥。'
         isSaving.value = false
         return
       }
       if (!currentConfigForTest.minimaxBaseUrl?.trim()) {
-        error.value = `Essential setting '${settingKeyToLabelMap.minimaxBaseUrl}' is missing.`
+        error.value = `缺少必要设置：“${settingKeyToLabelMap.minimaxBaseUrl}”。`
         generalStore.statusMessage = '需要 MiniMax 基础地址。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'deepseek') {
       if (!currentConfigForTest.VITE_DEEPSEEK_API_KEY?.trim()) {
-        error.value = `Essential setting '${settingKeyToLabelMap.VITE_DEEPSEEK_API_KEY}' is missing.`
+        error.value = `缺少必要设置：“${settingKeyToLabelMap.VITE_DEEPSEEK_API_KEY}”。`
         generalStore.statusMessage = '需要 DeepSeek API 密钥。'
         isSaving.value = false
         return
       }
       if (!currentConfigForTest.deepseekBaseUrl?.trim()) {
-        error.value = `Essential setting '${settingKeyToLabelMap.deepseekBaseUrl}' is missing.`
+        error.value = `缺少必要设置：“${settingKeyToLabelMap.deepseekBaseUrl}”。`
         generalStore.statusMessage = '需要 DeepSeek 基础地址。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'codex') {
       if (!currentConfigForTest.codexAuthConnected) {
-        error.value = `Essential setting '${settingKeyToLabelMap.codexAuthConnected}' is missing.`
+        error.value = `缺少必要设置：“${settingKeyToLabelMap.codexAuthConnected}”。`
         generalStore.statusMessage = '需要 ChatGPT Codex 授权。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'ollama') {
       if (!currentConfigForTest.ollamaBaseUrl?.trim()) {
-        error.value = `Essential setting '${settingKeyToLabelMap.ollamaBaseUrl}' is missing.`
+        error.value = `缺少必要设置：“${settingKeyToLabelMap.ollamaBaseUrl}”。`
         generalStore.statusMessage = '需要 Ollama 基础地址。'
         isSaving.value = false
         return
       }
     } else if (currentConfigForTest.aiProvider === 'lm-studio') {
       if (!currentConfigForTest.lmStudioBaseUrl?.trim()) {
-        error.value = `Essential setting '${settingKeyToLabelMap.lmStudioBaseUrl}' is missing.`
+        error.value = `缺少必要设置：“${settingKeyToLabelMap.lmStudioBaseUrl}”。`
         generalStore.statusMessage = '需要 LM Studio 基础地址。'
         isSaving.value = false
         return
@@ -1073,7 +1073,7 @@ export const useSettingsStore = defineStore('settings', () => {
       currentConfigForTest.sttProvider === 'groq' &&
       !currentConfigForTest.VITE_GROQ_API_KEY?.trim()
     ) {
-      error.value = `Groq STT is selected, but '${settingKeyToLabelMap.VITE_GROQ_API_KEY}' is missing.`
+      error.value = `已选择 Groq 语音识别，但缺少“${settingKeyToLabelMap.VITE_GROQ_API_KEY}”。`
       generalStore.statusMessage = 'Groq 语音识别需要 Groq API 密钥。'
       isSaving.value = false
       return
@@ -1084,7 +1084,7 @@ export const useSettingsStore = defineStore('settings', () => {
         currentConfigForTest.ttsProvider === 'google') &&
       !currentConfigForTest.VITE_GOOGLE_API_KEY?.trim()
     ) {
-      error.value = `Google is selected, but '${settingKeyToLabelMap.VITE_GOOGLE_API_KEY}' is missing.`
+      error.value = `已选择 Google 服务，但缺少“${settingKeyToLabelMap.VITE_GOOGLE_API_KEY}”。`
       generalStore.statusMessage = 'Google 服务需要 Google API 密钥。'
       isSaving.value = false
       return
@@ -1107,7 +1107,7 @@ export const useSettingsStore = defineStore('settings', () => {
       const providerName = getProviderDisplayName(
         currentConfigForTest.aiProvider
       )
-      error.value = `${providerName} API connection test failed: ${e.message}. Check your ${providerName} configuration.`
+      error.value = `${providerName} API 连接测试失败：${e.message}。请检查 ${providerName} 配置。`
       coreOpenAISettingsValid.value = false
       openAIServiceTestSuccess = false
     }
@@ -1117,7 +1117,7 @@ export const useSettingsStore = defineStore('settings', () => {
         const providerName = getProviderDisplayName(
           currentConfigForTest.aiProvider
         )
-        error.value = `${providerName} connection is valid. Please select an '${settingKeyToLabelMap.assistantModel}'.`
+        error.value = `${providerName} 连接有效，请选择“${settingKeyToLabelMap.assistantModel}”。`
         generalStore.statusMessage = '尚未选择助手模型。'
         successMessage.value = `${providerName} 连接有效，模型已加载，请完成模型选择。`
         isSaving.value = false
@@ -1127,7 +1127,7 @@ export const useSettingsStore = defineStore('settings', () => {
         const providerName = getProviderDisplayName(
           currentConfigForTest.aiProvider
         )
-        error.value = `${providerName} connection is valid. Please select a '${settingKeyToLabelMap.SUMMARIZATION_MODEL}'.`
+        error.value = `${providerName} 连接有效，请选择“${settingKeyToLabelMap.SUMMARIZATION_MODEL}”。`
         generalStore.statusMessage = '尚未选择摘要模型。'
         successMessage.value = `${providerName} 连接有效，模型已加载，请完成模型选择。`
         isSaving.value = false
@@ -1155,7 +1155,7 @@ export const useSettingsStore = defineStore('settings', () => {
             ? generalStore.statusMessage
             : '使用新设置重新初始化 Alice 失败。'
         error.value = (error.value ? error.value + '; ' : '') + initErrorMsg
-        successMessage.value = `Settings valid, but ${initErrorMsg}`
+        successMessage.value = `设置有效，但${initErrorMsg}`
       }
     } else {
       generalStore.statusMessage = '设置校验失败，请检查 API 密钥。'

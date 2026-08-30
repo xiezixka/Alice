@@ -247,7 +247,7 @@
             <span class="label-text">Groq API 密钥</span>
           </label>
           <div class="text-sm text-base-content/70 mb-2">
-            Get your key from the
+            请前往
             <a
               href="https://console.groq.com/keys"
               target="_blank"
@@ -268,7 +268,7 @@
             <span class="label-text">Google API 密钥</span>
           </label>
           <div class="text-sm text-base-content/70 mb-2">
-            Required for Google Cloud Speech-to-Text.
+            此密钥用于 Google Cloud 语音识别。
           </div>
           <input
             type="password"

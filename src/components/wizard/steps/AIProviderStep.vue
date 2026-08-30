@@ -126,7 +126,7 @@
           <span class="label-text">OpenRouter API 密钥</span>
         </label>
         <div class="text-sm text-base-content/70 mb-2">
-          Get your key from the
+          请前往
           <a href="https://openrouter.ai/keys" target="_blank" class="link"
             >OpenRouter 平台</a
           >

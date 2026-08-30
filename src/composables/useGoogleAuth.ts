@@ -45,7 +45,7 @@ export function useGoogleAuth() {
       if (result.success) googleAuthStatus.message = result.message
       else {
         googleAuthStatus.error =
-          result.error || 'Failed to start Google authentication.'
+          result.error || '无法启动 Google 授权。'
         googleAuthStatus.authInProgress = false
       }
     } catch (e: any) {
@@ -70,7 +70,7 @@ export function useGoogleAuth() {
         googleAuthStatus.message = result.message
       } else {
         googleAuthStatus.error =
-          result.error || 'Failed to disconnect from Google.'
+          result.error || '无法断开 Google 连接。'
         googleAuthStatus.message = null
       }
     } catch (e: any) {

@@ -908,6 +908,7 @@ const emit = defineEmits<{
     key: keyof AliceSettings,
     value: string | boolean | number | string[],
   ]
+  'persist-settings': []
 }>()
 
 const serviceStatus = ref<{
@@ -1152,6 +1153,10 @@ const enableBackgroundWake = async () => {
     emit('update:setting', 'backgroundListeningEnabled', true)
     microphoneCheckResult.value =
       '麦克风已授权；后台唤醒已开启，Alice 将在托盘中等待唤醒词。'
+    // The enable button is an explicit action rather than a form field. Save
+    // its state immediately so closing the settings window cannot silently
+    // discard a successfully prepared background session.
+    emit('persist-settings')
   } finally {
     isEnablingBackgroundWake.value = false
   }

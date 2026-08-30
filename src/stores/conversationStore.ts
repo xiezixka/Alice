@@ -30,7 +30,7 @@ import type { ChatDependencies } from '../modules/conversation/chatOrchestrator'
 import type { AppChatMessageContentPart, ChatMessage } from '../types/chat'
 
 function parseErrorMessage(error: any): AppChatMessageContentPart {
-  let errorMessage = error.message || 'Unknown error occurred'
+  let errorMessage = error.message || '发生未知错误'
   let errorType = 'unknown_error'
   let errorCode = null
   let errorParam = null
