@@ -39,6 +39,9 @@ export interface DesktopObservationContext {
   readonly screenFingerprint?: string
 }
 
+/** Short alias for integrations that use the generic observation wording. */
+export type ObservationContext = DesktopObservationContext
+
 /** The normalized, non-sensitive context values kept by the registry. */
 export interface DesktopObservationFingerprints {
   readonly windowFingerprint: string
@@ -53,6 +56,8 @@ export interface DesktopObservation {
   readonly windowFingerprint: string
   readonly screenFingerprint: string
 }
+
+export type ObservationToken = DesktopObservation
 
 export interface CreateObservationOptions {
   /** Override the default 30-second lifetime for this observation. */
@@ -98,6 +103,8 @@ export interface InvalidObservationResult {
 
 export type ObservationValidationResult =
   ValidObservationResult | InvalidObservationResult
+
+export type ObservationValidation = ObservationValidationResult
 
 /**
  * Request form accepted by the convenience validateObservation wrapper.
@@ -330,8 +337,6 @@ export function getObservationFingerprints(
 /** Backwards-friendly alias for callers that prefer a verb phrase. */
 export const fingerprintObservationContext = getObservationFingerprints
 
-let fallbackIdCounter = 0
-
 function defaultIdFactory(): string {
   const cryptoObject = globalThis.crypto
   if (cryptoObject && typeof cryptoObject.randomUUID === 'function') {
@@ -347,10 +352,13 @@ function defaultIdFactory(): string {
     return `obs_${randomPart}`
   }
 
-  // This branch is only a last-resort compatibility fallback for old hosts;
-  // modern Electron and browsers provide Web Crypto above.
-  fallbackIdCounter = (fallbackIdCounter + 1) % Number.MAX_SAFE_INTEGER
-  return `obs_${Date.now().toString(36)}_${fallbackIdCounter.toString(36)}_${Math.random().toString(36).slice(2)}`
+  // Do not silently fall back to Math.random: the observation ID is a
+  // capability and must not become guessable on a degraded host.  Electron
+  // 43/Chromium and supported Node versions expose Web Crypto; test hosts can
+  // inject a deterministic idFactory through DesktopObservationStoreOptions.
+  throw new InvalidDesktopObservationOptionsError(
+    'secure random number generation is unavailable; provide idFactory or enable Web Crypto'
+  )
 }
 
 function cloneObservation(record: DesktopObservation): DesktopObservation {
@@ -486,6 +494,14 @@ export class DesktopObservationStore {
     return cloneObservation(record)
   }
 
+  /** Explicit method name for class consumers mirroring the module wrapper. */
+  createObservation(
+    context: DesktopObservationContext,
+    options: CreateObservationOptions = {}
+  ): DesktopObservation {
+    return this.create(context, options)
+  }
+
   validate(
     value: string | Pick<DesktopObservation, 'observationId'>,
     context: DesktopObservationContext,
@@ -527,12 +543,36 @@ export class DesktopObservationStore {
     return { valid: true, observationId, observation }
   }
 
+  /** Explicit method name for class consumers mirroring the module wrapper. */
+  validateObservation(
+    value: string | Pick<DesktopObservation, 'observationId'>,
+    context: DesktopObservationContext,
+    options: ValidateObservationOptions = {}
+  ): ObservationValidationResult {
+    return this.validate(value, context, options)
+  }
+
   invalidate(
     value: string | Pick<DesktopObservation, 'observationId'>
   ): boolean {
     const observationId = extractObservationId(value)
     if (!observationId) return false
     return this.records.delete(observationId)
+  }
+
+  /** Explicit method name for class consumers mirroring the module wrapper. */
+  invalidateObservation(
+    value: string | Pick<DesktopObservation, 'observationId'>
+  ): boolean {
+    return this.invalidate(value)
+  }
+
+  /** Prune expired records and return the number removed. */
+  pruneExpired(at?: number): number {
+    const now = at === undefined ? this.now() : assertFiniteTimestamp(at, 'at')
+    const before = this.records.size
+    this.cleanupExpired(now)
+    return before - this.records.size
   }
 
   /** Remove all records, useful when the host loses its desktop session. */
