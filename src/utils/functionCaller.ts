@@ -828,10 +828,21 @@ export async function executeFunction(
   // disabled a tool, or a provider may return a call that was not advertised
   // in the request. Known predefined tools therefore fail closed here;
   // custom tools are checked against their own enabled/valid state below.
-  // The production conversation and Codex bridges pass the current settings
-  // snapshot. Direct legacy callers that omit it retain their old behavior;
-  // there is no policy object to evaluate in that embedded context.
-  if (!isAssistantToolEnabled(name, settings)) {
+  let effectiveSettings = settings
+  if (!effectiveSettings) {
+    try {
+      // Resolve lazily so functionCaller does not introduce a static cycle:
+      // settingsStore imports conversationStore, which in turn imports this
+      // module for tool execution. Legacy/direct callers still get the same
+      // execution-time policy as the normal conversation bridge.
+      const { useSettingsStore } = await import('../stores/settingsStore')
+      effectiveSettings = useSettingsStore().config
+    } catch {
+      // Embedded callers without Pinia have no policy snapshot to evaluate.
+      effectiveSettings = undefined
+    }
+  }
+  if (!isAssistantToolEnabled(name, effectiveSettings)) {
     return `Error executing ${name}: 工具当前未启用，请先在助手设置中启用后重试。`
   }
 
