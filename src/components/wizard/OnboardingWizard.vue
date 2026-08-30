@@ -354,7 +354,7 @@ const fetchAvailableModels = async () => {
 
 const testOpenAIKey = async () => {
   if (!formData.VITE_OPENAI_API_KEY.trim()) {
-    testResult.openai.error = 'API Key cannot be empty.'
+    testResult.openai.error = 'API 密钥不能为空。'
     testResult.openai.success = false
     return
   }
@@ -367,11 +367,11 @@ const testOpenAIKey = async () => {
     await listOpenAIModelsForConfig(formData.VITE_OPENAI_API_KEY)
     testResult.openai.success = true
   } catch (e: any) {
-    testResult.openai.error = 'API Key is invalid or has no permissions.'
+    testResult.openai.error = 'API 密钥无效或没有所需权限。'
     if (e.message?.includes('401')) {
-      testResult.openai.error = 'Invalid API key - please check your key.'
+      testResult.openai.error = 'API 密钥无效，请检查后重试。'
     } else if (e.message?.includes('429')) {
-      testResult.openai.error = 'Rate limit exceeded - please try again later.'
+      testResult.openai.error = '请求过于频繁，请稍后重试。'
     }
   } finally {
     isTesting.openai = false
@@ -380,7 +380,7 @@ const testOpenAIKey = async () => {
 
 const testOpenRouterKey = async () => {
   if (!formData.VITE_OPENROUTER_API_KEY.trim()) {
-    testResult.openrouter.error = 'API Key cannot be empty.'
+    testResult.openrouter.error = 'API 密钥不能为空。'
     testResult.openrouter.success = false
     return
   }
@@ -393,12 +393,12 @@ const testOpenRouterKey = async () => {
     await listOpenRouterModelsForConfig(formData.VITE_OPENROUTER_API_KEY)
     testResult.openrouter.success = true
   } catch (e: any) {
-    testResult.openrouter.error = 'API Key is invalid or has no permissions.'
+    testResult.openrouter.error = 'API 密钥无效或没有所需权限。'
     if (e.message?.includes('401')) {
-      testResult.openrouter.error = 'Invalid API key - please check your key.'
+      testResult.openrouter.error = 'API 密钥无效，请检查后重试。'
     } else if (e.message?.includes('429')) {
       testResult.openrouter.error =
-        'Rate limit exceeded - please try again later.'
+        '请求过于频繁，请稍后重试。'
     }
   } finally {
     isTesting.openrouter = false
@@ -407,12 +407,12 @@ const testOpenRouterKey = async () => {
 
 const testZAIKey = async () => {
   if (!formData.VITE_ZAI_API_KEY.trim()) {
-    testResult.zai.error = 'API Key cannot be empty.'
+    testResult.zai.error = 'API 密钥不能为空。'
     testResult.zai.success = false
     return
   }
   if (!formData.zaiBaseUrl.trim()) {
-    testResult.zai.error = 'Base URL cannot be empty.'
+    testResult.zai.error = '基础地址不能为空。'
     testResult.zai.success = false
     return
   }
@@ -426,11 +426,11 @@ const testZAIKey = async () => {
     testResult.zai.success = true
   } catch (e: any) {
     testResult.zai.error =
-      'API key or Coding Plan endpoint is invalid or has no permissions.'
+      'API 密钥或编程套餐地址无效，或没有所需权限。'
     if (e.message?.includes('401')) {
-      testResult.zai.error = 'Invalid API key - please check your key.'
+      testResult.zai.error = 'API 密钥无效，请检查后重试。'
     } else if (e.message?.includes('429')) {
-      testResult.zai.error = 'Rate limit exceeded - please try again later.'
+      testResult.zai.error = '请求过于频繁，请稍后重试。'
     }
   } finally {
     isTesting.zai = false
@@ -439,12 +439,12 @@ const testZAIKey = async () => {
 
 const testMiniMaxKey = async () => {
   if (!formData.VITE_MINIMAX_API_KEY.trim()) {
-    testResult.minimax.error = 'API Key cannot be empty.'
+    testResult.minimax.error = 'API 密钥不能为空。'
     testResult.minimax.success = false
     return
   }
   if (!formData.minimaxBaseUrl.trim()) {
-    testResult.minimax.error = 'Base URL cannot be empty.'
+    testResult.minimax.error = '基础地址不能为空。'
     testResult.minimax.success = false
     return
   }
@@ -458,11 +458,11 @@ const testMiniMaxKey = async () => {
     testResult.minimax.success = true
   } catch (e: any) {
     testResult.minimax.error =
-      'API key or OpenAI-compatible endpoint is invalid or has no permissions.'
+      'API 密钥或 OpenAI 兼容地址无效，或没有所需权限。'
     if (e.message?.includes('401')) {
-      testResult.minimax.error = 'Invalid API key - please check your key.'
+      testResult.minimax.error = 'API 密钥无效，请检查后重试。'
     } else if (e.message?.includes('429')) {
-      testResult.minimax.error = 'Rate limit exceeded - please try again later.'
+      testResult.minimax.error = '请求过于频繁，请稍后重试。'
     }
   } finally {
     isTesting.minimax = false
@@ -471,12 +471,12 @@ const testMiniMaxKey = async () => {
 
 const testDeepSeekKey = async () => {
   if (!formData.VITE_DEEPSEEK_API_KEY.trim()) {
-    testResult.deepseek.error = 'API Key cannot be empty.'
+    testResult.deepseek.error = 'API 密钥不能为空。'
     testResult.deepseek.success = false
     return
   }
   if (!formData.deepseekBaseUrl.trim()) {
-    testResult.deepseek.error = 'Base URL cannot be empty.'
+    testResult.deepseek.error = '基础地址不能为空。'
     testResult.deepseek.success = false
     return
   }
@@ -490,12 +490,12 @@ const testDeepSeekKey = async () => {
     testResult.deepseek.success = true
   } catch (e: any) {
     testResult.deepseek.error =
-      'API key or OpenAI-compatible endpoint is invalid or has no permissions.'
+      'API 密钥或 OpenAI 兼容地址无效，或没有所需权限。'
     if (e.message?.includes('401')) {
-      testResult.deepseek.error = 'Invalid API key - please check your key.'
+      testResult.deepseek.error = 'API 密钥无效，请检查后重试。'
     } else if (e.message?.includes('429')) {
       testResult.deepseek.error =
-        'Rate limit exceeded - please try again later.'
+        '请求过于频繁，请稍后重试。'
     }
   } finally {
     isTesting.deepseek = false
@@ -506,11 +506,11 @@ const syncCodexStatus = async () => {
   const status = await window.aliceIPC.invoke('codex-auth:status')
   const connected = Boolean(status?.connected)
   formData.codexAuthConnected = connected
-  formData.codexAccountLabel = connected ? status.accountLabel || 'Connected' : ''
+  formData.codexAccountLabel = connected ? status.accountLabel || '已连接' : ''
   testResult.codex.success = connected
   testResult.codex.error = connected
     ? ''
-    : status?.error || 'ChatGPT Codex is not connected.'
+    : status?.error || 'ChatGPT Codex 尚未连接。'
 
   if (connected) {
     await fetchAvailableModels()
@@ -532,15 +532,15 @@ const testCodexAuth = async () => {
     const result = await window.aliceIPC.invoke('codex-auth:start-login')
     if (!result?.success) {
       testResult.codex.error =
-        result?.error || 'Failed to start ChatGPT Codex authorization.'
+        result?.error || '无法启动 ChatGPT Codex 授权。'
       return
     }
 
     testResult.codex.error =
-      'Browser authorization opened. Finish it, then return to Alice.'
+      '浏览器授权页面已打开，请完成授权后返回 Alice。'
   } catch (e: any) {
     testResult.codex.error =
-      'ChatGPT Codex authorization failed: ' + (e.message || String(e))
+      'ChatGPT Codex 授权失败：' + (e.message || String(e))
   } finally {
     isTesting.codex = false
   }
@@ -549,11 +549,11 @@ const testCodexAuth = async () => {
 function handleCodexStatus(status: any) {
   const connected = Boolean(status?.connected)
   formData.codexAuthConnected = connected
-  formData.codexAccountLabel = connected ? status.accountLabel || 'Connected' : ''
+  formData.codexAccountLabel = connected ? status.accountLabel || '已连接' : ''
   testResult.codex.success = connected
   testResult.codex.error = connected
     ? ''
-    : status?.error || 'ChatGPT Codex is not connected.'
+    : status?.error || 'ChatGPT Codex 尚未连接。'
   if (connected && formData.aiProvider === 'codex') {
     void fetchAvailableModels()
   }
@@ -563,7 +563,7 @@ function handleCodexLogin(payload: any) {
   if (payload?.success === false) {
     testResult.codex.success = false
     testResult.codex.error =
-      payload?.error || 'ChatGPT Codex authorization failed.'
+      payload?.error || 'ChatGPT Codex 授权失败。'
     return
   }
   void syncCodexStatus()
@@ -571,7 +571,7 @@ function handleCodexLogin(payload: any) {
 
 const testOllamaConnection = async () => {
   if (!formData.ollamaBaseUrl.trim()) {
-    testResult.ollama.error = 'Ollama Base URL cannot be empty.'
+    testResult.ollama.error = 'Ollama 基础地址不能为空。'
     testResult.ollama.success = false
     return
   }
@@ -594,13 +594,13 @@ const testOllamaConnection = async () => {
     await fetchAvailableModels()
   } catch (e: any) {
     testResult.ollama.error =
-      'Connection failed - check if Ollama is running and accessible.'
+      '连接失败，请确认 Ollama 已启动且地址可访问。'
     if (e.message?.includes('NetworkError') || e.message?.includes('fetch')) {
       testResult.ollama.error =
-        'Cannot reach Ollama server - is it running on this URL?'
+        '无法连接 Ollama 服务，请确认它正在此地址运行。'
     } else if (e.message?.includes('timeout')) {
       testResult.ollama.error =
-        'Connection timeout - Ollama may be starting up.'
+        '连接超时，Ollama 可能仍在启动。'
     }
   } finally {
     isTesting.ollama = false
@@ -609,7 +609,7 @@ const testOllamaConnection = async () => {
 
 const testLMStudioConnection = async () => {
   if (!formData.lmStudioBaseUrl.trim()) {
-    testResult.lmStudio.error = 'LM Studio Base URL cannot be empty.'
+    testResult.lmStudio.error = 'LM Studio 基础地址不能为空。'
     testResult.lmStudio.success = false
     return
   }
@@ -632,13 +632,13 @@ const testLMStudioConnection = async () => {
     await fetchAvailableModels()
   } catch (e: any) {
     testResult.lmStudio.error =
-      'Connection failed - check if LM Studio server is running and accessible.'
+      '连接失败，请确认 LM Studio 已启动且地址可访问。'
     if (e.message?.includes('NetworkError') || e.message?.includes('fetch')) {
       testResult.lmStudio.error =
-        'Cannot reach LM Studio server - is it running on this URL?'
+        '无法连接 LM Studio 服务，请确认它正在此地址运行。'
     } else if (e.message?.includes('timeout')) {
       testResult.lmStudio.error =
-        'Connection timeout - LM Studio may be starting up.'
+        '连接超时，LM Studio 可能仍在启动。'
     }
   } finally {
     isTesting.lmStudio = false

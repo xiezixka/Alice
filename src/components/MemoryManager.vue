@@ -148,7 +148,7 @@ async function fetchMemories() {
       listError.value = result.error || '获取记忆失败。'
     }
   } catch (error: any) {
-    listError.value = `Error: ${error.message}`
+    listError.value = `错误：${error.message}`
   } finally {
     isLoading.value = false
   }
@@ -223,7 +223,7 @@ async function handleSaveMemory() {
       formError.value = result.error || '保存记忆失败。'
     }
   } catch (error: any) {
-    formError.value = `Error: ${error.message}`
+    formError.value = `错误：${error.message}`
   } finally {
     isSaving.value = false
   }
@@ -266,7 +266,7 @@ async function confirmDeleteMemory(id: string) {
         listError.value = result.error || '删除记忆失败。'
       }
     } catch (error: any) {
-      listError.value = `Error: ${error.message}`
+      listError.value = `错误：${error.message}`
     } finally {
       isLoading.value = false
     }
@@ -289,7 +289,7 @@ async function confirmDeleteAllMemories() {
         listError.value = result.error || '删除全部记忆失败。'
       }
     } catch (error: any) {
-      listError.value = `Error: ${error.message}`
+      listError.value = `错误：${error.message}`
     } finally {
       isLoading.value = false
     }
@@ -297,7 +297,7 @@ async function confirmDeleteAllMemories() {
 }
 
 function formatDate(dateString: string) {
-  if (!dateString) return 'N/A'
+  if (!dateString) return '暂无'
   try {
     return new Date(dateString).toLocaleString()
   } catch (e) {

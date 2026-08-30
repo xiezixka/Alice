@@ -667,7 +667,7 @@
                     v-for="voice in voices"
                     :key="voice.name"
                     :value="voice.name"
-                    :title="`${voice.description} | Quality: ${getVoiceQuality(voice.name)} | Gender: ${voice.gender || 'Unknown'}`"
+                    :title="`${voice.description} | 质量：${getVoiceQuality(voice.name)} | 性别：${voice.gender || '未知'}`"
                   >
                     {{ getVoiceDisplayName(voice) }}
                   </option>
@@ -1518,19 +1518,19 @@ const indexRagPaths = async (paths: string[]) => {
   const normalizedPaths = Array.from(paths || []).map(String)
   if (normalizedPaths.length === 0) return
   isIndexingRag.value = true
-  ragStatusMessage.value = 'Indexing...'
+  ragStatusMessage.value = '正在建立索引…'
   try {
     const result = await window.aliceIPC.invoke('rag:index-paths', {
       paths: normalizedPaths,
       recursive: true,
     })
     if (result.success && result.data) {
-      ragStatusMessage.value = `Indexed ${result.data.indexed}, skipped ${result.data.skipped}`
+      ragStatusMessage.value = `已建立 ${result.data.indexed} 个，跳过 ${result.data.skipped} 个`
     } else {
-      ragStatusMessage.value = result.error || 'Indexing failed'
+      ragStatusMessage.value = result.error || '建立索引失败'
     }
   } catch (error) {
-    ragStatusMessage.value = 'Indexing failed'
+    ragStatusMessage.value = '建立索引失败'
   } finally {
     isIndexingRag.value = false
     await refreshRagStats()
@@ -1543,12 +1543,12 @@ const reindexRag = async () => {
 
 const clearRagIndex = async () => {
   isIndexingRag.value = true
-  ragStatusMessage.value = 'Clearing index...'
+  ragStatusMessage.value = '正在清空索引…'
   try {
     await window.aliceIPC.invoke('rag:clear')
-    ragStatusMessage.value = 'Index cleared'
+    ragStatusMessage.value = '索引已清空'
   } catch (error) {
-    ragStatusMessage.value = 'Failed to clear index'
+    ragStatusMessage.value = '清空索引失败'
   } finally {
     isIndexingRag.value = false
     await refreshRagStats()
@@ -1565,18 +1565,18 @@ const removeRagPath = (pathItem: string) => {
 
 const removeRagDocuments = async (pathItem: string) => {
   isIndexingRag.value = true
-  ragStatusMessage.value = 'Removing documents...'
+  ragStatusMessage.value = '正在移除文档…'
   try {
     const result = await window.aliceIPC.invoke('rag:remove-paths', {
       paths: [pathItem],
     })
     if (result.success && result.data) {
-      ragStatusMessage.value = `Removed ${result.data.removed} documents`
+      ragStatusMessage.value = `已移除 ${result.data.removed} 个文档`
     } else {
-      ragStatusMessage.value = result.error || 'Failed to remove documents'
+      ragStatusMessage.value = result.error || '移除文档失败'
     }
   } catch (error) {
-    ragStatusMessage.value = 'Failed to remove documents'
+    ragStatusMessage.value = '移除文档失败'
   } finally {
     isIndexingRag.value = false
     await refreshRagStats()
