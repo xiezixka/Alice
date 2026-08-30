@@ -47,6 +47,31 @@ The GitHub Actions build and PR workflows run this check automatically. It
 rejects missing, empty, or mis-versioned installer files before they are
 uploaded as downloadable artifacts.
 
+### macOS 原生语音资源检查
+
+打包前可以单独检查随安装包带入的 FFmpeg、Whisper 和 Piper 资源：
+
+```bash
+# 警告模式：发现历史缓存或架构问题时给出明确提示，但不阻断本地开发
+npm run verify:native -- macos
+
+# 发布前严格模式：缺失、架构不匹配或链接到 Homebrew 的资源会失败
+npm run verify:native:strict -- macos
+```
+
+当前仓库的旧版构建脚本仍会从 Evermeet 下载 macOS FFmpeg；该下载是
+x86_64，不能在 Apple Silicon 上原生运行。检查器会把这种情况标为
+“架构不匹配”，不会再让它悄悄通过发布验收。macOS ARM 版 Piper 目前是
+调用系统 Python 的脚本包装器，不是自包含的原生可执行文件；首次使用本地
+TTS 可能需要先安装 Python `piper-tts`。这两项限制在找到经过许可证、依赖和
+架构三重核验的固定版本前都应保留在发布说明中。
+
+开发机临时使用语音转写时，可按 Homebrew 官方方式安装 FFmpeg（例如
+`brew install ffmpeg`），并确认 `~/.local/bin` 与系统 PATH 顺序；但不要把
+Homebrew 的动态库路径直接打进交付安装包。正式发布必须使用固定版本、带
+SHA-256 校验且只依赖 macOS 系统库的 ARM64/Universal 构建，并在严格模式
+通过后再上传产物。
+
 # AI Provider Setup
 
 Alice supports OpenAI, OpenRouter, DeepSeek, MiniMax, Z.ai, and local LLM inference.

@@ -53,17 +53,6 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ matrix.goos }}-${{ matrix.goarch }}-${{ hashFiles('backend/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ matrix.goos }}-${{ matrix.goarch }}-
-            ${{ runner.os }}-go-
-
       - name: Install system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |

@@ -236,6 +236,14 @@ and speech output; the release commands intentionally stop early on a
 different OS instead of producing an installer with broken voice features.
 GitHub Actions builds the three native installers on macOS, Windows and Linux.
 
+在 macOS 上发布前还应执行 `npm run verify:native:strict -- macos`。它会检查
+FFmpeg/Whisper 的架构，并拒绝链接到开发机 Homebrew 路径的二进制；警告模式
+`npm run verify:native -- macos` 适合日常开发。当前旧版 FFmpeg 下载源只提供
+x86_64，Apple Silicon 构建会明确报告架构不匹配；ARM Piper 仍是依赖系统
+Python 的包装脚本。临时开发可按需 `brew install ffmpeg`，但正式安装包不能
+依赖用户机器上的 Homebrew 动态库，需换成经过许可证、依赖和 SHA-256 核验的
+固定 ARM64/Universal 资源后再发布。
+
 ## 🤝 Contributing
 
 Ideas, bug reports, feature requests - all welcome! Open an issue or PR, or drop by to share your thoughts. Your input helps shape Alice into something wonderful 💚

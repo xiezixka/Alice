@@ -65,16 +65,6 @@ jobs:
           go-version: '1.23'
           cache-dependency-path: backend/go.sum
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
       - name: Verify Go installation
         run: |
           which go
