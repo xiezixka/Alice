@@ -116,6 +116,8 @@ export interface DesktopReplyResponse {
   success: boolean
   action?: 'reply_message'
   recipient?: string
+  /** Whether the reply body was typed before the send step completed. */
+  typed?: boolean
   sent?: boolean
   targetApp?: string
   targetWindowTitle?: string
