@@ -197,23 +197,52 @@
   display: none;
 }
 
-.actions-bar--capsule:not(.actions-bar--mini) .inside-actions--utility {
-  top: 8px !important;
-  right: auto;
-  bottom: auto;
-  left: 14px;
-  width: auto;
-  gap: 4px;
-  padding: 0;
-  justify-content: flex-start;
+.inside-actions--utility,
+.inside-actions--menu {
+  box-sizing: border-box;
+  height: 40px !important;
+  min-height: 40px !important;
 }
 
-.actions-bar--capsule:not(.actions-bar--mini) .inside-actions--menu {
-  top: 8px !important;
+/* These overlays are siblings of the action rail (not descendants of it),
+ * so scope their capsule placement from the shell. Keeping their hit areas
+ * compact prevents an invisible layer from intercepting the main controls. */
+.assistant-shell--capsule:not(.assistant-shell--mini) .inside-actions--utility {
+  top: auto !important;
+  right: 14px;
+  bottom: 8px;
+  left: 14px;
+  width: calc(100% - 28px) !important;
+  gap: 4px;
+  padding: 0;
+  justify-content: space-between;
+}
+
+.assistant-shell--capsule:not(.assistant-shell--mini) .inside-actions--menu {
+  top: 58px !important;
   right: 16px;
+  bottom: auto;
   left: auto;
-  width: auto;
-  justify-content: flex-end;
+  width: 40px !important;
+  justify-content: center;
+}
+
+.assistant-shell--mini .inside-actions--utility {
+  top: 80px !important;
+  right: 8px;
+  bottom: auto;
+  left: 8px;
+  width: calc(100% - 16px) !important;
+  justify-content: space-between;
+}
+
+.assistant-shell--mini .inside-actions--menu {
+  top: 8px !important;
+  right: 0;
+  bottom: auto;
+  left: 0;
+  width: 100% !important;
+  justify-content: center;
 }
 
 @keyframes capsule-wave-pulse {
@@ -357,7 +386,7 @@
     max-width: 96px;
   }
 
-  .actions-bar--capsule:not(.actions-bar--mini) .inside-actions--menu {
+  .assistant-shell--capsule:not(.assistant-shell--mini) .inside-actions--menu {
     right: 10px;
   }
 }
