@@ -456,7 +456,7 @@
                 !currentSettings.localSttEnabled ||
                 !currentSettings.localSttWakeWord?.trim()
               "
-              @change="e => emitCheckboxChange('backgroundListeningEnabled', e)"
+              @change="handleBackgroundListeningToggle"
             />
           </div>
           <div
@@ -1160,6 +1160,24 @@ const enableBackgroundWake = async () => {
   } finally {
     isEnablingBackgroundWake.value = false
   }
+}
+
+const handleBackgroundListeningToggle = async (event: Event) => {
+  const checked = (event.target as HTMLInputElement).checked
+
+  if (checked) {
+    // Route the direct toggle through the same permission/device check as the
+    // explicit "启用后台唤醒" button. This avoids persisting a misleading
+    // enabled state when the OS denies access or no input device is present.
+    await enableBackgroundWake()
+    return
+  }
+
+  emit('update:setting', 'backgroundListeningEnabled', false)
+  microphoneCheckResult.value = '后台唤醒已关闭，Alice 不会继续占用麦克风。'
+  // Persist the opt-out immediately so the tray and login-start path stop the
+  // background session even if the settings window is closed right away.
+  emit('persist-settings')
 }
 
 type SystemPermissionTarget =
