@@ -26,12 +26,21 @@ function convertResponsesInputToChatMessages(
               }
 
               if (part.type === 'input_image' && part.image_url) {
+                // Responses puts `detail` on the input_image part, while the
+                // Chat Completions wire format nests it inside image_url.
+                // Preserve it when translating so DeepSeek Vision receives
+                // the requested low/high/original processing mode instead of
+                // silently falling back to the provider default.
+                const imageUrl =
+                  typeof part.image_url === 'string'
+                    ? { url: part.image_url }
+                    : { ...part.image_url }
+                if (part.detail && imageUrl.detail === undefined) {
+                  imageUrl.detail = part.detail
+                }
                 return {
                   type: 'image_url',
-                  image_url:
-                    typeof part.image_url === 'string'
-                      ? { url: part.image_url }
-                      : part.image_url,
+                  image_url: imageUrl,
                 }
               }
 

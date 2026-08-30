@@ -1,8 +1,6 @@
 <template>
   <div class="space-y-6">
-    <h3 class="text-xl font-semibold mb-4 text-red-400">
-      安全与命令权限
-    </h3>
+    <h3 class="text-xl font-semibold mb-4 text-red-400">安全与命令权限</h3>
 
     <fieldset
       class="fieldset bg-gray-900/90 border-red-500/50 rounded-box w-full border p-4"
@@ -10,7 +8,8 @@
       <legend class="fieldset-legend">已批准的命令</legend>
       <div class="p-2 space-y-4">
         <div class="text-sm text-gray-300 mb-4">
-          这些命令可由 Alice 直接执行，无需再次批准。“本次会话允许”的命令仅在当前会话中有效。
+          这些命令通常可由 Alice
+          直接执行，无需再次批准；包含管道、分隔符、重定向或命令替换的组合命令仍会逐次确认。“本次会话允许”的命令仅在当前会话中有效。
         </div>
 
         <div class="overflow-x-auto">
@@ -47,9 +46,7 @@
                   <span class="badge badge-info badge-sm">会话</span>
                 </td>
                 <td>
-                  <span class="text-xs text-gray-500"
-                    >重启后自动移除</span
-                  >
+                  <span class="text-xs text-gray-500">重启后自动移除</span>
                 </td>
               </tr>
             </tbody>

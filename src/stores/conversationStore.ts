@@ -845,7 +845,7 @@ export const useConversationStore = defineStore('conversation', () => {
     if (typeof message === 'function') {
       return message(args)
     }
-    return message || `⚙️ Using tool: ${toolName}...`
+    return message || `⚙️ 正在使用工具：${toolName}…`
   }
 
   function getCompletionMessage(functionName: string): string {

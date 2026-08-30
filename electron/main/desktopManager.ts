@@ -42,11 +42,20 @@ import {
 } from './desktopCoordinates'
 import { selectPrimaryCaptureSource } from './desktopCaptureSelection'
 import { sameForegroundContext as foregroundContextsMatch } from './foregroundContext'
+import { loadSettings, saveSettings } from './settingsManager'
 import {
   matchesDesktopReplyContext,
   parseDesktopReplyRequest,
   type NormalizedDesktopReplyRequest,
 } from '../../src/utils/desktopReply'
+import {
+  commandNameKey,
+  hasShellOperators,
+  isCommandNameApproved,
+  normalizeApprovedCommandNames,
+  normalizeCommandName,
+  type CommandApprovalScope,
+} from '../../src/utils/commandApproval'
 
 const execFileAsync = promisify(execFile)
 
@@ -159,6 +168,8 @@ class DesktopManager {
     string,
     ObservationFrameMetadata
   >()
+  /** Command grants that last until Alice exits.  Never persisted. */
+  private readonly sessionApprovedCommands = new Set<string>()
 
   constructor() {
     if (DesktopManager.instance) {
@@ -1101,52 +1112,107 @@ class DesktopManager {
           return { success: false, error: '命令长度超过限制。' }
         }
 
-        const commandPreview =
-          command.length > 4_000
-            ? `${command.slice(0, 4_000)}\n\n[Command preview truncated]`
-            : command
+        const normalizedCommand = command.trim()
+        const commandName = normalizeCommandName(normalizedCommand)
+        if (!commandName) {
+          return { success: false, error: '无法识别要执行的命令名称。' }
+        }
 
-        const owner = BrowserWindow.fromWebContents(event.sender)
-        const confirmation = owner
-          ? await dialog.showMessageBox(owner, {
-              type: 'warning',
-              buttons: ['取消', '仅运行一次'],
-              defaultId: 0,
-              cancelId: 0,
-              noLink: true,
-              title: '确认执行命令',
-              message: 'Alice 请求在这台电脑上执行一条命令。',
-              detail: commandPreview,
-            })
-          : await dialog.showMessageBox({
-              type: 'warning',
-              buttons: ['取消', '仅运行一次'],
-              defaultId: 0,
-              cancelId: 0,
-              noLink: true,
-              title: '确认执行命令',
-              message: 'Alice 请求在这台电脑上执行一条命令。',
-              detail: commandPreview,
-            })
+        const settings = await loadSettings()
+        const permanentlyApproved = isCommandNameApproved(
+          commandName,
+          settings?.approvedCommands
+        )
+        const sessionApproved = this.sessionApprovedCommands.has(
+          commandNameKey(commandName)
+        )
+        const shellComposed = hasShellOperators(normalizedCommand)
+        const storedApproval =
+          !shellComposed && (permanentlyApproved || sessionApproved)
+        let approvalScope: CommandApprovalScope = permanentlyApproved
+          ? 'permanent'
+          : sessionApproved
+            ? 'session'
+            : 'once'
 
-        if (confirmation.response !== 1) {
-          return { success: false, error: '用户拒绝执行命令。' }
+        // A command-name grant is deliberately insufficient for shell
+        // composition (`;`, pipes, redirection, substitution, etc.).  Those
+        // commands always show the full confirmation dialog so an approved
+        // `ls` cannot silently become `ls; rm -rf …`.
+        if (!storedApproval) {
+          const commandPreview =
+            normalizedCommand.length > 4_000
+              ? `${normalizedCommand.slice(0, 4_000)}\n\n[命令预览已截断]`
+              : normalizedCommand
+          const detail = [
+            commandPreview,
+            `命令名：${commandName}`,
+            shellComposed
+              ? '检测到组合命令或重定向；仅支持本次确认，不会保存长期批准。'
+              : '可选择本次、当前会话或永久允许该命令名。',
+          ].join('\n\n')
+          const owner = BrowserWindow.fromWebContents(event.sender)
+          const options = {
+            type: 'warning' as const,
+            buttons: shellComposed
+              ? ['取消', '仅运行一次']
+              : ['取消', '仅运行一次', '本次会话允许', '始终允许此命令'],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true,
+            title: '确认执行命令',
+            message: 'Alice 请求在这台电脑上执行一条命令。',
+            detail,
+          }
+          const confirmation = owner
+            ? await dialog.showMessageBox(owner, options)
+            : await dialog.showMessageBox(options)
+
+          if (confirmation.response === 0) {
+            return { success: false, error: '用户拒绝执行命令。' }
+          }
+          if (confirmation.response === 1) {
+            approvalScope = 'once'
+          } else if (!shellComposed && confirmation.response === 2) {
+            approvalScope = 'session'
+            this.sessionApprovedCommands.add(commandNameKey(commandName))
+          } else if (!shellComposed && confirmation.response === 3) {
+            approvalScope = 'permanent'
+            try {
+              await this.persistPermanentCommandApproval(commandName, settings)
+            } catch (error) {
+              return {
+                success: false,
+                error: `无法保存“${commandName}”的永久批准，命令未执行：${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+              }
+            }
+          } else {
+            return { success: false, error: '用户拒绝执行命令。' }
+          }
+
+          this.notifyCommandApproval(event, commandName, approvalScope)
         }
 
         return new Promise(resolve => {
           exec(
-            command,
+            normalizedCommand,
             { timeout: 60_000, maxBuffer: 1024 * 1024 },
             (error, stdout, stderr) => {
               if (error) {
                 resolve({
                   success: false,
+                  commandName,
+                  approvalScope,
                   error: stderr ? `${error.message}\n${stderr}` : error.message,
                 })
                 return
               }
               resolve({
                 success: true,
+                commandName,
+                approvalScope,
                 output: stderr ? `${stdout}${stderr}` : stdout,
               })
             }
@@ -1834,6 +1900,55 @@ $handleText = if ($handle -ne [IntPtr]::Zero) { $handle.ToInt64().ToString() } e
       this.screenCaptureApprovedForSession = true
     }
     return { success: true }
+  }
+
+  /** Persist a command-name grant without ever storing the full command text. */
+  private async persistPermanentCommandApproval(
+    commandName: string,
+    settings: Awaited<ReturnType<typeof loadSettings>>
+  ): Promise<void> {
+    const approvedCommands = normalizeApprovedCommandNames([
+      ...(Array.isArray(settings?.approvedCommands)
+        ? settings.approvedCommands
+        : []),
+      commandName,
+    ])
+    await saveSettings({
+      ...(settings || {}),
+      approvedCommands,
+    })
+  }
+
+  /** Keep the renderer's security settings view in sync with native grants. */
+  private notifyCommandApproval(
+    event: Electron.IpcMainInvokeEvent,
+    commandName: string,
+    scope: CommandApprovalScope
+  ): void {
+    try {
+      const payload = {
+        commandName,
+        scope,
+      }
+      const windows = BrowserWindow.getAllWindows()
+      for (const window of windows) {
+        if (!window.isDestroyed()) {
+          window.webContents.send('security:command-approved', payload)
+        }
+      }
+      // Keep a direct-sender fallback for unusual test/embedded environments
+      // where no BrowserWindow is registered yet.
+      if (windows.length === 0 && !event.sender.isDestroyed()) {
+        event.sender.send('security:command-approved', payload)
+      }
+    } catch (error) {
+      // The command has already been approved and may still execute even if a
+      // closing renderer cannot receive the informational settings event.
+      console.warn(
+        '[DesktopManager] Failed to notify renderer about command approval:',
+        error
+      )
+    }
   }
 
   private ensureAccessibilityApproved():

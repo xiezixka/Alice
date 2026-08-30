@@ -138,6 +138,11 @@ import {
   buildRelaunchArgs,
   isBackgroundListeningActive,
 } from './backgroundLaunch'
+import {
+  hasShellOperators,
+  isCommandNameApproved,
+  normalizeCommandName,
+} from '../../src/utils/commandApproval'
 
 const USER_DATA_PATH = app.getPath('userData')
 const GENERATED_IMAGES_DIR_NAME = 'generated_images'
@@ -1861,11 +1866,18 @@ export function registerGoogleIPCHandlers(): void {
         const command =
           typeof args.details === 'string' ? args.details.trim() : ''
         const configured = (await loadSettings())?.approvedCommands || []
-        const commandName = command.split(/\s+/)[0]?.split(/[\\/]/).pop() || ''
-        if (!command || !configured.includes(commandName)) {
+        const commandName = normalizeCommandName(command)
+        if (
+          !command ||
+          !commandName ||
+          !isCommandNameApproved(commandName, configured) ||
+          hasShellOperators(command)
+        ) {
           return {
             success: false,
-            error: `定时命令“${commandName || '未命名'}”未在已批准命令中。请先在安全设置中批准该命令。`,
+            error: hasShellOperators(command)
+              ? `定时命令“${commandName || '未命名'}”包含组合命令或重定向，无法在后台安全执行。请拆分命令后重试。`
+              : `定时命令“${commandName || '未命名'}”未在已批准命令中。请先在安全设置中批准该命令。`,
           }
         }
         const owner = BrowserWindow.fromWebContents(event.sender)

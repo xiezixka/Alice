@@ -136,6 +136,7 @@ export const EVENT_CHANNELS = new Set([
   'update-download-progress',
   'update-downloaded',
   'scheduler:reminder',
+  'security:command-approved',
   'kokoro-tts-progress',
   'local-embedding-progress',
 ])

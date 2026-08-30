@@ -136,7 +136,7 @@
   {
     "type": "function",
     "name": "execute_command",
-    "description": "Executes a shell command on the user's computer. For security, only a limited set of commands are allowed. Use this to perform simple tasks like getting the current IP address or running a script.",
+    "description": "Executes a shell command on the user's computer after a native confirmation. The user can allow it once, for the current session, or permanently by executable name; shell composition (pipes, separators, redirection, or substitution) always requires an explicit confirmation.",
     "strict": true,
     "parameters": {
       "type": "object",

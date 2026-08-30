@@ -18,6 +18,12 @@ import {
   DEFAULT_WAKE_WORD,
   validateWakeWord,
 } from '../composables/wakeWordConfig'
+import {
+  commandNameKey,
+  hasShellOperators,
+  normalizeApprovedCommandNames,
+  normalizeCommandName,
+} from '../utils/commandApproval'
 
 export const DEFAULT_ASSISTANT_PERSONA_PROMPT = DEFAULT_PERSONA_PROMPT
 
@@ -345,6 +351,8 @@ const ESSENTIAL_CORE_API_KEYS: (keyof AliceSettings)[] = [
   'VITE_DEEPSEEK_API_KEY',
 ]
 
+const commandApprovalSubscriptions = new WeakSet<object>()
+
 function requiresOpenAIKey(config: AliceSettings): boolean {
   return (
     config.aiProvider === 'openai' ||
@@ -365,11 +373,73 @@ export const useSettingsStore = defineStore('settings', () => {
   const coreOpenAISettingsValid = ref(false)
   const sessionApprovedCommands = ref<string[]>([])
 
+  // Native command approvals are decided in the main process.  Mirror the
+  // resulting grant here so the Security settings tab reflects session and
+  // permanent approvals immediately, even when the command originated from a
+  // voice request while Settings was open.
+  const ipcBridge =
+    typeof window !== 'undefined' && window.aliceIPC ? window.aliceIPC : null
+  if (ipcBridge && !commandApprovalSubscriptions.has(ipcBridge)) {
+    commandApprovalSubscriptions.add(ipcBridge)
+    ipcBridge.on('security:command-approved', (payload: unknown) => {
+      const event = payload as { commandName?: unknown; scope?: unknown }
+      const commandName = normalizeCommandName(event?.commandName)
+      const key = commandNameKey(commandName)
+      if (!key) return
+
+      if (event?.scope === 'session') {
+        if (
+          !sessionApprovedCommands.value.some(
+            existing => commandNameKey(existing) === key
+          )
+        ) {
+          sessionApprovedCommands.value.push(commandName)
+        }
+        return
+      }
+
+      if (event?.scope === 'permanent') {
+        if (
+          !settings.value.approvedCommands.some(
+            existing => commandNameKey(existing) === key
+          )
+        ) {
+          settings.value.approvedCommands.push(commandName)
+        }
+        sessionApprovedCommands.value = sessionApprovedCommands.value.filter(
+          existing => commandNameKey(existing) !== key
+        )
+      }
+    })
+  }
+
   const validateAndFixSettings = (
     loadedSettings: Partial<AliceSettings>
   ): { settings: AliceSettings; migrated: boolean } => {
     const validated = { ...defaultSettings, ...loadedSettings }
     let migrated = false
+
+    // Command approvals are security-sensitive capability names, not raw
+    // shell snippets.  Normalize legacy/malformed persisted values before
+    // they reach the tool policy or the settings UI.
+    if (
+      Object.prototype.hasOwnProperty.call(loadedSettings, 'approvedCommands')
+    ) {
+      const normalizedApprovals = normalizeApprovedCommandNames(
+        loadedSettings.approvedCommands
+      )
+      const rawApprovals = loadedSettings.approvedCommands
+      const unchanged =
+        Array.isArray(rawApprovals) &&
+        rawApprovals.length === normalizedApprovals.length &&
+        rawApprovals.every(
+          (value, index) => value === normalizedApprovals[index]
+        )
+      if (!unchanged) {
+        validated.approvedCommands = normalizedApprovals
+        migrated = true
+      }
+    }
 
     if (
       typeof loadedSettings.assistantSystemPrompt === 'string' &&
@@ -1431,31 +1501,50 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function addApprovedCommand(command: string) {
-    const commandName = command.split(' ')[0]
-    if (!settings.value.approvedCommands.includes(commandName)) {
+    const commandName = normalizeCommandName(command)
+    if (
+      commandName &&
+      !settings.value.approvedCommands.some(
+        existing => commandNameKey(existing) === commandNameKey(commandName)
+      )
+    ) {
       settings.value.approvedCommands.push(commandName)
       saveSettingsToFile()
     }
   }
 
   function addSessionApprovedCommand(command: string) {
-    const commandName = command.split(' ')[0]
-    if (!sessionApprovedCommands.value.includes(commandName)) {
+    const commandName = normalizeCommandName(command)
+    if (
+      commandName &&
+      !sessionApprovedCommands.value.some(
+        existing => commandNameKey(existing) === commandNameKey(commandName)
+      )
+    ) {
       sessionApprovedCommands.value.push(commandName)
     }
   }
 
   function isCommandApproved(command: string): boolean {
-    const commandName = command.split(' ')[0]
+    if (hasShellOperators(command)) return false
+    const commandName = commandNameKey(command)
+    if (!commandName) return false
     return (
-      settings.value.approvedCommands.includes(commandName) ||
-      sessionApprovedCommands.value.includes(commandName)
+      settings.value.approvedCommands.some(
+        existing => commandNameKey(existing) === commandName
+      ) ||
+      sessionApprovedCommands.value.some(
+        existing => commandNameKey(existing) === commandName
+      )
     )
   }
 
   async function removeApprovedCommand(command: string) {
-    const commandName = command.split(' ')[0]
-    const index = settings.value.approvedCommands.indexOf(commandName)
+    const commandName = commandNameKey(command)
+    if (!commandName) return
+    const index = settings.value.approvedCommands.findIndex(
+      existing => commandNameKey(existing) === commandName
+    )
     if (index > -1) {
       settings.value.approvedCommands.splice(index, 1)
       await saveSettingsToFile()

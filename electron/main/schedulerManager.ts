@@ -4,6 +4,11 @@ import { getDBInstance } from './thoughtVectorStore'
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 import { loadSettings } from './settingsManager'
+import {
+  hasShellOperators,
+  isCommandNameApproved,
+  normalizeCommandName,
+} from '../../src/utils/commandApproval'
 
 const execAsync = promisify(exec)
 
@@ -301,11 +306,17 @@ async function executeTask(task: ScheduledTask): Promise<void> {
   try {
     if (task.actionType === 'command') {
       const command = task.details.trim()
-      const commandName = command.split(/\s+/)[0]?.split(/[\\/]/).pop() || ''
+      const commandName = normalizeCommandName(command)
       const approvedCommands = (await loadSettings())?.approvedCommands || []
-      if (!approvedCommands.includes(commandName)) {
+      // Scheduled commands run without an interactive confirmation dialog.
+      // Require a permanent executable grant and reject shell composition so a
+      // saved `ls` approval cannot be expanded into a hidden pipeline.
+      if (
+        !isCommandNameApproved(commandName, approvedCommands) ||
+        hasShellOperators(command)
+      ) {
         console.warn(
-          `[SchedulerManager] Blocked unapproved scheduled command: ${commandName}`
+          `[SchedulerManager] Blocked unsafe or unapproved scheduled command: ${commandName}`
         )
         return
       }

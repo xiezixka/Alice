@@ -28,6 +28,7 @@ To activate all tools, you need to get your API credentials for each tool.
 - `list_directory_detailed`、`find_files`：只读查看目录和搜索文件。
 - `organize_files`：默认 `dryRun=true`，先返回变更清单；用户确认后再设置 `dryRun=false` 执行移动、复制或重命名。
 - `undo_file_organization`：使用执行返回的 `operationId` 撤销最近一次整理。最近 50 次已确认的操作会保存到 Alice 用户数据目录，应用重启后仍可撤销；如果磁盘不可写，工具会明确返回警告。
+- `execute_command`：执行前会显示原始命令和命令名。用户可选择“仅运行一次”“本次会话允许”或“始终允许此命令”；会话批准只保留到 Alice 退出，永久批准只保存可执行文件名。包含管道、分隔符、重定向或命令替换的组合命令不会继承批准，且每次只能逐次确认。
 
 ## Gmail 与行程
 
@@ -37,4 +38,4 @@ To activate all tools, you need to get your API credentials for each tool.
 - 微信、QQ、Slack 等聊天应用目前优先通过 `desktop_observe` + `desktop_reply_message` 辅助操作；聊天窗口必须已打开且处于前台，模型支持视觉输入，并且每次发送前都要确认收件人和正文。若高层工具不可用，才使用 `desktop_action` 分步操作。Alice 不会在后台读取或发送未打开的聊天。
 - `plan_itinerary`：读取 Google 日历并生成避开冲突的时间草案，不会自动写入日历。
 
-所有写操作都应先展示目标、影响和内容。工具在执行时还会再次校验助手设置中的启用状态；即使模型返回了未启用的工具调用，也会拒绝执行。工具失败或平台不支持时必须如实反馈，不得声称已完成。
+所有写操作都应先展示目标、影响和内容。工具在执行时还会再次校验助手设置中的启用状态；即使模型返回了未启用的工具调用，也会拒绝执行。工具失败或平台不支持时必须如实反馈，不得声称已完成。定时命令只接受已永久批准且不含 shell 组合运算符的命令。

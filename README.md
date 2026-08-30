@@ -67,6 +67,8 @@ Alice can interact with your local system with user-approved permissions:
   - Session-based
   - Permanent (revocable)
 
+  `execute_command` 会在原生确认框中让用户选择批准范围；组合命令（管道、分隔符、重定向或命令替换）不会继承命令名批准，定时执行只接受安全的永久批准命令。
+
 - 🔧 Settings tab "Permissions" lets you review and manage all approved commands
 
 ### ⚙️ Function Calling

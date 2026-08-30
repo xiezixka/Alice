@@ -179,7 +179,7 @@ const currentStepTitle = computed(() => {
     3: '语音与记忆模式',
     4: '完成配置',
   }
-  return titles[step.value as keyof typeof titles] || 'Setup'
+  return titles[step.value as keyof typeof titles] || '设置'
 })
 
 const canContinue = computed(() => {
