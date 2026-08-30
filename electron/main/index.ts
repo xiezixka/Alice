@@ -32,13 +32,19 @@ import {
   registerCustomProtocol,
   getMainWindow,
   focusMainWindow,
+  minimizeMainWindow,
+  getMainWindowPresentationState,
   getRendererDist,
 } from './windowManager'
 import {
   shouldAllowMicrophonePermissionCheck,
   shouldAllowMicrophonePermissionRequest,
 } from './mediaPermissions'
-import { createTray, destroyTray } from './trayManager'
+import {
+  createTray,
+  destroyTray,
+  setTrayBackgroundListening,
+} from './trayManager'
 import { getCustomAvatarsRootPath } from './customAvatarsManager'
 import { registerIPCHandlers, registerGoogleIPCHandlers } from './ipcManager'
 import {
@@ -59,6 +65,8 @@ import { setupDependencies } from '../../scripts/setup-dependencies.js'
 import {
   BACKGROUND_LAUNCH_ARG,
   buildRelaunchArgs,
+  getBackgroundLaunchPresentation,
+  isBackgroundListeningActive,
   shouldKeepWindowHiddenForSecondInstance,
 } from './backgroundLaunch'
 
@@ -79,7 +87,126 @@ const GENERATED_IMAGES_FULL_PATH = path.join(USER_DATA_PATH, 'generated_images')
 
 let isHandlingQuit = false
 let wss: any | null = null
-const isBackgroundLaunch = process.argv.includes(BACKGROUND_LAUNCH_ARG)
+// Windows login items can carry the explicit argv marker.  On macOS 13+
+// Electron delegates login items to SMAppService, which does not forward
+// custom args; `wasOpenedAtLogin` is therefore the authoritative fallback.
+let isBackgroundLaunch = process.argv.includes(BACKGROUND_LAUNCH_ARG)
+let activateHandlerRegistered = false
+let pendingManualActivation = false
+let activationReady = false
+let initialBackgroundActivationSeen = false
+type PendingActivation = {
+  hasVisibleWindows: boolean
+  receivedAt: number
+}
+
+// `activate` can be emitted while dependency setup/settings loading is still
+// in flight.  Keep the event shape (rather than a boolean) so the startup
+// policy can consume only the first no-visible-window login activation and
+// replay later user/Dock activations in order.
+const pendingActivations: PendingActivation[] = []
+let loginItemSourceResolved = process.platform !== 'darwin'
+
+function detectMacLoginItemLaunch(): void {
+  if (process.platform !== 'darwin') {
+    loginItemSourceResolved = true
+    return
+  }
+  try {
+    if (app.getLoginItemSettings().wasOpenedAtLogin === true) {
+      isBackgroundLaunch = true
+      console.log(
+        '[Main Index] Detected macOS login-item launch via wasOpenedAtLogin.'
+      )
+    }
+  } catch (error) {
+    console.warn(
+      '[Main Index] Could not detect macOS login-item launch; using argv marker only:',
+      error
+    )
+  } finally {
+    // Even a failed probe is a resolved (fail-visible) decision.  Do not let
+    // an activation remain indefinitely queued waiting for metadata that the
+    // current runtime cannot provide.
+    loginItemSourceResolved = true
+  }
+}
+
+function replayPendingActivations(): void {
+  if (!activationReady) return
+
+  const queued = pendingActivations.splice(0)
+  let shouldFocus = pendingManualActivation
+  pendingManualActivation = false
+
+  // A login-item launch on macOS 13+ may not carry our argv marker.  Once
+  // `wasOpenedAtLogin` (or the explicit marker) identifies this process as a
+  // background launch, consume exactly one queued activation with no visible
+  // windows.  Any subsequent activation is a real user request and must be
+  // replayed so a Dock click during startup is not lost.
+  if (
+    loginItemSourceResolved &&
+    isBackgroundLaunch &&
+    !initialBackgroundActivationSeen
+  ) {
+    const backgroundIndex = queued.findIndex(
+      activation => activation.hasVisibleWindows === false
+    )
+    if (backgroundIndex >= 0) {
+      queued.splice(backgroundIndex, 1)
+      initialBackgroundActivationSeen = true
+    }
+  }
+
+  if (queued.length > 0) shouldFocus = true
+  if (!shouldFocus) return
+
+  if (!focusMainWindow()) {
+    void createMainWindow()
+  }
+}
+
+function registerActivateHandler(): void {
+  if (activateHandlerRegistered) return
+  activateHandlerRegistered = true
+  app.on('activate', (_event, hasVisibleWindows) => {
+    // Register the listener before app.whenReady so no activate event is lost.
+    // A login-item launch can emit an initial activation while dependencies
+    // are still loading. Queue it until `wasOpenedAtLogin` and settings have
+    // resolved; replayPendingActivations() then consumes only the first
+    // no-visible-window background event and preserves later Dock clicks.
+    if (!activationReady) {
+      pendingActivations.push({
+        hasVisibleWindows: hasVisibleWindows === true,
+        receivedAt: Date.now(),
+      })
+      return
+    }
+
+    // The initial event is normally queued before the window is created.  If
+    // Electron delivers it one tick later, retain the same one-shot rule, but
+    // only for an explicit background launch source and a no-visible-window
+    // event. A visible-window activation is always user initiated.
+    if (
+      loginItemSourceResolved &&
+      isBackgroundLaunch &&
+      !initialBackgroundActivationSeen &&
+      hasVisibleWindows !== true
+    ) {
+      initialBackgroundActivationSeen = true
+      return
+    }
+    if (!focusMainWindow()) {
+      void createMainWindow()
+    }
+  })
+}
+
+// Electron documents `activate` as a macOS lifecycle event that may fire on
+// the first launch, before the async initialization below has created a
+// BrowserWindow. Install the guarded listener synchronously to handle both
+// first-launch and subsequent Dock activations deterministically.
+registerActivateHandler()
 // Use global variables to persist across hot reloads
 if (!global.aliceAppState) {
   global.aliceAppState = {
@@ -111,10 +238,15 @@ function configureLaunchAtLogin(enabled: boolean): void {
   if (typeof app.setLoginItemSettings !== 'function') return
 
   try {
-    app.setLoginItemSettings({
+    const loginItemSettings: Electron.Settings = {
       openAtLogin: enabled,
-      args: [BACKGROUND_LAUNCH_ARG],
-    })
+    }
+    // `args` is supported for Windows registry launch items. macOS 13+
+    // uses SMAppService and reports the launch through wasOpenedAtLogin.
+    if (process.platform !== 'darwin') {
+      loginItemSettings.args = [BACKGROUND_LAUNCH_ARG]
+    }
+    app.setLoginItemSettings(loginItemSettings)
     console.log(
       `[Main Index] Launch at login ${enabled ? 'enabled' : 'disabled'}`
     )
@@ -427,12 +559,17 @@ app.on('ready', () => {
 })
 
 app.whenReady().then(async () => {
+  // Must run before loading settings and choosing the initial window policy;
+  // macOS 13+ does not preserve the custom background argv flag.
+  detectMacLoginItemLaunch()
   console.log(
     `[Main Index ${initId}] whenReady called, appInitialized:`,
     global.aliceAppState!.appInitialized
   )
   if (global.aliceAppState!.appInitialized) {
     console.log(`[Main Index ${initId}] App already initialized, skipping...`)
+    activationReady = Boolean(getMainWindow())
+    replayPendingActivations()
     return
   }
   global.aliceAppState!.appInitialized = true
@@ -455,8 +592,11 @@ app.whenReady().then(async () => {
   registerCustomProtocol(GENERATED_IMAGES_FULL_PATH, getCustomAvatarsRootPath())
 
   const initialSettings = await loadSettings()
-  configureLaunchAtLogin(initialSettings?.launchAtLogin === true)
   if (initialSettings) {
+    // Do not overwrite the user's existing login-item registration when a
+    // transient settings read fails.  A null result is an error/first-run
+    // state, not an explicit request to disable launch at login.
+    configureLaunchAtLogin(initialSettings.launchAtLogin === true)
     registerMicrophoneToggleHotkey(initialSettings.microphoneToggleHotkey)
     registerMutePlaybackHotkey(initialSettings.mutePlaybackHotkey)
     registerTakeScreenshotHotkey(initialSettings.takeScreenshotHotkey)
@@ -501,24 +641,119 @@ app.whenReady().then(async () => {
     )
   }
 
-  const showMainWindow = !(
-    isBackgroundLaunch && initialSettings?.backgroundListeningEnabled === true
+  // Never hide onboarding or malformed legacy settings. The native policy
+  // validates local STT + wake-word prerequisites before allowing a login-item
+  // launch to start hidden; otherwise the user would have no UI to repair it.
+  const launchPresentation = getBackgroundLaunchPresentation(
+    initialSettings,
+    process.platform
   )
-  await createMainWindow(
-    showMainWindow,
-    !showMainWindow &&
-      isBackgroundLaunch &&
-      initialSettings?.backgroundListeningEnabled === true
-  )
+  const shouldLaunchSilently =
+    isBackgroundLaunch &&
+    (process.platform === 'darwin'
+      ? launchPresentation.silentIsland
+      : launchPresentation.launchInBackground)
+  const showMainWindow = !shouldLaunchSilently
+  await createMainWindow(showMainWindow, shouldLaunchSilently)
+  activationReady = true
+  replayPendingActivations()
   await createOverlayWindow()
-  createTray(initialSettings?.backgroundListeningEnabled === true)
+  createTray(isBackgroundListeningActive(initialSettings))
   checkForUpdates()
+
+  const revealBackendFailure = (
+    message = '本地语音后端启动失败，请打开设置检查模型和权限。'
+  ) => {
+    if (!shouldLaunchSilently) return
+    // Keep the tray status honest even when the persisted preference remains
+    // enabled for the next retry. The listener is not usable in this run.
+    setTrayBackgroundListening(false)
+    const presentation = getMainWindowPresentationState()
+    const alreadyVisibleToUser =
+      presentation.visible &&
+      !presentation.silent &&
+      !presentation.initiallyHidden
+    if (presentation.hiddenByUser) {
+      // Respect an explicit close-to-tray action. This notification updates
+      // renderer status without turning it back into an attention request.
+      const hiddenWindow = getMainWindow()
+      if (hiddenWindow && !hiddenWindow.isDestroyed()) {
+        hiddenWindow.webContents.send('show-notification', {
+          type: 'error',
+          attention: false,
+          message,
+        })
+      }
+      return
+    }
+    if (alreadyVisibleToUser) {
+      // Keep a full window open so the failure remains readable, but do not
+      // perform another native focus/show transition.
+      const visibleWindow = getMainWindow()
+      if (visibleWindow && !visibleWindow.isDestroyed()) {
+        visibleWindow.webContents.send('show-notification', {
+          type: 'error',
+          message,
+        })
+      }
+      return
+    }
+    // Do not leave a login-item launch stranded in an invisible island when
+    // the local backend/model cannot start. Reveal the full window without
+    // activating it so the user can read the failure status and repair the
+    // installation.
+    minimizeMainWindow(false, false, true)
+    const fallbackWindow = getMainWindow()
+    if (fallbackWindow && !fallbackWindow.isDestroyed()) {
+      fallbackWindow.webContents.send('main-window:expanded', {
+        userInitiated: true,
+      })
+      fallbackWindow.webContents.send('show-notification', {
+        type: 'error',
+        message,
+      })
+    }
+  }
 
   try {
     console.log('[Main App Ready] Starting Go AI backend...')
     const backendStarted = await backendManager.start()
     if (backendStarted) {
       console.log('[Main App Ready] Go AI backend started successfully')
+      if (shouldLaunchSilently) {
+        // The health endpoint can become reachable a little before its STT
+        // readiness bit is published. Check in the background with short,
+        // bounded retries so the island appears immediately and a transient
+        // startup race does not flash the full window unnecessarily.
+        void (async () => {
+          for (let attempt = 0; attempt < 3; attempt += 1) {
+            const status = await Promise.race([
+              backendManager.getServiceStatus(),
+              new Promise<null>(resolve =>
+                setTimeout(() => resolve(null), 1200)
+              ),
+            ])
+            if (status?.stt) return
+            if (attempt < 2) {
+              await new Promise(resolve => setTimeout(resolve, 400))
+            }
+          }
+          console.error(
+            '[Main App Ready] Local STT service is unavailable; revealing the background launch.'
+          )
+          revealBackendFailure(
+            '本地语音识别服务不可用，请打开设置检查 Whisper 模型和麦克风权限。'
+          )
+        })().catch(error => {
+          console.error(
+            '[Main App Ready] Background STT readiness check failed:',
+            error
+          )
+          revealBackendFailure(
+            '本地语音识别服务检查失败，请打开设置检查 Whisper 模型和麦克风权限。'
+          )
+        })
+      }
       void (async () => {
         try {
           const result = await reindexMultilingualLocalEmbeddings()
@@ -554,9 +789,11 @@ app.whenReady().then(async () => {
       })()
     } else {
       console.error('[Main App Ready] Failed to start Go AI backend')
+      revealBackendFailure()
     }
   } catch (error) {
     console.error('[Main App Ready] Error starting Go AI backend:', error)
+    revealBackendFailure()
   }
 
   if (initialSettings && isBrowserContextToolEnabled(initialSettings)) {
@@ -621,7 +858,7 @@ app.on('second-instance', (event, commandLine, workingDirectory) => {
       if (
         shouldKeepWindowHiddenForSecondInstance(
           commandLine,
-          settings?.backgroundListeningEnabled === true
+          isBackgroundListeningActive(settings)
         )
       ) {
         console.log(
@@ -636,6 +873,12 @@ app.on('second-instance', (event, commandLine, workingDirectory) => {
         // activation so a compact macOS silent island is expanded before the
         // user is shown the full assistant window.
         focusMainWindow()
+      } else {
+        // Initialization performs dependency/model checks before creating the
+        // BrowserWindow. Preserve a manual relaunch request that arrives in
+        // that interval and reveal the window immediately after creation.
+        pendingManualActivation = true
+        replayPendingActivations()
       }
     })
     .catch(error => {
@@ -648,14 +891,11 @@ app.on('second-instance', (event, commandLine, workingDirectory) => {
       const win = getMainWindow()
       if (win) {
         focusMainWindow()
+      } else {
+        pendingManualActivation = true
+        replayPendingActivations()
       }
     })
-})
-
-app.on('activate', () => {
-  if (!focusMainWindow()) {
-    createMainWindow()
-  }
 })
 
 app.on('certificate-error', (event, webContents, url, err, certificate, cb) => {

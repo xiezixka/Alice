@@ -535,8 +535,14 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.22);
   backdrop-filter: blur(22px) saturate(140%);
   isolation: isolate;
-  cursor: pointer;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
   -webkit-app-region: no-drag;
+}
+
+.assistant-shell--mac-silent .avatar.mac-silent-avatar--dragging {
+  cursor: grabbing;
 }
 
 .assistant-shell--mac-silent .avatar::before {

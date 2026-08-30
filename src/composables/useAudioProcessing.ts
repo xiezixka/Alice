@@ -655,6 +655,7 @@ export function useAudioProcessing() {
     const backgroundEnabled = settingsStore.config.backgroundListeningEnabled
     const canRunBackground =
       backgroundEnabled &&
+      settingsStore.config.onboardingCompleted === true &&
       settingsStore.config.sttProvider === 'local' &&
       settingsStore.config.localSttEnabled &&
       isValidWakeWord(settingsStore.config.localSttWakeWord)
@@ -691,6 +692,7 @@ export function useAudioProcessing() {
       () => settingsStore.config.localSttEnabled,
       () => settingsStore.config.sttProvider,
       () => settingsStore.config.localSttWakeWord,
+      () => settingsStore.config.onboardingCompleted,
     ],
     syncBackgroundListening
   )

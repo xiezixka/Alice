@@ -102,6 +102,7 @@ export const INVOKE_CHANNELS = new Set([
 
 export const SEND_CHANNELS = new Set([
   'resize',
+  'move-main-window',
   'mini',
   'close-app',
   'restart-and-install-update',

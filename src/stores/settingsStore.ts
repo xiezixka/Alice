@@ -540,6 +540,7 @@ export const useSettingsStore = defineStore('settings', () => {
       'backgroundListeningEnabled',
       'launchAtLogin',
       'macSilentModeEnabled',
+      'onboardingCompleted',
     ] as const) {
       if (typeof validated[key] !== 'boolean') {
         validated[key] = defaultSettings[key]

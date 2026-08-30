@@ -54,6 +54,8 @@ let mainWindowRestoreSize = { ...DEFAULT_MAIN_WINDOW_SIZE }
 let mainWindowSilent = false
 let mainWindowCompact = false
 let mainWindowRestoreBounds: Electron.Rectangle | null = null
+let mainWindowSilentX: number | null = null
+let mainWindowSilentDisplayId: number | null = null
 // A user choosing “隐藏到后台” must not be overridden by the first
 // background-launch reveal.  Keep this native guard in addition to the
 // renderer timer so a close-to-tray action remains deterministic even when
@@ -86,6 +88,29 @@ function fitMainWindowSize(
       Math.max(MINI_MAIN_WINDOW_SIZE.height, workArea.height - 20)
     ),
   }
+}
+
+function getPreferredSilentWindowBounds(
+  display: Electron.Display
+): Electron.Rectangle {
+  const centered = getMacSilentWindowBounds(display.bounds, {
+    width: MAC_SILENT_WINDOW_SIZE.width,
+    height: MAC_SILENT_WINDOW_SIZE.height,
+  })
+  const minX = Math.round(display.bounds.x)
+  const maxX = Math.round(
+    display.bounds.x + Math.max(0, display.bounds.width - centered.width)
+  )
+  // Keep a dragged position when the island remains on the same display.
+  // When macOS moves it to another display (or the previous display is
+  // removed), start from that display's center instead of clamping an
+  // absolute coordinate to an edge.
+  const preservePosition = mainWindowSilentDisplayId === display.id
+  const preferredX =
+    !preservePosition || mainWindowSilentX === null
+      ? centered.x
+      : Math.max(minX, Math.min(maxX, Math.round(mainWindowSilentX)))
+  return { ...centered, x: preferredX }
 }
 
 function installNavigationGuards(window: BrowserWindow): void {
@@ -147,6 +172,8 @@ export async function createMainWindow(
   mainWindowCompact = false
   mainWindowHiddenByUser = false
   mainWindowInitiallyHidden = !show
+  mainWindowSilentX = null
+  mainWindowSilentDisplayId = null
   win = new BrowserWindow({
     title: 'Alice',
     icon: path.join(getVitePublic(), 'app_logo.png'),
@@ -160,6 +187,10 @@ export async function createMainWindow(
     alwaysOnTop: true,
     hasShadow: false,
     show,
+    // Let the first click on the inactive floating island reach the renderer
+    // instead of merely activating the Electron app.  This is especially
+    // important when Alice is sitting above another application on macOS.
+    acceptFirstMouse: true,
     paintWhenInitiallyHidden: !show,
     webPreferences: {
       preload: getPreloadPath(),
@@ -177,23 +208,27 @@ export async function createMainWindow(
         : [],
     },
   })
+  // Keep a stable reference for all listeners below. `win` is a module-level
+  // slot and may be replaced by a later window creation before an old window's
+  // close/display callbacks fire.
+  const mainWindow = win
 
-  installNavigationGuards(win)
+  installNavigationGuards(mainWindow)
 
   if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL)
+    mainWindow.loadURL(VITE_DEV_SERVER_URL)
   } else {
-    win.loadFile(getIndexHtmlPath())
+    mainWindow.loadFile(getIndexHtmlPath())
   }
 
   const repositionSilentWindow = () => {
-    if (!win || win.isDestroyed() || !mainWindowSilent) return
-    const display = screen.getDisplayMatching(win.getBounds())
-    const bounds = getMacSilentWindowBounds(display.bounds, {
-      width: MAC_SILENT_WINDOW_SIZE.width,
-      height: MAC_SILENT_WINDOW_SIZE.height,
-    })
-    win.setPosition(bounds.x, bounds.y)
+    if (win !== mainWindow || mainWindow.isDestroyed() || !mainWindowSilent)
+      return
+    const display = screen.getDisplayMatching(mainWindow.getBounds())
+    const bounds = getPreferredSilentWindowBounds(display)
+    mainWindow.setPosition(bounds.x, bounds.y)
+    mainWindowSilentX = bounds.x
+    mainWindowSilentDisplayId = display.id
   }
   // Keep the simulated island attached to the active display when the user
   // changes scale/resolution or docks/undocks a monitor.
@@ -202,30 +237,31 @@ export async function createMainWindow(
   screen.on('display-removed', repositionSilentWindow)
 
   const markMainWindowVisible = () => {
-    if (!mainWindowHiddenByUser) {
+    if (win === mainWindow && !mainWindowHiddenByUser) {
       mainWindowInitiallyHidden = false
     }
   }
-  const mainWindow = win
   mainWindow.on('show', markMainWindowVisible)
 
-  win.on('closed', () => {
+  mainWindow.on('closed', () => {
     screen.off('display-metrics-changed', repositionSilentWindow)
     screen.off('display-added', repositionSilentWindow)
     screen.off('display-removed', repositionSilentWindow)
     mainWindow.off('show', markMainWindowVisible)
-    win = null
-    mainWindowInitiallyHidden = false
+    if (win === mainWindow) {
+      win = null
+      mainWindowInitiallyHidden = false
+    }
   })
 
-  win.webContents.on('did-finish-load', () => {
-    win?.webContents.send(
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.send(
       'main-process-message',
       `Alice ready at ${new Date().toLocaleString()}`
     )
   })
 
-  return win
+  return mainWindow
 }
 
 export async function createOverlayWindow(): Promise<BrowserWindow> {
@@ -352,10 +388,7 @@ export function minimizeMainWindow(
     const useMacSilentWindow =
       silent && shouldUseMacSilentWindow(process.platform, true)
     if (useMacSilentWindow) {
-      const bounds = getMacSilentWindowBounds(display.bounds, {
-        width: MAC_SILENT_WINDOW_SIZE.width,
-        height: MAC_SILENT_WINDOW_SIZE.height,
-      })
+      const bounds = getPreferredSilentWindowBounds(display)
       const shouldRevealHiddenWindow =
         (showWhenHidden || mainWindowInitiallyHidden) && !mainWindowHiddenByUser
       const wasInitiallyHidden = mainWindowInitiallyHidden
@@ -375,6 +408,8 @@ export function minimizeMainWindow(
       }
       win.setSize(bounds.width, bounds.height)
       win.setPosition(bounds.x, bounds.y)
+      mainWindowSilentX = bounds.x
+      mainWindowSilentDisplayId = display.id
       mainWindowSilent = true
       mainWindowCompact = true
       if (shouldRevealHiddenWindow && typeof win.showInactive === 'function') {
@@ -397,6 +432,9 @@ export function minimizeMainWindow(
     )
     win.setResizable(false)
     win.setSkipTaskbar(false)
+    // Preserve the floating level used by the original window.  Passing
+    // `normal` here would cancel the always-on-top behaviour on macOS.
+    win.setAlwaysOnTop(true, 'floating')
     if (typeof win.setVisibleOnAllWorkspaces === 'function') {
       win.setVisibleOnAllWorkspaces(false)
     }
@@ -423,6 +461,7 @@ export function minimizeMainWindow(
     )
     win.setResizable(true)
     win.setSkipTaskbar(false)
+    win.setAlwaysOnTop(true, 'floating')
     if (typeof win.setVisibleOnAllWorkspaces === 'function') {
       win.setVisibleOnAllWorkspaces(false)
     }
@@ -466,10 +505,47 @@ export function isMainWindowSilent(): boolean {
   return mainWindowSilent
 }
 
+/**
+ * Move the compact macOS island horizontally while keeping it in the current
+ * display's bounds.  The renderer sends small pointer deltas; native clamping
+ * prevents a malicious or accidental large delta from moving the window off
+ * screen.  The vertical position remains pinned to the notch-safe top offset.
+ */
+export function moveMainWindowHorizontally(deltaX: number): boolean {
+  if (
+    !win ||
+    win.isDestroyed() ||
+    !mainWindowSilent ||
+    !Number.isFinite(deltaX)
+  ) {
+    return false
+  }
+
+  const current = win.getBounds()
+  const display = screen.getDisplayMatching(current)
+  const displayBounds = display.bounds
+  const minX = Math.round(displayBounds.x)
+  const maxX = Math.round(
+    displayBounds.x + Math.max(0, displayBounds.width - current.width)
+  )
+  const boundedDelta = Math.max(-500, Math.min(500, Math.round(deltaX)))
+  const nextX = Math.max(minX, Math.min(maxX, current.x + boundedDelta))
+  if (nextX === current.x) {
+    mainWindowSilentDisplayId = display.id
+    return true
+  }
+  win.setPosition(nextX, current.y)
+  mainWindowSilentX = nextX
+  mainWindowSilentDisplayId = display.id
+  return true
+}
+
 export interface MainWindowPresentationState {
   silent: boolean
   hiddenByUser: boolean
   initiallyHidden: boolean
+  /** Whether Chromium/Electron currently exposes the native window. */
+  visible: boolean
 }
 
 /**
@@ -482,6 +558,7 @@ export function getMainWindowPresentationState(): MainWindowPresentationState {
     silent: mainWindowSilent,
     hiddenByUser: mainWindowHiddenByUser,
     initiallyHidden: mainWindowInitiallyHidden,
+    visible: Boolean(win && !win.isDestroyed() && win.isVisible()),
   }
 }
 
@@ -586,8 +663,14 @@ export function cleanupWindows(): void {
   win = null
   overlayWindow = null
   settingsWindow = null
+  mainWindowRestoreSize = { ...DEFAULT_MAIN_WINDOW_SIZE }
+  mainWindowRestoreBounds = null
+  mainWindowSilent = false
+  mainWindowCompact = false
   mainWindowHiddenByUser = false
   mainWindowInitiallyHidden = false
+  mainWindowSilentX = null
+  mainWindowSilentDisplayId = null
 }
 
 /**

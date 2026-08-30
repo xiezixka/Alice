@@ -111,6 +111,24 @@ const handleShowNotification = (data: {
 onMounted(async () => {
   await settingsStore.loadSettings()
 
+  // A background login launch starts the native window hidden. If the
+  // renderer cannot read settings (or receives an incomplete payload), the
+  // Main component is replaced by onboarding and can no longer collapse into
+  // the island. Reveal the full window immediately so the user always has a
+  // repair path instead of a process that appears to have vanished.
+  if (
+    window.electron?.backgroundLaunch === true &&
+    (!settingsStore.settingsLoadSucceeded ||
+      !settingsStore.settings.onboardingCompleted)
+  ) {
+    window.electron.mini({
+      minimize: false,
+      silent: false,
+      showWhenHidden: true,
+    })
+    generalStore.statusMessage = '设置读取失败，请检查配置后重试。'
+  }
+
   if (window.aliceIPC) {
     window.aliceIPC.on('update-downloaded', info => {
       // The update alert is rendered outside Main's 44px island. Force the

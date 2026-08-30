@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execSync } from 'child_process'
+import { execFileSync, execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -15,7 +15,13 @@ import { resolveFFmpegPaths } from './setup-dependencies.js'
 const FFMPEG_URLS = {
   win32:
     'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip',
-  darwin: 'https://evermeet.cx/ffmpeg/ffmpeg-8.0.zip', // Use available release version
+  // evermeet provides the Intel build; Apple Silicon uses the pinned static
+  // arm64 release so an arm64 package never inherits an x86-only executable.
+  darwin: {
+    x64: 'https://evermeet.cx/ffmpeg/ffmpeg-8.0.zip',
+    arm64:
+      'https://github.com/binmgr/ffmpeg/releases/download/v8.1.2/ffmpeg-darwin-arm64.tar.gz',
+  },
   linux: [
     'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz',
     'https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz',
@@ -58,6 +64,17 @@ const archiveMagic = {
   ],
   '.tar.xz': [Buffer.from([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00])],
   '.tar.gz': [Buffer.from([0x1f, 0x8b])],
+}
+
+function commandOutput(command, commandArgs) {
+  try {
+    return execFileSync(command, commandArgs, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+  } catch {
+    return ''
+  }
 }
 
 function removeFileIfPresent(filePath) {
@@ -283,6 +300,18 @@ function isValidFFmpegBinary(filePath, platform = os.platform()) {
   } catch {
     return false
   }
+}
+
+function hasExpectedFFmpegArchitecture(
+  filePath,
+  platform = os.platform(),
+  arch = os.arch()
+) {
+  if (platform !== 'darwin') return true
+  const expected = arch === 'arm64' ? /arm64/i : /x86_64|x86-64|amd64/i
+  const lipoArchitectures = commandOutput('lipo', ['-archs', filePath])
+  if (lipoArchitectures) return expected.test(lipoArchitectures)
+  return expected.test(commandOutput('file', ['-b', filePath]))
 }
 
 function extractFFmpeg(archivePath, outputDir, platform = os.platform()) {
@@ -1143,6 +1172,7 @@ async function downloadRequiredVoiceModels() {
  */
 async function ensureFFmpeg(options = {}) {
   const platform = options.platform || os.platform()
+  const arch = options.arch || os.arch()
   const backendBinDir =
     options.backendBinDir ||
     path.join(options.cwd || process.cwd(), 'resources', 'backend', 'bin')
@@ -1154,7 +1184,10 @@ async function ensureFFmpeg(options = {}) {
   // Check if ffmpeg already exists and is a native executable.  Merely
   // checking existence would preserve a truncated/HTML file from a previous
   // failed download and let the packaging preflight fail much later.
-  if (isValidFFmpegBinary(ffmpegPath, platform)) {
+  if (
+    isValidFFmpegBinary(ffmpegPath, platform) &&
+    hasExpectedFFmpegArchitecture(ffmpegPath, platform, arch)
+  ) {
     if (platform !== 'win32') {
       try {
         fs.chmodSync(ffmpegPath, 0o755)
@@ -1181,10 +1214,16 @@ async function ensureFFmpeg(options = {}) {
   // Get download URLs for platform.  Callers/tests can inject a list without
   // touching the network; a legacy string value is accepted for compatibility.
   const configuredUrls = options.urls ?? FFMPEG_URLS[platform]
-  const downloadUrls = Array.isArray(configuredUrls)
-    ? configuredUrls
-    : configuredUrls
-      ? [configuredUrls]
+  const selectedUrls =
+    configuredUrls &&
+    typeof configuredUrls === 'object' &&
+    !Array.isArray(configuredUrls)
+      ? configuredUrls[options.arch || os.arch()] || configuredUrls.x64
+      : configuredUrls
+  const downloadUrls = Array.isArray(selectedUrls)
+    ? selectedUrls
+    : selectedUrls
+      ? [selectedUrls]
       : []
   if (downloadUrls.length === 0) {
     console.warn(
@@ -1227,12 +1266,19 @@ async function ensureFFmpeg(options = {}) {
 
       console.log('📦 Extracting ffmpeg binary...')
       const extractSuccess = await extractor(archivePath, backendBinDir)
-      if (!extractSuccess || !isValidFFmpegBinary(ffmpegPath, platform)) {
+      if (
+        !extractSuccess ||
+        !isValidFFmpegBinary(ffmpegPath, platform) ||
+        !hasExpectedFFmpegArchitecture(ffmpegPath, platform, arch)
+      ) {
         throw new Error('extracted ffmpeg binary is missing or invalid')
       }
 
       if (platform !== 'win32') fs.chmodSync(ffmpegPath, 0o755)
-      if (!isValidFFmpegBinary(ffmpegPath, platform)) {
+      if (
+        !isValidFFmpegBinary(ffmpegPath, platform) ||
+        !hasExpectedFFmpegArchitecture(ffmpegPath, platform, arch)
+      ) {
         throw new Error('ffmpeg binary failed the final validation')
       }
       console.log(`✅ FFmpeg setup completed: ${ffmpegPath}`)
@@ -1397,6 +1443,7 @@ export {
   extractFFmpeg,
   isValidArchive,
   isValidFFmpegBinary,
+  hasExpectedFFmpegArchitecture,
   ensureFFmpeg,
 }
 

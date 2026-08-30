@@ -93,6 +93,7 @@ import {
   getMainWindow,
   resizeMainWindow,
   minimizeMainWindow,
+  moveMainWindowHorizontally,
   showOverlay,
   hideOverlay,
   focusMainWindow,
@@ -132,7 +133,11 @@ import {
   validateHttpBridgeUrl,
 } from './securityBoundaries'
 import { setTrayBackgroundListening } from './trayManager'
-import { BACKGROUND_LAUNCH_ARG, buildRelaunchArgs } from './backgroundLaunch'
+import {
+  BACKGROUND_LAUNCH_ARG,
+  buildRelaunchArgs,
+  isBackgroundListeningActive,
+} from './backgroundLaunch'
 
 const USER_DATA_PATH = app.getPath('userData')
 const GENERATED_IMAGES_DIR_NAME = 'generated_images'
@@ -179,6 +184,9 @@ export function registerIPCHandlers(): void {
 
   // Window management
   ipcMain.on('resize', (event, arg) => {
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    const mainWindow = getMainWindow()
+    if (!owner || !mainWindow || owner !== mainWindow) return
     if (
       arg &&
       typeof arg.width === 'number' &&
@@ -190,7 +198,19 @@ export function registerIPCHandlers(): void {
     }
   })
 
+  ipcMain.on('move-main-window', (event, arg) => {
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    const mainWindow = getMainWindow()
+    if (!owner || !mainWindow || owner !== mainWindow) return
+    if (arg && typeof arg.deltaX === 'number' && Number.isFinite(arg.deltaX)) {
+      moveMainWindowHorizontally(arg.deltaX)
+    }
+  })
+
   ipcMain.on('mini', (event, arg) => {
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    const mainWindow = getMainWindow()
+    if (!owner || !mainWindow || owner !== mainWindow) return
     if (
       arg &&
       typeof arg.minimize === 'boolean' &&
@@ -219,16 +239,23 @@ export function registerIPCHandlers(): void {
   })
 
   ipcMain.on('close-app', event => {
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    const mainWindow = getMainWindow()
+    // Only the main assistant window may request a close-to-tray/quit.  The
+    // preload is shared by secondary windows, so accepting an arbitrary
+    // renderer sender would let a stale or compromised child hide/quit Alice.
+    if (!owner || !mainWindow || owner !== mainWindow) return
+    // Apply the native hide/guard synchronously, before the settings read
+    // below can yield to a pending renderer timer or wake-word event.
+    if (!hideMainWindowToTray()) {
+      owner?.hide()
+    }
     void (async () => {
       const settings = await loadSettings()
-      if (settings?.backgroundListeningEnabled === true) {
+      if (isBackgroundListeningActive(settings)) {
         // Mark the native window as explicitly hidden before notifying the
         // renderer.  This prevents a pending background-launch reveal timer
         // from summoning the island again after the user chose “隐藏到后台”.
-        const owner = BrowserWindow.fromWebContents(event.sender)
-        if (!hideMainWindowToTray()) {
-          owner?.hide()
-        }
         // Always notify the main renderer so its timer/state is consumed even
         // when a secondary settings/onboarding window initiated the request.
         const notificationTarget = getMainWindow() ?? owner
@@ -725,7 +752,7 @@ export function registerIPCHandlers(): void {
       const settings = await loadSettings()
       const relaunchArgs = buildRelaunchArgs(
         process.argv.slice(1),
-        settings?.backgroundListeningEnabled === true
+        isBackgroundListeningActive(settings)
       )
       app.relaunch({ args: relaunchArgs })
       app.exit(0)
@@ -798,15 +825,16 @@ export function registerIPCHandlers(): void {
             settingsToSave as unknown as Record<string, unknown>
           )
         )
-        setTrayBackgroundListening(
-          settingsToSave.backgroundListeningEnabled === true
-        )
+        setTrayBackgroundListening(isBackgroundListeningActive(settingsToSave))
         if (typeof app.setLoginItemSettings === 'function') {
           try {
-            app.setLoginItemSettings({
+            const loginItemSettings: Electron.Settings = {
               openAtLogin: settingsToSave.launchAtLogin === true,
-              args: [BACKGROUND_LAUNCH_ARG],
-            })
+            }
+            if (process.platform !== 'darwin') {
+              loginItemSettings.args = [BACKGROUND_LAUNCH_ARG]
+            }
+            app.setLoginItemSettings(loginItemSettings)
           } catch (error) {
             console.warn(
               '[Main IPC settings:save] Could not configure launch at login:',

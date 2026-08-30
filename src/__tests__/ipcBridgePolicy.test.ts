@@ -16,6 +16,7 @@ describe('renderer IPC bridge policy', () => {
     expect(isAllowedInvokeChannel('desktop:executeCommand')).toBe(true)
     expect(isAllowedInvokeChannel('main-window:state')).toBe(true)
     expect(isAllowedSendChannel('restart-and-install-update')).toBe(true)
+    expect(isAllowedSendChannel('move-main-window')).toBe(true)
     expect(isAllowedSendChannel('desktop:executeCommand')).toBe(false)
   })
 

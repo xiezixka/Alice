@@ -2,9 +2,10 @@ export type FFmpegPlatform = 'win32' | 'darwin' | 'linux' | string
 
 export interface FFmpegEnsureOptions {
   platform?: FFmpegPlatform
+  arch?: string
   cwd?: string
   backendBinDir?: string
-  urls?: string | string[]
+  urls?: string | string[] | Record<string, string | string[]>
   download?: (url: string, outputPath: string) => Promise<void> | void
   downloadFile?: (url: string, outputPath: string) => Promise<void> | void
   extract?: (
@@ -17,6 +18,11 @@ export interface FFmpegEnsureOptions {
   ) => Promise<boolean> | boolean
 }
 
+export interface DarwinFFmpegUrls {
+  x64: string
+  arm64: string
+}
+
 export interface DownloadOptions {
   redirects?: number
   maxRedirects?: number
@@ -25,9 +31,9 @@ export interface DownloadOptions {
 
 export const FFMPEG_URLS: {
   win32: string
-  darwin: string
+  darwin: DarwinFFmpegUrls
   linux: string[]
-  [platform: string]: string | string[]
+  [platform: string]: string | string[] | DarwinFFmpegUrls
 }
 
 export function archiveExtensionFromUrl(

@@ -50,6 +50,12 @@ describe('build-go ffmpeg bootstrap', () => {
     expect(FFMPEG_URLS.linux[1]).toContain('johnvansickle.com')
   })
 
+  it('selects a pinned native arm64 archive for Apple Silicon', () => {
+    expect(FFMPEG_URLS.darwin.arm64).toContain(
+      'binmgr/ffmpeg/releases/download/v8.1.2/ffmpeg-darwin-arm64.tar.gz'
+    )
+  })
+
   it('infers archive type without being confused by redirect query strings', () => {
     expect(
       archiveExtensionFromUrl(

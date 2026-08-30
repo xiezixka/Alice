@@ -34,6 +34,7 @@ declare global {
     desktopAPI: AliceDesktopAPI
     electron: {
       resize: (dimensions: { width: number; height: number }) => void
+      moveWindowHorizontally?: (deltaX: number) => void
       mini: (minimize: {
         minimize: boolean
         silent?: boolean

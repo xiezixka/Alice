@@ -92,6 +92,8 @@ const aliceIPC = {
 contextBridge.exposeInMainWorld('electron', {
   resize: (dimensions: { width: number; height: number }) =>
     ipcRenderer.send('resize', dimensions),
+  moveWindowHorizontally: (deltaX: number) =>
+    ipcRenderer.send('move-main-window', { deltaX }),
   mini: (minimize: {
     minimize: boolean
     silent?: boolean

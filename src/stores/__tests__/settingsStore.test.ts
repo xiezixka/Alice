@@ -388,4 +388,25 @@ describe('useSettingsStore boolean settings', () => {
       vi.unstubAllGlobals()
     }
   })
+
+  it('fails closed when onboarding completion is persisted as a string', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({ onboardingCompleted: 'false' })),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+      expect(store.settings.onboardingCompleted).toBe(false)
+      expect(saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ onboardingCompleted: false })
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })

@@ -167,10 +167,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineProps, nextTick, ref, watch, onMounted } from 'vue'
+import {
+  computed,
+  defineProps,
+  nextTick,
+  ref,
+  watch,
+  onMounted,
+  onUnmounted,
+} from 'vue'
 import { useGeneralStore, AudioState } from '../stores/generalStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { storeToRefs } from 'pinia'
+import { hasBackgroundListeningPrerequisites } from '../composables/backgroundListeningPolicy'
 import {
   micIcon,
   micIconActive,
@@ -235,6 +244,8 @@ const baseWindowSize = computed(() =>
 )
 const SIDEBAR_WINDOW_WIDTH = 1340
 const SIDEBAR_WINDOW_HEIGHT = 560
+let minimizeTransitionId = 0
+let pendingSidebarMinimizeTimer: ReturnType<typeof setTimeout> | null = null
 
 const statusMessageId = ref(
   `status-msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
@@ -310,8 +321,15 @@ const waveformAriaLabel = computed(() =>
   waveformActive.value ? 'Alice 正在处理音频' : '音频波形待命'
 )
 
+const backgroundListeningActive = computed(
+  () =>
+    settingsStore.config.onboardingCompleted === true &&
+    settingsStore.config.backgroundListeningEnabled === true &&
+    hasBackgroundListeningPrerequisites(settingsStore.config)
+)
+
 const closeActionLabel = computed(() =>
-  settingsStore.config.backgroundListeningEnabled ? '隐藏到后台' : '关闭应用'
+  backgroundListeningActive.value ? '隐藏到后台' : '关闭应用'
 )
 
 const closeWindow = () => {
@@ -380,6 +398,11 @@ const toggleMinimize = async () => {
   // mini→full race if the user clicks the utility control mid-response.
   if (willMinimize && macSilentEnabled && (isBusy || manualListeningBusy))
     return
+  if (pendingSidebarMinimizeTimer) {
+    clearTimeout(pendingSidebarMinimizeTimer)
+    pendingSidebarMinimizeTimer = null
+  }
+  const transitionId = ++minimizeTransitionId
   emit('manualMinimize', willMinimize)
   isMinimized.value = willMinimize
 
@@ -389,7 +412,15 @@ const toggleMinimize = async () => {
     if (willMinimize && openSidebar.value) {
       toggleSidebar()
       openSidebar.value = false
-      setTimeout(() => {
+      pendingSidebarMinimizeTimer = setTimeout(() => {
+        pendingSidebarMinimizeTimer = null
+        if (
+          transitionId !== minimizeTransitionId ||
+          !isMinimized.value ||
+          openSidebar.value
+        ) {
+          return
+        }
         console.log('Minimizing window after closing sidebar.')
         ;(window as any).electron.mini({
           minimize: true,
@@ -432,5 +463,13 @@ const isConfigState = computed(() => {
 
 onMounted(() => {
   calculateScrollDuration()
+})
+
+onUnmounted(() => {
+  if (pendingSidebarMinimizeTimer) {
+    clearTimeout(pendingSidebarMinimizeTimer)
+    pendingSidebarMinimizeTimer = null
+  }
+  minimizeTransitionId += 1
 })
 </script>

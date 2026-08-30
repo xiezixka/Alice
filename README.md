@@ -90,7 +90,7 @@ With the local STT model, you can set a **wake-up word** (like "Hey, Siri").
 - Default mode is **auto language detection**, but you can also select a specific language in settings.
 - In **Core Settings**, enable **后台语音监听** to keep VAD active while the avatar is hidden in the system tray. This requires local STT + wake word mode; closing the avatar hides it instead of quitting, and **退出 Alice** remains available from the tray menu.
 - **开机启动 Alice** uses the operating system login-item mechanism. When paired with background listening, Alice starts hidden and waits for the wake word.
-- 修改唤醒词后点击“保存并重新加载”即可生效；如果后台监听已开启，重启会继续携带后台启动参数并保持窗口隐藏，手动打开 Alice 仍会显示主窗口。
+- 修改唤醒词后点击“保存并重新加载”即可生效；如果后台监听已开启，重启会继续按登录项状态保持窗口隐藏（Windows 使用启动参数，macOS 使用系统登录项标记），手动打开 Alice 仍会显示主窗口。
 - 后台唤醒基于本地 Whisper 转写和 VAD，并非低功耗专用关键词芯片；Alice 进程必须保持运行且系统必须授予麦克风权限。
 
 ### 中文快速启用
@@ -121,7 +121,7 @@ Fully customizable settings interface:
 - Prompt and summarization tuning
 - Audio/mic toggles & hotkeys
 - Switchable main-window styles: **悬浮胶囊** (A) and **玻璃对话卡片** (B); use the toggle in the top-right corner or **Settings → AI 助手 → 主界面样式**.
-- macOS 可选 **静默灵动岛**：最小化后自动收纳到当前屏幕顶部中央的 240×44 窄胶囊；待命/后台等待唤醒词时约 2.2 秒后自动收起，后台登录启动在渲染器初始化后会不抢焦点地显示一次，开始处理或播报会立即展开。点击胶囊或按 Enter/空格可恢复完整窗口；从托盘/Dock 打开会恢复完整窗口，选择“隐藏到后台”后不会被定时器再次召回。在 **设置 → AI 助手** 关闭后恢复原来的 210×210 小窗（Windows/Linux 不受影响）。这是基于屏幕顶部安全区的跨版本布局，不依赖特定机型的物理灵动岛 API。
+- macOS 可选 **静默灵动岛**：最小化后自动收纳到当前屏幕顶部的 240×44 窄胶囊；待命/后台等待唤醒词时约 2.2 秒后自动收起，后台登录启动在渲染器初始化后会不抢焦点地显示一次，开始处理或播报会立即展开。胶囊可用鼠标左右拖动到当前屏幕的任意顶部位置，点击胶囊或按 Enter/空格可恢复完整窗口；从托盘/Dock 打开会恢复完整窗口，选择“隐藏到后台”后不会被定时器再次召回。在 **设置 → AI 助手** 关闭后恢复原来的 210×210 小窗（Windows/Linux 不受影响）。这是基于屏幕顶部安全区的跨版本布局，不依赖特定机型的物理灵动岛 API。
 - Available tools & MCP configuration
 - Google integrations
 

@@ -102,12 +102,21 @@
     >
       <div
         class="avatar"
-        :class="{ open: openSidebar, 'mac-silent-avatar': isMacSilent }"
+        :class="{
+          open: openSidebar,
+          'mac-silent-avatar': isMacSilent,
+          'mac-silent-avatar--dragging': isMacSilentDragging,
+        }"
         :role="isMacSilent ? 'button' : undefined"
         :tabindex="isMacSilent ? 0 : undefined"
         :aria-label="isMacSilent ? '展开 Alice' : undefined"
+        :title="isMacSilent ? '拖动调整位置，点击展开 Alice' : undefined"
         @click="handleSilentIslandClick"
         @keydown="handleSilentIslandKeydown"
+        @pointerdown="handleMacSilentPointerDown"
+        @pointermove="handleMacSilentPointerMove"
+        @pointerup="handleMacSilentPointerUp"
+        @pointercancel="handleMacSilentPointerUp"
       >
         <div
           class="avatar-ring"
@@ -277,11 +286,27 @@ let blinkTimer: ReturnType<typeof setTimeout> | null = null
 let blinkEndTimer: ReturnType<typeof setTimeout> | null = null
 let modeNoticeTimer: ReturnType<typeof setTimeout> | null = null
 let macSilentCollapseTimer: ReturnType<typeof setTimeout> | null = null
+let macSilentCollapseGeneration = 0
+let macSilentTransitionIntent = 0
+// A native state query can resolve after a tray/Dock click or a renderer
+// transition.  Increment this token whenever presentation changes so an old
+// response can never put the DOM back into the compact layout.
+let nativePresentationSyncGeneration = 0
 let modeNoticeRestoreStatus: string | null = null
 let backgroundSilentRevealSent = false
 const isBlinking = vueRef(false)
 const macSilentManuallyExpanded = vueRef(false)
+const isMacSilentDragging = vueRef(false)
+let macSilentDragState: {
+  pointerId: number
+  lastScreenX: number
+  distanceX: number
+  moved: boolean
+} | null = null
+let macSilentDragResetTimer: ReturnType<typeof setTimeout> | null = null
+let macSilentDragJustFinished = false
 const MAC_SILENT_IDLE_DELAY = 2200
+const MAC_SILENT_DRAG_CLICK_SUPPRESSION = 700
 
 const baseWindowSize = computed(() =>
   uiMode.value === 'glass'
@@ -321,6 +346,19 @@ const clearMacSilentCollapseTimer = () => {
     clearTimeout(macSilentCollapseTimer)
     macSilentCollapseTimer = null
   }
+  // Invalidate an already-queued async collapse continuation as well as the
+  // timer itself. Vue's nextTick can resume after a user click or audio-state
+  // change, so a stale continuation must never send a late native minimize.
+  macSilentCollapseGeneration += 1
+}
+
+const invalidateNativePresentationSync = () => {
+  nativePresentationSyncGeneration += 1
+}
+
+const invalidatePresentationIntent = () => {
+  macSilentTransitionIntent += 1
+  invalidateNativePresentationSync()
 }
 
 const isBackgroundWakeListening = computed(
@@ -341,10 +379,75 @@ const shouldAutoCollapseMacSilent = computed(
       (audioState.value === 'LISTENING' && isBackgroundWakeListening.value))
 )
 
-const collapseIntoMacSilentIsland = async () => {
+const collapseIntoMacSilentIsland = async (
+  expectedGeneration = macSilentCollapseGeneration
+) => {
   if (!shouldAutoCollapseMacSilent.value || isMinimized.value) return
+  const transitionIntent = ++macSilentTransitionIntent
+  const syncGeneration = nativePresentationSyncGeneration + 1
+  invalidateNativePresentationSync()
   isMinimized.value = true
   await nextTick()
+  if (transitionIntent !== macSilentTransitionIntent || !isMinimized.value) {
+    return
+  }
+  if (
+    expectedGeneration !== macSilentCollapseGeneration ||
+    !shouldAutoCollapseMacSilent.value
+  ) {
+    // The native minimize was cancelled while Vue was flushing. Restore the
+    // renderer state so it cannot remain in a 44px layout inside a full-size
+    // window; a newer transition (if any) owns its own state update.
+    isMinimized.value = false
+    return
+  }
+  // A Dock/tray activation can happen after the renderer schedules its first
+  // background collapse but before the one-shot `main-window:expanded` event
+  // listener is attached. Reconcile native state one last time so that a
+  // manually revealed full window is never folded back into the island.
+  if (isBackgroundLaunch.value && !backgroundSilentRevealSent) {
+    try {
+      const nativeState = await window.aliceIPC?.invoke('main-window:state')
+      if (
+        transitionIntent !== macSilentTransitionIntent ||
+        syncGeneration !== nativePresentationSyncGeneration ||
+        expectedGeneration !== macSilentCollapseGeneration ||
+        !shouldAutoCollapseMacSilent.value ||
+        !isMinimized.value
+      ) {
+        return
+      }
+      const nativeRevealConsumed =
+        nativeState &&
+        typeof nativeState === 'object' &&
+        (nativeState.hiddenByUser === true ||
+          (nativeState.initiallyHidden === false &&
+            nativeState.silent === false))
+      if (nativeRevealConsumed) {
+        isMinimized.value = false
+        backgroundSilentRevealSent = true
+        macSilentManuallyExpanded.value = true
+        return
+      }
+    } catch (error) {
+      // If the state bridge is unavailable, retain the normal collapse path;
+      // native validation still clamps the window and the next launch can
+      // repair a failed background presentation.
+      console.warn(
+        '[Main] Could not reconcile native state before silent collapse:',
+        error
+      )
+    }
+  }
+  if (
+    transitionIntent !== macSilentTransitionIntent ||
+    syncGeneration !== nativePresentationSyncGeneration ||
+    expectedGeneration !== macSilentCollapseGeneration ||
+    !shouldAutoCollapseMacSilent.value ||
+    !isMinimized.value
+  ) {
+    return
+  }
   const showWhenHidden = isBackgroundLaunch.value && !backgroundSilentRevealSent
   window.electron?.mini({
     minimize: true,
@@ -367,14 +470,35 @@ const scheduleMacSilentCollapse = () => {
     isBackgroundLaunch.value && !backgroundSilentRevealSent
       ? 0
       : MAC_SILENT_IDLE_DELAY
+  const expectedGeneration = macSilentCollapseGeneration
   macSilentCollapseTimer = setTimeout(() => {
     macSilentCollapseTimer = null
-    void collapseIntoMacSilentIsland()
+    void collapseIntoMacSilentIsland(expectedGeneration)
   }, delay)
+}
+
+const reconcileNativeExpansion = (showWhenHidden = false) => {
+  if (
+    !isMacPlatform.value ||
+    !macSilentModeEnabled.value ||
+    isMinimized.value ||
+    !isActiveAudioState(audioState.value)
+  ) {
+    return false
+  }
+  window.electron?.mini({
+    minimize: false,
+    silent: false,
+    showWhenHidden,
+  })
+  if (showWhenHidden) backgroundSilentRevealSent = true
+  resizeForUiMode()
+  return true
 }
 
 const expandMacSilentForActivity = async (manual = false) => {
   if (!isMacPlatform.value) return
+  clearMacSilentCollapseTimer()
   // A background login window is created hidden.  A wake word can arrive
   // before the initial 0ms collapse timer runs, so treat that first active
   // turn as a reveal request even though Vue still reports `isMinimized=false`.
@@ -382,22 +506,141 @@ const expandMacSilentForActivity = async (manual = false) => {
     isBackgroundLaunch.value && !backgroundSilentRevealSent
   if (!isMinimized.value && !revealBackgroundWindow) {
     if (manual) macSilentManuallyExpanded.value = true
+    // Audio-state watchers can fire again while a previous expansion is
+    // awaiting Vue's next tick.  Reconcile the native window even when the
+    // renderer flag already says “expanded”, otherwise a stale token can
+    // leave full DOM content inside the 240×44 native island.
+    if (isActiveAudioState(audioState.value)) {
+      reconcileNativeExpansion()
+    }
     return
   }
+  // Only a real expansion transition gets a new intent. A duplicate watcher
+  // notification while an expansion is already in flight must not cancel the
+  // pending native `mini(false)` call.
+  const transitionIntent = ++macSilentTransitionIntent
+  const syncGeneration = nativePresentationSyncGeneration + 1
+  invalidateNativePresentationSync()
   if (manual) macSilentManuallyExpanded.value = true
   isMinimized.value = false
   await nextTick()
-  window.electron?.mini({
-    minimize: false,
-    silent: false,
-    showWhenHidden: revealBackgroundWindow,
-  })
-  if (revealBackgroundWindow) backgroundSilentRevealSent = true
-  resizeForUiMode()
+  if (
+    transitionIntent !== macSilentTransitionIntent ||
+    syncGeneration !== nativePresentationSyncGeneration ||
+    isMinimized.value
+  ) {
+    if (isActiveAudioState(audioState.value)) {
+      reconcileNativeExpansion(revealBackgroundWindow)
+    }
+    return
+  }
+  reconcileNativeExpansion(revealBackgroundWindow)
+}
+
+const isWindowDragInteractiveTarget = (
+  target: EventTarget | null,
+  currentTarget: EventTarget | null
+): boolean => {
+  const element = target instanceof HTMLElement ? target : null
+  const interactive = element?.closest(
+    'button, a, input, textarea, select, [role="button"], [data-no-window-drag]'
+  )
+  // The avatar itself carries role="button" for keyboard activation, but it
+  // is also the drag surface. Only descendants with an interactive role
+  // should cancel a drag gesture.
+  return Boolean(interactive && interactive !== currentTarget)
+}
+
+const handleMacSilentPointerDown = (event: PointerEvent) => {
+  if (
+    !isMacSilent.value ||
+    event.button !== 0 ||
+    isWindowDragInteractiveTarget(event.target, event.currentTarget)
+  ) {
+    return
+  }
+
+  const screenX = Number.isFinite(event.screenX) ? event.screenX : event.clientX
+  macSilentDragState = {
+    pointerId: event.pointerId,
+    lastScreenX: screenX,
+    distanceX: 0,
+    moved: false,
+  }
+  isMacSilentDragging.value = false
+  const target = event.currentTarget as HTMLElement | null
+  try {
+    target?.setPointerCapture(event.pointerId)
+  } catch {
+    // Pointer capture is best-effort; native deltas still work while the
+    // pointer remains over the compact window.
+  }
+}
+
+const handleMacSilentPointerMove = (event: PointerEvent) => {
+  const drag = macSilentDragState
+  if (!drag || drag.pointerId !== event.pointerId || !isMacSilent.value) {
+    return
+  }
+
+  const screenX = Number.isFinite(event.screenX) ? event.screenX : event.clientX
+  const deltaX = screenX - drag.lastScreenX
+  drag.lastScreenX = screenX
+  if (!Number.isFinite(deltaX) || deltaX === 0) return
+
+  drag.distanceX += Math.abs(deltaX)
+  if (drag.distanceX < 4) return
+  drag.moved = true
+  isMacSilentDragging.value = true
+  // Set the click guard as soon as the movement crosses the drag threshold.
+  // Some native/macOS pointer paths dispatch `click` before a captured
+  // `pointerup` reaches Chromium; waiting for pointerup would then expand the
+  // island immediately after a drag.
+  macSilentDragJustFinished = true
+  if (macSilentDragResetTimer) clearTimeout(macSilentDragResetTimer)
+  macSilentDragResetTimer = setTimeout(() => {
+    macSilentDragResetTimer = null
+    macSilentDragJustFinished = false
+  }, MAC_SILENT_DRAG_CLICK_SUPPRESSION)
+  event.preventDefault()
+  window.electron?.moveWindowHorizontally?.(deltaX)
+}
+
+const handleMacSilentPointerUp = (event: PointerEvent) => {
+  const drag = macSilentDragState
+  if (!drag || drag.pointerId !== event.pointerId) return
+  const target = event.currentTarget as HTMLElement | null
+  try {
+    if (target?.hasPointerCapture(event.pointerId)) {
+      target.releasePointerCapture(event.pointerId)
+    }
+  } catch {
+    // Pointer capture may already have been released by the browser.
+  }
+  macSilentDragState = null
+  isMacSilentDragging.value = false
+  if (!drag.moved) return
+
+  // Chromium dispatches a click after pointerup even for a short drag. Ignore
+  // that synthetic click so moving the island does not immediately expand it.
+  macSilentDragJustFinished = true
+  if (macSilentDragResetTimer) clearTimeout(macSilentDragResetTimer)
+  macSilentDragResetTimer = setTimeout(() => {
+    macSilentDragResetTimer = null
+    macSilentDragJustFinished = false
+  }, MAC_SILENT_DRAG_CLICK_SUPPRESSION)
 }
 
 const handleSilentIslandClick = (event: MouseEvent) => {
   if (!isMacSilent.value) return
+  if (macSilentDragJustFinished) {
+    macSilentDragJustFinished = false
+    if (macSilentDragResetTimer) {
+      clearTimeout(macSilentDragResetTimer)
+      macSilentDragResetTimer = null
+    }
+    return
+  }
   const target = event.target as HTMLElement | null
   // Controls inside the island (currently the expand affordance) keep their
   // own click semantics; only the pill surface itself expands the window.
@@ -423,6 +666,7 @@ const handleSilentIslandKeydown = (event: KeyboardEvent) => {
 const handleManualMinimize = (minimized: boolean) => {
   if (!isMacPlatform.value || !macSilentModeEnabled.value) return
   clearMacSilentCollapseTimer()
+  invalidatePresentationIntent()
   // A user expansion is an explicit opt-out until the next active voice turn;
   // this prevents the island from immediately swallowing a window the user
   // just opened to work in the chat panel.
@@ -445,6 +689,7 @@ const handleShellInteraction = (event: Event) => {
     )
   ) {
     clearMacSilentCollapseTimer()
+    invalidatePresentationIntent()
     macSilentManuallyExpanded.value = true
   }
 }
@@ -473,6 +718,7 @@ const handleAssistantAttention = (options?: { forceExpand?: boolean }) => {
   } else if (isMacPlatform.value) {
     // Keep an update/notification readable instead of letting the idle timer
     // fold the full window away while the user is deciding what to do.
+    invalidatePresentationIntent()
     macSilentManuallyExpanded.value = true
   }
 }
@@ -482,6 +728,7 @@ const handleAssistantHidden = () => {
   // Consume the one-shot background reveal and cancel any renderer timer so
   // choosing “隐藏到后台” cannot bring the island back on its own.
   clearMacSilentCollapseTimer()
+  invalidatePresentationIntent()
   backgroundSilentRevealSent = true
   macSilentManuallyExpanded.value = false
 }
@@ -505,6 +752,7 @@ const isActiveAudioState = (state: string) => {
 // expansion while idle remains open, which keeps the chat usable and avoids a
 // window collapsing underneath a click the user just made.
 watch([audioState, isBackgroundWakeListening], ([state]) => {
+  invalidateNativePresentationSync()
   if (isActiveAudioState(state)) {
     macSilentManuallyExpanded.value = false
     clearMacSilentCollapseTimer()
@@ -517,6 +765,7 @@ watch([audioState, isBackgroundWakeListening], ([state]) => {
 watch(
   [openSidebar, macSilentModeEnabled, settingsReady],
   ([sidebarOpen, silentEnabled, ready]) => {
+    invalidateNativePresentationSync()
     if (!silentEnabled) {
       // Do not let a previous manual expansion veto automatic folding when
       // the user turns the macOS island off and later enables it again.
@@ -563,6 +812,7 @@ const handleNativeWindowExpanded = (payload?: { userInitiated?: boolean }) => {
   // The tray/Dock can expand the native island without going through the
   // renderer's Actions component. Mirror that transition before resizing so
   // the DOM never remains in the 240×44 layout inside a full-size window.
+  invalidatePresentationIntent()
   isMinimized.value = false
   if (payload?.userInitiated !== false) {
     clearMacSilentCollapseTimer()
@@ -574,8 +824,16 @@ const handleNativeWindowExpanded = (payload?: { userInitiated?: boolean }) => {
 
 const syncNativeWindowPresentation = async () => {
   if (!isElectron || !window.aliceIPC) return
+  const syncGeneration = nativePresentationSyncGeneration
+  const syncTransitionIntent = macSilentTransitionIntent
   try {
     const state = await window.aliceIPC.invoke('main-window:state')
+    if (
+      syncGeneration !== nativePresentationSyncGeneration ||
+      syncTransitionIntent !== macSilentTransitionIntent
+    ) {
+      return
+    }
     if (!state || typeof state !== 'object') return
 
     if (state.hiddenByUser === true) {
@@ -587,9 +845,38 @@ const syncNativeWindowPresentation = async () => {
     }
 
     if (state.silent === true) {
-      // Avoid fighting an active audio turn while reconciling a renderer that
-      // mounted after the native island had already been placed.
-      if (!isActiveAudioState(audioState.value)) {
+      if (isActiveAudioState(audioState.value)) {
+        // The native window can already be compact when a renderer remounts
+        // during an active turn. Expand it explicitly; merely leaving the
+        // reactive flag false would otherwise create a full DOM inside a
+        // 240×44 native surface.
+        const revealBackgroundWindow =
+          isBackgroundLaunch.value && !backgroundSilentRevealSent
+        isMinimized.value = false
+        await nextTick()
+        if (
+          syncGeneration !== nativePresentationSyncGeneration ||
+          syncTransitionIntent !== macSilentTransitionIntent ||
+          isMinimized.value ||
+          !isActiveAudioState(audioState.value)
+        ) {
+          // A newer renderer transition may have invalidated this query
+          // while Vue was flushing the expansion.  If the active turn still
+          // owns the full layout, repair the native window as well; otherwise
+          // a stale 240×44 native island could contain the expanded DOM.
+          if (!isMinimized.value && isActiveAudioState(audioState.value)) {
+            reconcileNativeExpansion(revealBackgroundWindow)
+          }
+          return
+        }
+        window.electron?.mini({
+          minimize: false,
+          silent: false,
+          showWhenHidden: revealBackgroundWindow,
+        })
+        if (revealBackgroundWindow) backgroundSilentRevealSent = true
+        resizeForUiMode()
+      } else {
         isMinimized.value = true
       }
       return
@@ -767,6 +1054,14 @@ onUnmounted(() => {
   aiVideo.value = null
   clearBlinkTimers()
   clearMacSilentCollapseTimer()
+  invalidatePresentationIntent()
+  macSilentDragState = null
+  isMacSilentDragging.value = false
+  macSilentDragJustFinished = false
+  if (macSilentDragResetTimer) {
+    clearTimeout(macSilentDragResetTimer)
+    macSilentDragResetTimer = null
+  }
   if (modeNoticeTimer) {
     clearTimeout(modeNoticeTimer)
     modeNoticeTimer = null
