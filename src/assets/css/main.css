@@ -541,6 +541,19 @@
   -webkit-app-region: no-drag;
 }
 
+/* Extend the drag hit area to the native window's transparent 4px inset.
+ * Users can grab the capsule by its edge without accidentally missing the
+ * renderer surface; the visible pill remains inset for its soft shadow. */
+.assistant-shell--mac-silent .mac-silent-drag-hitbox {
+  position: absolute;
+  inset: -4px;
+  z-index: 0;
+  border-radius: 999px;
+  cursor: inherit;
+  pointer-events: auto;
+  touch-action: none;
+}
+
 .assistant-shell--mac-silent .avatar.mac-silent-avatar--dragging {
   cursor: grabbing;
 }

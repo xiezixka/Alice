@@ -114,10 +114,13 @@
         @click="handleSilentIslandClick"
         @keydown="handleSilentIslandKeydown"
         @pointerdown="handleMacSilentPointerDown"
-        @pointermove="handleMacSilentPointerMove"
-        @pointerup="handleMacSilentPointerUp"
-        @pointercancel="handleMacSilentPointerUp"
+        @lostpointercapture="handleMacSilentPointerUp"
       >
+        <span
+          v-if="isMacSilent"
+          class="mac-silent-drag-hitbox"
+          aria-hidden="true"
+        />
         <div
           class="avatar-ring"
           :style="avatarRingStyle"
@@ -300,6 +303,7 @@ const isMacSilentDragging = vueRef(false)
 let macSilentDragState: {
   pointerId: number
   lastScreenX: number
+  lastClientX: number
   distanceX: number
   moved: boolean
 } | null = null
@@ -307,6 +311,9 @@ let macSilentDragResetTimer: ReturnType<typeof setTimeout> | null = null
 let macSilentDragJustFinished = false
 const MAC_SILENT_IDLE_DELAY = 2200
 const MAC_SILENT_DRAG_CLICK_SUPPRESSION = 700
+const macSilentDragListenerOptions: AddEventListenerOptions = {
+  capture: true,
+}
 
 const baseWindowSize = computed(() =>
   uiMode.value === 'glass'
@@ -551,6 +558,53 @@ const isWindowDragInteractiveTarget = (
   return Boolean(interactive && interactive !== currentTarget)
 }
 
+/**
+ * Prefer the global screen coordinate for native window movement, but fall
+ * back to the client coordinate when a WebKit/Electron pointer path reports a
+ * zero or otherwise unusable screenX. The latter can occur with synthetic
+ * input and a few multi-display/macOS accessibility paths; using the client
+ * delta keeps the pill responsive instead of making it appear locked.
+ */
+const getMacSilentPointerX = (event: PointerEvent): number => {
+  const screenX = event.screenX
+  const clientX = event.clientX
+  if (
+    Number.isFinite(screenX) &&
+    (screenX !== 0 || !Number.isFinite(clientX) || clientX === 0)
+  ) {
+    return screenX
+  }
+  if (Number.isFinite(clientX)) return clientX
+  return screenX
+}
+
+const removeMacSilentDragListeners = () => {
+  window.removeEventListener(
+    'pointermove',
+    handleMacSilentPointerMove,
+    macSilentDragListenerOptions
+  )
+  window.removeEventListener(
+    'pointerup',
+    handleMacSilentPointerUp,
+    macSilentDragListenerOptions
+  )
+  window.removeEventListener(
+    'pointercancel',
+    handleMacSilentPointerUp,
+    macSilentDragListenerOptions
+  )
+  window.removeEventListener('blur', handleMacSilentDragBlur)
+}
+
+const handleMacSilentDragBlur = () => {
+  const drag = macSilentDragState
+  if (!drag) return
+  removeMacSilentDragListeners()
+  macSilentDragState = null
+  isMacSilentDragging.value = false
+}
+
 const handleMacSilentPointerDown = (event: PointerEvent) => {
   if (
     !isMacSilent.value ||
@@ -560,10 +614,13 @@ const handleMacSilentPointerDown = (event: PointerEvent) => {
     return
   }
 
-  const screenX = Number.isFinite(event.screenX) ? event.screenX : event.clientX
+  removeMacSilentDragListeners()
+  const screenX = getMacSilentPointerX(event)
+  const clientX = Number.isFinite(event.clientX) ? event.clientX : screenX
   macSilentDragState = {
     pointerId: event.pointerId,
     lastScreenX: screenX,
+    lastClientX: clientX,
     distanceX: 0,
     moved: false,
   }
@@ -575,6 +632,25 @@ const handleMacSilentPointerDown = (event: PointerEvent) => {
     // Pointer capture is best-effort; native deltas still work while the
     // pointer remains over the compact window.
   }
+  // Moving the native BrowserWindow can move the hit target away from the
+  // pointer in the same frame. Capture follow-up events at window level so a
+  // long drag keeps receiving deltas after that boundary changes.
+  window.addEventListener(
+    'pointermove',
+    handleMacSilentPointerMove,
+    macSilentDragListenerOptions
+  )
+  window.addEventListener(
+    'pointerup',
+    handleMacSilentPointerUp,
+    macSilentDragListenerOptions
+  )
+  window.addEventListener(
+    'pointercancel',
+    handleMacSilentPointerUp,
+    macSilentDragListenerOptions
+  )
+  window.addEventListener('blur', handleMacSilentDragBlur)
 }
 
 const handleMacSilentPointerMove = (event: PointerEvent) => {
@@ -583,9 +659,19 @@ const handleMacSilentPointerMove = (event: PointerEvent) => {
     return
   }
 
-  const screenX = Number.isFinite(event.screenX) ? event.screenX : event.clientX
-  const deltaX = screenX - drag.lastScreenX
+  const screenX = getMacSilentPointerX(event)
+  const clientX = Number.isFinite(event.clientX) ? event.clientX : screenX
+  // movementX is the most stable delta while the native window itself is
+  // moving under the pointer. Some synthetic/macOS paths omit it, so retain
+  // the absolute-coordinate fallback for those events.
+  const movementX = Number.isFinite(event.movementX) ? event.movementX : 0
+  const coordinateDelta =
+    screenX === 0 || drag.lastScreenX === 0
+      ? clientX - drag.lastClientX
+      : screenX - drag.lastScreenX
+  const deltaX = movementX !== 0 ? movementX : coordinateDelta
   drag.lastScreenX = screenX
+  drag.lastClientX = clientX
   if (!Number.isFinite(deltaX) || deltaX === 0) return
 
   drag.distanceX += Math.abs(deltaX)
@@ -611,12 +697,17 @@ const handleMacSilentPointerUp = (event: PointerEvent) => {
   if (!drag || drag.pointerId !== event.pointerId) return
   const target = event.currentTarget as HTMLElement | null
   try {
-    if (target?.hasPointerCapture(event.pointerId)) {
+    if (
+      target &&
+      typeof target.hasPointerCapture === 'function' &&
+      target.hasPointerCapture(event.pointerId)
+    ) {
       target.releasePointerCapture(event.pointerId)
     }
   } catch {
     // Pointer capture may already have been released by the browser.
   }
+  removeMacSilentDragListeners()
   macSilentDragState = null
   isMacSilentDragging.value = false
   if (!drag.moved) return
@@ -1051,6 +1142,7 @@ onUnmounted(() => {
   if (isElectron) {
     cleanupScreenshotListeners()
   }
+  removeMacSilentDragListeners()
   aiVideo.value = null
   clearBlinkTimers()
   clearMacSilentCollapseTimer()
