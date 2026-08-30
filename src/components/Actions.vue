@@ -200,6 +200,13 @@ const props = defineProps({
     type: String as () => AudioState,
     required: true,
   },
+  // Background VAD is intentionally allowed to remain quiet in the island
+  // while it waits for the wake word. A manual LISTENING session is active
+  // work and must stay visible instead.
+  isBackgroundWakeListening: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits([
@@ -366,10 +373,13 @@ const toggleMinimize = async () => {
     'SPEAKING',
     'GENERATING_IMAGE',
   ].includes(props.audioState)
+  const manualListeningBusy =
+    props.audioState === 'LISTENING' && !props.isBackgroundWakeListening
   // Keep an active voice turn visible.  The main renderer also expands when
   // activity starts, but rejecting this reverse transition avoids a native
   // mini→full race if the user clicks the utility control mid-response.
-  if (willMinimize && macSilentEnabled && isBusy) return
+  if (willMinimize && macSilentEnabled && (isBusy || manualListeningBusy))
+    return
   emit('manualMinimize', willMinimize)
   isMinimized.value = willMinimize
 

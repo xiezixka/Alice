@@ -165,6 +165,7 @@
           :isElectron="isElectron"
           :isTTSEnabled="isTTSEnabled"
           :audioState="audioState"
+          :isBackgroundWakeListening="isBackgroundWakeListening"
           :uiMode="uiMode"
         />
       </div>
