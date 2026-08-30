@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createVadLifecycleGate,
+  shouldContinueVadMountWork,
   shouldRestartVadAfterStop,
 } from '../vadLifecycle'
 
@@ -110,5 +111,11 @@ describe('vad lifecycle gate', () => {
         hasInstance: true,
       })
     ).toBe(false)
+  })
+
+  it('blocks stale onMounted continuations after unmount', () => {
+    expect(shouldContinueVadMountWork(true, false)).toBe(true)
+    expect(shouldContinueVadMountWork(false, false)).toBe(false)
+    expect(shouldContinueVadMountWork(true, true)).toBe(false)
   })
 })

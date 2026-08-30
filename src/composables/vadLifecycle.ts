@@ -45,6 +45,14 @@ export function shouldRestartVadAfterStop(state: VadRestartState): boolean {
   )
 }
 
+/** Whether an async onMounted continuation is still allowed to mutate state. */
+export function shouldContinueVadMountWork(
+  mounted: boolean,
+  disposed: boolean
+): boolean {
+  return mounted && !disposed
+}
+
 export function createVadLifecycleGate(): VadLifecycleGate {
   let generation = 0
   let queue: Promise<unknown> = Promise.resolve()

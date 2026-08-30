@@ -14,6 +14,7 @@ import {
 } from './microphonePermission'
 import {
   createVadLifecycleGate,
+  shouldContinueVadMountWork,
   shouldRestartVadAfterStop,
 } from './vadLifecycle'
 
@@ -53,6 +54,7 @@ export function useAudioProcessing() {
   let vadStopRequests = 0
   let restartAfterStop = false
   let disposed = false
+  let mounted = false
 
   const isWakeWordModeEnabled = () =>
     settingsStore.config.sttProvider === 'local' &&
@@ -101,6 +103,7 @@ export function useAudioProcessing() {
   }
 
   onMounted(async () => {
+    mounted = true
     if (
       window.location.protocol === 'file:' &&
       window.electronPaths?.getRendererDistPath
@@ -142,6 +145,13 @@ export function useAudioProcessing() {
       )
       vadAssetBasePath.value = './'
     }
+
+    // The renderer path lookup above is asynchronous in production. If the
+    // component was removed while it was pending, do not attach global
+    // listeners or mutate the shared recording/settings state from this stale
+    // continuation.
+    if (!shouldContinueVadMountWork(mounted, disposed)) return
+
     if (window.aliceIPC && !ipcListenersRegistered) {
       window.aliceIPC.on('global-hotkey-mic-toggle', handleGlobalMicToggle)
       window.aliceIPC.on(
@@ -159,6 +169,7 @@ export function useAudioProcessing() {
     // A background session is deliberately opt-in. It starts only after the
     // renderer has resolved its production VAD assets and the persisted
     // settings are available.
+    if (!shouldContinueVadMountWork(mounted, disposed)) return
     syncBackgroundListening()
   })
 
@@ -662,6 +673,7 @@ export function useAudioProcessing() {
   onUnmounted(() => {
     // Invalidate any in-flight MicVAD.new/start before queuing teardown so an
     // obsolete completion cannot resurrect the microphone after unmount.
+    mounted = false
     disposed = true
     vadLifecycle.invalidate()
     void destroyVAD()
