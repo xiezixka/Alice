@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  clearObservations,
+  createObservation,
   DesktopObservationStore,
+  invalidateObservation,
   InvalidDesktopObservationContextError,
   InvalidDesktopObservationOptionsError,
+  validateObservation,
   type DesktopObservationContext,
 } from '../desktopObservation'
 
@@ -188,6 +192,29 @@ describe('DesktopObservationStore', () => {
         screenFingerprint: 'screen-native-other',
       })
     ).toMatchObject({ valid: false, reason: 'context-changed' })
+  })
+
+  it('accepts native screen/window identifiers and request-shaped wrappers', () => {
+    const nativeContext = {
+      screenId: 9,
+      width: 1728,
+      height: 1117,
+      scaleFactor: 2,
+      windowId: 42,
+      foregroundApp: 'Safari',
+      windowTitle: '行程规划',
+    }
+    clearObservations()
+    const observation = createObservation(nativeContext, 5_000)
+    expect(observation.observationId).toMatch(/^obs_/)
+    expect(
+      validateObservation({
+        observationId: observation.observationId,
+        ...nativeContext,
+      })
+    ).toMatchObject({ valid: true })
+    expect(invalidateObservation(observation)).toBe(true)
+    expect(invalidateObservation(observation)).toBe(false)
   })
 
   it('returns explicit reasons for malformed input and invalidates exactly once', () => {

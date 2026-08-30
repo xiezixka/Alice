@@ -30,13 +30,20 @@ const MAX_ID_GENERATION_ATTEMPTS = 16
  */
 export interface DesktopObservationContext {
   readonly displayId?: string | number
+  /** Alias used by some native display APIs. */
+  readonly screenId?: string | number
   readonly width?: number
   readonly height?: number
   readonly scaleFactor?: number
   readonly foregroundApp?: string
   readonly windowTitle?: string
+  /** Optional native window handle/process identifier for stronger binding. */
+  readonly windowId?: string | number
   readonly windowFingerprint?: string
   readonly screenFingerprint?: string
+  /** Convenience fields accepted by createObservation request-shaped calls. */
+  readonly createdAt?: number
+  readonly ttlMs?: number
 }
 
 /** Short alias for integrations that use the generic observation wording. */
@@ -66,6 +73,8 @@ export interface CreateObservationOptions {
   readonly createdAt?: number
 }
 
+export type CreateObservationOptionsInput = CreateObservationOptions | number
+
 export interface DesktopObservationStoreOptions {
   /** Default lifetime used when create() does not provide ttlMs. */
   readonly ttlMs?: number
@@ -85,6 +94,9 @@ export interface ValidateObservationOptions {
   /** Alias for now, convenient for request-shaped callers. */
   readonly at?: number
 }
+
+export type ValidateObservationOptionsInput =
+  ValidateObservationOptions | number
 
 export type ObservationValidationReason =
   'invalid-id' | 'not-found' | 'expired' | 'context-changed' | 'invalid-context'
@@ -114,6 +126,13 @@ export type ObservationValidation = ObservationValidationResult
 export interface ValidateObservationRequest {
   readonly observationId: string | Pick<DesktopObservation, 'observationId'>
   readonly context: DesktopObservationContext
+  readonly now?: number
+  readonly at?: number
+}
+
+/** Flattened request form convenient for IPC payloads. */
+export type FlatValidateObservationRequest = DesktopObservationContext & {
+  readonly observationId: string | Pick<DesktopObservation, 'observationId'>
   readonly now?: number
   readonly at?: number
 }
@@ -164,6 +183,20 @@ function normalizeTtl(value: number, label: string): number {
     )
   }
   return value
+}
+
+function normalizeCreateOptions(
+  options: CreateObservationOptionsInput | undefined
+): CreateObservationOptions {
+  if (options === undefined) return {}
+  return typeof options === 'number' ? { ttlMs: options } : options
+}
+
+function normalizeValidateOptions(
+  options: ValidateObservationOptionsInput | undefined
+): ValidateObservationOptions {
+  if (options === undefined) return {}
+  return typeof options === 'number' ? { now: options } : options
 }
 
 function normalizeMaxEntries(value: number): number {
@@ -219,17 +252,29 @@ function requireFinitePositiveNumber(value: unknown, label: string): number {
 }
 
 function requireDisplayId(value: unknown): string {
+  return requireDisplayIdWithLabel(value, 'displayId')
+}
+
+function requireOptionalIdentifier(
+  value: unknown,
+  label: string
+): string | undefined {
+  if (value === undefined) return undefined
+  return requireDisplayIdWithLabel(value, label)
+}
+
+function requireDisplayIdWithLabel(value: unknown, label: string): string {
   if (
     (typeof value !== 'string' && typeof value !== 'number') ||
     (typeof value === 'number' && !Number.isFinite(value))
   ) {
     throw new InvalidDesktopObservationContextError(
-      'displayId must be a non-empty string or finite number'
+      `${label} must be a non-empty string or finite number`
     )
   }
   const normalized = String(value).trim()
   if (!normalized) {
-    throw new InvalidDesktopObservationContextError('displayId cannot be empty')
+    throw new InvalidDesktopObservationContextError(`${label} cannot be empty`)
   }
   return normalized
 }
@@ -255,6 +300,7 @@ function fingerprint(value: string): string {
 function hasDisplayContext(context: DesktopObservationContext): boolean {
   return (
     context.displayId !== undefined ||
+    context.screenId !== undefined ||
     context.width !== undefined ||
     context.height !== undefined ||
     context.scaleFactor !== undefined
@@ -263,7 +309,9 @@ function hasDisplayContext(context: DesktopObservationContext): boolean {
 
 function hasWindowContext(context: DesktopObservationContext): boolean {
   return (
-    context.foregroundApp !== undefined || context.windowTitle !== undefined
+    context.foregroundApp !== undefined ||
+    context.windowTitle !== undefined ||
+    context.windowId !== undefined
   )
 }
 
@@ -292,7 +340,7 @@ export function getObservationFingerprints(
         'screenFingerprint or displayId/width/height/scaleFactor is required'
       )
     }
-    const displayId = requireDisplayId(context.displayId)
+    const displayId = requireDisplayId(context.displayId ?? context.screenId)
     const width = requireFinitePositiveNumber(context.width, 'width')
     const height = requireFinitePositiveNumber(context.height, 'height')
     const scaleFactor = requireFinitePositiveNumber(
@@ -321,13 +369,14 @@ export function getObservationFingerprints(
       'foregroundApp'
     )
     const windowTitle = normalizeText(context.windowTitle ?? '', 'windowTitle')
-    if (!foregroundApp && !windowTitle) {
+    const windowId = requireOptionalIdentifier(context.windowId, 'windowId')
+    if (!foregroundApp && !windowTitle && windowId === undefined) {
       throw new InvalidDesktopObservationContextError(
         'foregroundApp or windowTitle cannot both be empty'
       )
     }
     windowFingerprint = `window:v1:${fingerprint(
-      JSON.stringify({ foregroundApp, windowTitle })
+      JSON.stringify({ foregroundApp, windowTitle, windowId: windowId ?? null })
     )}`
   }
 
@@ -409,9 +458,6 @@ export class DesktopObservationStore {
     )
     this.clock = options.now ?? (() => Date.now())
     this.idFactory = options.idFactory ?? defaultIdFactory
-    // Fail early for a malformed injected clock rather than creating records
-    // that can never be validated.
-    assertFiniteTimestamp(this.clock(), 'now()')
   }
 
   /** Number of non-expired records currently retained. */
@@ -471,14 +517,20 @@ export class DesktopObservationStore {
 
   create(
     context: DesktopObservationContext,
-    options: CreateObservationOptions = {}
+    optionsInput: CreateObservationOptionsInput = {}
   ): DesktopObservation {
+    const options = normalizeCreateOptions(optionsInput)
     const fingerprints = getObservationFingerprints(context)
     const now =
       options.createdAt === undefined
-        ? this.now()
+        ? context.createdAt === undefined
+          ? this.now()
+          : assertFiniteTimestamp(context.createdAt, 'createdAt')
         : assertFiniteTimestamp(options.createdAt, 'createdAt')
-    const ttlMs = normalizeTtl(options.ttlMs ?? this.defaultTtlMs, 'ttlMs')
+    const ttlMs = normalizeTtl(
+      options.ttlMs ?? context.ttlMs ?? this.defaultTtlMs,
+      'ttlMs'
+    )
 
     this.cleanupForCapacity(now)
     const observationId = this.nextUniqueId()
@@ -497,7 +549,7 @@ export class DesktopObservationStore {
   /** Explicit method name for class consumers mirroring the module wrapper. */
   createObservation(
     context: DesktopObservationContext,
-    options: CreateObservationOptions = {}
+    options: CreateObservationOptionsInput = {}
   ): DesktopObservation {
     return this.create(context, options)
   }
@@ -505,8 +557,9 @@ export class DesktopObservationStore {
   validate(
     value: string | Pick<DesktopObservation, 'observationId'>,
     context: DesktopObservationContext,
-    options: ValidateObservationOptions = {}
+    optionsInput: ValidateObservationOptionsInput = {}
   ): ObservationValidationResult {
+    const options = normalizeValidateOptions(optionsInput)
     const observationId = extractObservationId(value)
     if (!observationId) return { valid: false, reason: 'invalid-id' }
 
@@ -547,7 +600,7 @@ export class DesktopObservationStore {
   validateObservation(
     value: string | Pick<DesktopObservation, 'observationId'>,
     context: DesktopObservationContext,
-    options: ValidateObservationOptions = {}
+    options: ValidateObservationOptionsInput = {}
   ): ObservationValidationResult {
     return this.validate(value, context, options)
   }
@@ -603,7 +656,7 @@ const defaultObservationStore = new DesktopObservationStore()
 /** Create a short-lived observation in the process-local default registry. */
 export function createObservation(
   context: DesktopObservationContext,
-  options: CreateObservationOptions = {}
+  options: CreateObservationOptionsInput = {}
 ): DesktopObservation {
   return defaultObservationStore.create(context, options)
 }
@@ -618,34 +671,37 @@ export function createObservation(
 export function validateObservation(
   observationId: string | Pick<DesktopObservation, 'observationId'>,
   context: DesktopObservationContext,
-  options?: ValidateObservationOptions
+  options?: ValidateObservationOptionsInput
 ): ObservationValidationResult
 export function validateObservation(
   request: ValidateObservationRequest
 ): ObservationValidationResult
 export function validateObservation(
+  request: FlatValidateObservationRequest
+): ObservationValidationResult
+export function validateObservation(
   first:
     | string
     | Pick<DesktopObservation, 'observationId'>
-    | ValidateObservationRequest,
+    | ValidateObservationRequest
+    | FlatValidateObservationRequest,
   second?: DesktopObservationContext,
-  third: ValidateObservationOptions = {}
+  third: ValidateObservationOptionsInput = {}
 ): ObservationValidationResult {
   if (
     first &&
     typeof first === 'object' &&
     'observationId' in first &&
-    'context' in first &&
     second === undefined
   ) {
-    const request = first as ValidateObservationRequest
+    const request = first as
+      ValidateObservationRequest | FlatValidateObservationRequest
     return defaultObservationStore.validate(
       request.observationId,
-      request.context,
-      {
-        now: request.now,
-        at: request.at,
-      }
+      'context' in request
+        ? request.context
+        : (request as FlatValidateObservationRequest),
+      { now: request.now, at: request.at }
     )
   }
   if (!second) return { valid: false, reason: 'invalid-context' }
@@ -663,7 +719,7 @@ export function invalidateObservation(
 export function isObservationValid(
   observationId: string | Pick<DesktopObservation, 'observationId'>,
   context: DesktopObservationContext,
-  options?: ValidateObservationOptions
+  options?: ValidateObservationOptionsInput
 ): boolean {
   return defaultObservationStore.validate(observationId, context, options).valid
 }
@@ -683,3 +739,9 @@ export function clearObservations(): void {
 export const createDesktopObservation = createObservation
 export const validateDesktopObservation = validateObservation
 export const invalidateDesktopObservation = invalidateObservation
+
+// Minimal verb aliases for small adapters that import the registry as a
+// capability object (`{ create, validate, invalidate }`).
+export const create = createObservation
+export const validate = validateObservation
+export const invalidate = invalidateObservation
