@@ -1215,6 +1215,13 @@ export const useSettingsStore = defineStore('settings', () => {
 
     // Set TTS and embedding providers based on local models preference
     if (onboardingData.useLocalModels) {
+      // Local STT is the intended path for the desktop wake-word assistant.
+      // Enabling the wake-word capability does not open the microphone; the
+      // separate backgroundListeningEnabled flag remains opt-in.
+      settings.value.localSttEnabled = true
+      if (!settings.value.localSttWakeWord?.trim()) {
+        settings.value.localSttWakeWord = 'alice'
+      }
       settings.value.ttsProvider = 'local'
       settings.value.embeddingProvider = 'local'
     } else {
