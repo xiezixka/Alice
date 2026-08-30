@@ -31,9 +31,9 @@ const aliases = new Map([
 ])
 
 const expectedExtensions = {
-  macos: '.dmg',
-  windows: '.exe',
-  linux: '.AppImage',
+  macos: ['.dmg', '.zip'],
+  windows: ['.exe'],
+  linux: ['.AppImage'],
 }
 
 const requested = String(process.argv[2] || process.platform)
@@ -59,7 +59,7 @@ if (!version) {
 const releaseDirectory = path.resolve(
   process.argv[3] || path.join('release', version)
 )
-const expectedExtension = expectedExtensions[target]
+const expectedExtensionsForTarget = expectedExtensions[target]
 const minimumBytes = 1024 * 1024
 
 function listDirectFiles(directory) {
@@ -75,21 +75,34 @@ if (!fs.existsSync(releaseDirectory)) {
   process.exit(1)
 }
 
-const installers = listDirectFiles(releaseDirectory).filter(file =>
-  file.toLowerCase().endsWith(expectedExtension.toLowerCase())
+const directFiles = listDirectFiles(releaseDirectory)
+const installersByExtension = new Map(
+  expectedExtensionsForTarget.map(extension => [
+    extension,
+    directFiles.filter(file =>
+      file.toLowerCase().endsWith(extension.toLowerCase())
+    ),
+  ])
+)
+const missingExtensions = expectedExtensionsForTarget.filter(
+  extension => installersByExtension.get(extension).length === 0
 )
 
-if (installers.length === 0) {
+if (missingExtensions.length > 0) {
   const entries = fs
     .readdirSync(releaseDirectory, { withFileTypes: true })
     .map(entry => entry.name)
     .sort()
   console.error(
-    `❌ 未找到 ${target} 安装包（期望扩展名 ${expectedExtension}）：${releaseDirectory}`
+    `❌ 未找到 ${target} 安装包（缺少 ${missingExtensions.join('、')}）：${releaseDirectory}`
   )
   console.error(`目录内容：${entries.join(', ') || '(空)'}`)
   process.exit(1)
 }
+
+const installers = expectedExtensionsForTarget.flatMap(extension =>
+  installersByExtension.get(extension)
+)
 
 const invalid = installers.filter(file => {
   const stats = fs.statSync(file)

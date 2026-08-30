@@ -219,7 +219,7 @@ For a release build, use the command for the operating system you are
 currently running:
 
 ```bash
-# macOS (DMG)
+# macOS (DMG installer + ZIP updater package)
 npm run build:mac
 
 # Windows (NSIS installer, x64)

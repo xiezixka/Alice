@@ -38,7 +38,7 @@ before sharing it:
 
 ```bash
 # Run on the matching operating system
-npm run verify:release -- macos   # release/<version>/*.dmg
+npm run verify:release -- macos   # release/<version>/*.dmg + *.zip
 npm run verify:release -- windows # release/<version>/*.exe
 npm run verify:release -- linux   # release/<version>/*.AppImage
 ```
