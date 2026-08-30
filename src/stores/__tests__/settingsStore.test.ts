@@ -216,6 +216,7 @@ describe('useSettingsStore boolean settings', () => {
       const saved = await store.saveSettingsToFile()
       expect(saved).toBe(false)
       expect(store.error).toContain('至少要包含')
+      expect(store.isSaving).toBe(false)
       expect(saveSettings).not.toHaveBeenCalled()
     } finally {
       vi.unstubAllGlobals()

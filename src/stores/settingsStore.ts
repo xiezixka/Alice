@@ -1027,6 +1027,11 @@ export const useSettingsStore = defineStore('settings', () => {
     if (rawWakeWord !== '' && !wakeWordValidation.valid) {
       if (!options.allowInvalidWakeWord) {
         error.value = wakeWordValidation.error || '唤醒词格式无效。'
+        successMessage.value = null
+        // saveAndTestSettings marks the store as saving before it delegates
+        // here. Clear the flag on this early validation exit so an invalid
+        // draft cannot leave the Save button spinning forever.
+        isSaving.value = false
         return false
       }
 
