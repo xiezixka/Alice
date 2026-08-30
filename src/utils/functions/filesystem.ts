@@ -316,7 +316,15 @@ export async function desktop_reply_message(
     const result = await desktopAPI.replyMessage(args)
     return result.success
       ? { success: true, data: result }
-      : { success: false, error: result.error || '发送聊天回复失败。' }
+      : {
+          // Keep partial-operation metadata (for example typed=true and
+          // sent=false when focus changes between typing and the send key)
+          // available to direct bridge callers. The generic function caller
+          // still renders the human-readable error as before.
+          success: false,
+          error: result.error || '发送聊天回复失败。',
+          data: result,
+        }
   } catch (error: any) {
     return { success: false, error: error.message }
   }

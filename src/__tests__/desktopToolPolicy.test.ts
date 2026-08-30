@@ -7,6 +7,7 @@ import {
 } from '../../electron/main/desktopHotkeys'
 import { isAssistantToolEnabled } from '../utils/assistantTools'
 import { executeFunction } from '../utils/functionCaller'
+import { desktop_reply_message } from '../utils/functions/filesystem'
 
 const customToolSnapshot = (overrides: Record<string, unknown> = {}) => ({
   tools: [
@@ -260,6 +261,31 @@ describe('execution-time tool policy', () => {
 
     expect(result).toContain('工具当前未启用')
     expect(replyMessage).not.toHaveBeenCalled()
+  })
+
+  it('preserves partial reply metadata returned by the desktop bridge', async () => {
+    const bridgeResult = {
+      success: false,
+      action: 'reply_message',
+      recipient: '小王',
+      typed: true,
+      sent: false,
+      error: '正文已输入，但发送前窗口发生变化。',
+    }
+    const replyMessage = vi.fn().mockResolvedValue(bridgeResult)
+    ;(globalThis as any).window = { desktopAPI: { replyMessage } }
+
+    const result = await desktop_reply_message({
+      observationId: 'obs-1',
+      recipient: '小王',
+      body: '明天见',
+    })
+
+    expect(result).toEqual({
+      success: false,
+      error: bridgeResult.error,
+      data: bridgeResult,
+    })
   })
 
   it('falls back to the active settings store when no snapshot is supplied', async () => {
