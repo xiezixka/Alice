@@ -1,5 +1,6 @@
 import {
   BrowserWindow,
+  app,
   desktopCapturer,
   dialog,
   ipcMain,
@@ -21,6 +22,10 @@ import {
   buildXdotoolHotkey,
   splitWindowsUnicodeInput,
 } from './desktopHotkeys'
+import {
+  FileOperationJournal,
+  type JournalFileOperation,
+} from './fileOperationJournal'
 
 const execFileAsync = promisify(execFile)
 
@@ -56,6 +61,7 @@ class DesktopManager {
     string,
     AppliedFileOperation[]
   >()
+  private readonly fileOperationJournal!: FileOperationJournal
   private microphoneAccessRequest: Promise<MicrophoneAccessResult> | null = null
 
   constructor() {
@@ -63,6 +69,9 @@ class DesktopManager {
       return DesktopManager.instance
     }
     DesktopManager.instance = this
+    this.fileOperationJournal = new FileOperationJournal(
+      path.join(app.getPath('userData'), 'alice-file-operation-history.json')
+    )
     this.registerIpcHandlers()
   }
 
@@ -236,6 +245,7 @@ class DesktopManager {
     ipcMain.handle('desktop:applyFileOperations', async (event, args) => {
       let applied: AppliedFileOperation[] = []
       try {
+        await this.fileOperationJournal.waitUntilReady()
         const operations = this.validateFileOperations(args?.operations)
         if (!operations.length)
           return {
@@ -324,12 +334,32 @@ class DesktopManager {
           const oldest = this.fileOperationHistory.keys().next().value
           if (oldest) this.fileOperationHistory.delete(oldest)
         }
+        let undoPersistent = true
+        try {
+          await this.fileOperationJournal.set(
+            operationId,
+            applied as JournalFileOperation[]
+          )
+        } catch (journalError) {
+          undoPersistent = false
+          console.error(
+            '[DesktopManager] Failed to persist file operation journal:',
+            journalError
+          )
+        }
         return {
           success: true,
           dryRun: false,
           operationId,
           operations: applied,
           undoAvailable: true,
+          undoPersistent,
+          ...(undoPersistent
+            ? {}
+            : {
+                warning:
+                  '文件整理已完成，但撤销记录未能写入磁盘；本次运行结束后可能无法撤销。',
+              }),
         }
       } catch (error) {
         for (const operation of [...applied].reverse()) {
@@ -361,9 +391,12 @@ class DesktopManager {
 
     ipcMain.handle('desktop:undoFileOperations', async (event, args) => {
       try {
+        await this.fileOperationJournal.waitUntilReady()
         const operationId =
           typeof args?.operationId === 'string' ? args.operationId : ''
-        const operations = this.fileOperationHistory.get(operationId)
+        const operations =
+          this.fileOperationHistory.get(operationId) ||
+          this.fileOperationJournal.get(operationId)
         if (!operations)
           return {
             success: false,
@@ -404,7 +437,28 @@ class DesktopManager {
           }
         }
         this.fileOperationHistory.delete(operationId)
-        return { success: true, operationId, message: '文件整理已撤销。' }
+        let journalRemoved = true
+        try {
+          await this.fileOperationJournal.delete(operationId)
+        } catch (journalError) {
+          journalRemoved = false
+          console.error(
+            '[DesktopManager] Failed to remove undone file operation from journal:',
+            journalError
+          )
+        }
+        return {
+          success: true,
+          operationId,
+          message: '文件整理已撤销。',
+          journalRemoved,
+          ...(journalRemoved
+            ? {}
+            : {
+                warning:
+                  '文件已撤销，但撤销记录未能从磁盘移除；请勿重复使用此 operationId。',
+              }),
+        }
       } catch (error) {
         return {
           success: false,

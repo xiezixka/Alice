@@ -24,7 +24,7 @@ To activate all tools, you need to get your API credentials for each tool.
 
 - `list_directory_detailed`、`find_files`：只读查看目录和搜索文件。
 - `organize_files`：默认 `dryRun=true`，先返回变更清单；用户确认后再设置 `dryRun=false` 执行移动、复制或重命名。
-- `undo_file_organization`：使用执行返回的 `operationId` 撤销最近一次整理。撤销记录保存在当前运行会话中，应用重启后失效。
+- `undo_file_organization`：使用执行返回的 `operationId` 撤销最近一次整理。最近 50 次已确认的操作会保存到 Alice 用户数据目录，应用重启后仍可撤销；如果磁盘不可写，工具会明确返回警告。
 
 ## Gmail 与行程
 
