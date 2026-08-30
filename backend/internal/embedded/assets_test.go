@@ -17,6 +17,14 @@ func TestArchiveTargetPathRejectsTraversal(t *testing.T) {
 		"../alice-archive-escape.txt",
 		"nested/../../alice-archive-escape.txt",
 		"/tmp/alice-archive-escape.txt",
+		`\tmp\alice-archive-escape.txt`,
+		"//server/share/alice-archive-escape.txt",
+		`\\server\share\alice-archive-escape.txt`,
+		"C:/tmp/alice-archive-escape.txt",
+		`C:\tmp\alice-archive-escape.txt`,
+		"D:alice-archive-escape.txt",
+		`..\alice-archive-escape.txt`,
+		`nested\..\..\alice-archive-escape.txt`,
 	} {
 		if _, err := archiveTargetPath(base, name); err == nil {
 			t.Fatalf("archiveTargetPath(%q) accepted an unsafe path", name)
@@ -33,6 +41,19 @@ func TestArchiveTargetPathRejectsTraversal(t *testing.T) {
 	}
 	if _, err := os.Stat(outside); !os.IsNotExist(err) {
 		t.Fatalf("test setup unexpectedly found escape target %s", outside)
+	}
+}
+
+func TestArchiveTargetPathNormalizesBackslashSeparators(t *testing.T) {
+	base := t.TempDir()
+
+	safe, err := archiveTargetPath(base, `voices\zh_CN-huayan-medium.onnx`)
+	if err != nil {
+		t.Fatalf("safe archive entry was rejected: %v", err)
+	}
+	want := filepath.Join(base, "voices", "zh_CN-huayan-medium.onnx")
+	if safe != want {
+		t.Fatalf("safe path = %q, want %q", safe, want)
 	}
 }
 

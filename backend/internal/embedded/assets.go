@@ -38,17 +38,26 @@ func archiveTargetPath(targetDir, entryName string) (string, error) {
 		return "", fmt.Errorf("archive entry has an empty name")
 	}
 
+	// Archive headers conventionally use '/', but an archive can still contain
+	// Windows-style separators.  Check absolute/volume-qualified names before
+	// handing the value to filepath so the result is independent of the host
+	// platform (for example, "/tmp/file" is not considered absolute by
+	// filepath.IsAbs on Windows).
+	if archivePathIsAbsolute(entryName) {
+		return "", fmt.Errorf("archive entry uses an absolute path: %q", entryName)
+	}
+
 	baseDir, err := filepath.Abs(targetDir)
 	if err != nil {
 		return "", fmt.Errorf("resolve archive target directory: %w", err)
 	}
 
 	// ZIP/TAR headers use '/' even on Windows.  Convert before cleaning so
-	// traversal checks use the host platform's separator consistently.
-	cleanName := filepath.Clean(filepath.FromSlash(entryName))
-	if filepath.IsAbs(cleanName) {
-		return "", fmt.Errorf("archive entry uses an absolute path: %q", entryName)
-	}
+	// traversal checks use the host platform's separator consistently.  Treat
+	// backslashes as separators too; otherwise a Windows traversal such as
+	// "..\\secret" would be a harmless filename on Unix but escape on Windows.
+	archiveName := strings.ReplaceAll(entryName, `\`, "/")
+	cleanName := filepath.Clean(filepath.FromSlash(archiveName))
 
 	targetPath, err := filepath.Abs(filepath.Join(baseDir, cleanName))
 	if err != nil {
@@ -63,6 +72,29 @@ func archiveTargetPath(targetDir, entryName string) (string, error) {
 	}
 
 	return targetPath, nil
+}
+
+// archivePathIsAbsolute reports whether an archive entry is absolute or
+// volume-qualified using either Unix or Windows path syntax.  It intentionally
+// does not rely on filepath.IsAbs, whose answer varies with GOOS.
+func archivePathIsAbsolute(entryName string) bool {
+	if entryName == "" {
+		return false
+	}
+
+	normalized := strings.ReplaceAll(entryName, `\`, "/")
+	// Unix-rooted paths and Windows UNC/device paths all begin with '/'.
+	if strings.HasPrefix(normalized, "/") {
+		return true
+	}
+	// Reject drive-qualified names, including drive-relative forms ("C:foo").
+	// They are not safe archive destinations and can resolve against a different
+	// working directory or volume on Windows.
+	return len(normalized) >= 2 && isASCIIAlpha(normalized[0]) && normalized[1] == ':'
+}
+
+func isASCIIAlpha(value byte) bool {
+	return (value >= 'a' && value <= 'z') || (value >= 'A' && value <= 'Z')
 }
 
 // PlatformInfo holds platform-specific asset information
