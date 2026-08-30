@@ -72,6 +72,19 @@ describe('buildToolsForProvider', () => {
     ).toBe(false)
   })
 
+  it('does not expose desktop observation to a text-only model', async () => {
+    const settingsStore = useSettingsStore()
+    settingsStore.updateSetting('aiProvider', 'deepseek')
+    settingsStore.updateSetting('assistantModel', 'deepseek-v4-flash')
+    settingsStore.updateSetting('assistantTools', ['desktop_observe'])
+
+    const { buildToolsForProvider } = await import('../tools')
+    const tools = await buildToolsForProvider()
+    expect(tools.some((tool: any) => tool.name === 'desktop_observe')).toBe(
+      false
+    )
+  })
+
   it('exposes screen capture to the DeepSeek vision model', async () => {
     const settingsStore = useSettingsStore()
     settingsStore.updateSetting('aiProvider', 'deepseek')
@@ -86,5 +99,21 @@ describe('buildToolsForProvider', () => {
     expect(
       tools.some((tool: any) => tool.name === 'capture_desktop_screen')
     ).toBe(true)
+  })
+
+  it('exposes desktop observation to the DeepSeek vision model', async () => {
+    const settingsStore = useSettingsStore()
+    settingsStore.updateSetting('aiProvider', 'deepseek')
+    settingsStore.updateSetting(
+      'assistantModel',
+      'deepseek-v4-flash-vision-exp'
+    )
+    settingsStore.updateSetting('assistantTools', ['desktop_observe'])
+
+    const { buildToolsForProvider } = await import('../tools')
+    const tools = await buildToolsForProvider()
+    expect(tools.some((tool: any) => tool.name === 'desktop_observe')).toBe(
+      true
+    )
   })
 })

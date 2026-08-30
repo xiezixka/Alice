@@ -7,6 +7,11 @@ import type {
   CustomToolDefinition,
 } from '../types/customTools'
 import type { CustomAvatarsSnapshot } from '../types/customAvatars'
+import type {
+  DesktopActionArgs,
+  DesktopActionResponse,
+  DesktopObservationResponse,
+} from '../types/desktop'
 
 declare module '*.vue' {
   import type { DefineComponent } from 'vue'
@@ -143,20 +148,9 @@ interface AliceDesktopAPI {
   openSystemSettings: (
     target: 'microphone' | 'screen-recording' | 'accessibility'
   ) => Promise<{ success: boolean; target?: string; error?: string }>
-  captureScreen: () => Promise<{
-    success: boolean
-    data?: {
-      imageDataUrl: string
-      width: number
-      height: number
-      displayId: string
-      capturedAt: string
-    }
-    error?: string
-  }>
-  runAction: (
-    args: Record<string, any>
-  ) => Promise<{ success: boolean; message?: string; error?: string }>
+  observeScreen: () => Promise<DesktopObservationResponse>
+  captureScreen: () => Promise<DesktopObservationResponse>
+  runAction: (args: DesktopActionArgs) => Promise<DesktopActionResponse>
 }
 
 interface AliceCustomToolsAPI {

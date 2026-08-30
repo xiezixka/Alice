@@ -174,6 +174,7 @@ contextBridge.exposeInMainWorld('desktopAPI', {
   openSystemSettings: (
     target: 'microphone' | 'screen-recording' | 'accessibility'
   ) => aliceIPC.invoke('desktop:openSystemSettings', target),
+  observeScreen: () => aliceIPC.invoke('desktop:observeScreen'),
   captureScreen: () => aliceIPC.invoke('desktop:captureScreen'),
   runAction: (args: Record<string, any>) =>
     aliceIPC.invoke('desktop:runAction', args),

@@ -82,9 +82,10 @@
           </p>
           <div
             v-if="
-              currentSettings.assistantTools.includes(
+              (currentSettings.assistantTools.includes(
                 'capture_desktop_screen'
-              ) &&
+              ) ||
+                currentSettings.assistantTools.includes('desktop_observe')) &&
               !isVisionCapableModel(
                 currentSettings.aiProvider,
                 currentSettings.assistantModel
@@ -627,6 +628,7 @@ const uiModeOptions = [
 const desktopAgentToolPreset = [
   'open_path',
   'desktop_capabilities',
+  'desktop_observe',
   'capture_desktop_screen',
   'desktop_action',
   'list_directory_detailed',

@@ -9,6 +9,7 @@ import {
   organize_files,
   undo_file_organization,
   desktop_capabilities,
+  desktop_observe,
   capture_desktop_screen,
   desktop_action,
   execute_command,
@@ -42,7 +43,9 @@ function isScreenCaptureAllowedForModel(
   toolName: string,
   settings: any
 ): boolean {
-  if (toolName !== 'capture_desktop_screen') return true
+  if (toolName !== 'capture_desktop_screen' && toolName !== 'desktop_observe') {
+    return true
+  }
 
   // Keep legacy/direct callers compatible when no provider snapshot is
   // available. Normal conversation and Codex bridges always pass these two
@@ -791,6 +794,7 @@ const functionRegistry: {
   organize_files,
   undo_file_organization,
   desktop_capabilities,
+  desktop_observe,
   capture_desktop_screen,
   desktop_action,
   execute_command,
@@ -829,6 +833,7 @@ const functionSchemas = {
   organize_files: { required: ['operations'] },
   undo_file_organization: { required: ['operationId'] },
   desktop_capabilities: { required: [] },
+  desktop_observe: { required: [] },
   capture_desktop_screen: { required: [] },
   desktop_action: { required: ['action'] },
   execute_command: { required: ['command'] },

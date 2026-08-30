@@ -72,6 +72,24 @@ describe('execution-time tool policy', () => {
     expect(captureScreen).not.toHaveBeenCalled()
   })
 
+  it('blocks desktop observations for an enabled text-only model', async () => {
+    const observeScreen = vi.fn()
+    ;(globalThis as any).window = { desktopAPI: { observeScreen } }
+
+    const result = await executeFunction(
+      'desktop_observe',
+      {},
+      {
+        assistantTools: ['desktop_observe'],
+        aiProvider: 'deepseek',
+        assistantModel: 'deepseek-v4-flash',
+      }
+    )
+
+    expect(result).toContain('当前模型不支持视觉输入')
+    expect(observeScreen).not.toHaveBeenCalled()
+  })
+
   it('allows screen capture for a configured vision model', async () => {
     const captureScreen = vi.fn().mockResolvedValue({
       success: true,
@@ -95,6 +113,46 @@ describe('execution-time tool policy', () => {
 
     expect(result).toContain('供视觉模型分析')
     expect(captureScreen).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns an observation token and screenshot to a vision model', async () => {
+    const observeScreen = vi.fn().mockResolvedValue({
+      success: true,
+      data: {
+        message: 'observed',
+        observationId: 'obs-test-1',
+        observedAt: '2026-08-30T12:00:00.000Z',
+        expiresAt: '2026-08-30T12:00:30.000Z',
+        context: { displayId: '1', scaleFactor: 2 },
+        screenshot: {
+          imageDataUrl: 'data:image/jpeg;base64,abc',
+          width: 1600,
+          height: 1000,
+          imageWidth: 1600,
+          imageHeight: 1000,
+          displayId: '1',
+          coordinateSpace: 'image-pixels',
+        },
+      },
+    })
+    ;(globalThis as any).window = { desktopAPI: { observeScreen } }
+
+    const result = await executeFunction(
+      'desktop_observe',
+      {},
+      {
+        assistantTools: ['desktop_observe'],
+        aiProvider: 'deepseek',
+        assistantModel: 'deepseek-v4-flash-vision-exp',
+      }
+    )
+
+    expect(result).toContain('obs-test-1')
+    expect(result).toContain('data:image/jpeg;base64,abc')
+    const payload = JSON.parse(result) as Record<string, any>
+    expect(payload.imageDataUrl).toBeUndefined()
+    expect(payload.screenshot.imageDataUrl).toBe('data:image/jpeg;base64,abc')
+    expect(observeScreen).toHaveBeenCalledTimes(1)
   })
 
   it('falls back to the active settings store when no snapshot is supplied', async () => {
@@ -150,8 +208,11 @@ describe('execution-time tool policy', () => {
 
 describe('desktop tool execution policy', () => {
   it('allows a configured predefined tool and blocks a disabled one', () => {
-    const settings = { assistantTools: ['desktop_action', 'find_files'] }
+    const settings = {
+      assistantTools: ['desktop_observe', 'desktop_action', 'find_files'],
+    }
 
+    expect(isAssistantToolEnabled('desktop_observe', settings)).toBe(true)
     expect(isAssistantToolEnabled('desktop_action', settings)).toBe(true)
     expect(isAssistantToolEnabled('organize_files', settings)).toBe(false)
   })

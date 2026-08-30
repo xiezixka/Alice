@@ -46,6 +46,10 @@ export const INVOKE_CHANNELS = new Set([
   'desktop:getCapabilities',
   'desktop:requestMicrophoneAccess',
   'desktop:openSystemSettings',
+  // Read-only screen observation.  Keep this separate from the legacy
+  // capture channel so the renderer can explicitly request an observation
+  // token before coordinate-based desktop actions.
+  'desktop:observeScreen',
   'desktop:captureScreen',
   'desktop:runAction',
   'desktop:executeCommand',

@@ -1,3 +1,8 @@
+import type {
+  DesktopActionArgs,
+  DesktopObservationResponse,
+} from '../../types/desktop'
+
 interface FunctionResult {
   success: boolean
   data?: any
@@ -32,9 +37,7 @@ export interface FileOperation {
 
 function requireDesktopAPI() {
   if (typeof window === 'undefined' || !window.desktopAPI) {
-    throw new Error(
-      'Electron 桌面桥接不可用，此功能只能在桌面应用中使用。'
-    )
+    throw new Error('Electron 桌面桥接不可用，此功能只能在桌面应用中使用。')
   }
   return window.desktopAPI
 }
@@ -46,8 +49,7 @@ export async function open_path(args: OpenPathArgs): Promise<FunctionResult> {
     if (typeof window === 'undefined' || !window.aliceIPC?.invoke) {
       return {
         success: false,
-        error:
-          'Electron IPC 桥接不可用，此功能只能在桌面应用中使用。',
+        error: 'Electron IPC 桥接不可用，此功能只能在桌面应用中使用。',
       }
     }
 
@@ -160,6 +162,75 @@ export async function desktop_capabilities(): Promise<FunctionResult> {
   }
 }
 
+/**
+ * Normalize the slightly different response shapes emitted by old and new
+ * desktop bridges.  New bridges return observation metadata plus a nested
+ * `screenshot`; older capture bridges return the screenshot fields directly.
+ * Keeping one shape here lets the visual-output extractor attach pixels to
+ * the current model turn without persisting them in chat history.
+ */
+function normalizeDesktopObservationData(
+  data: Record<string, any>,
+  fallbackMessage: string
+): Record<string, any> {
+  const directScreenshot =
+    data.screenshot ||
+    (typeof data.imageDataUrl === 'string' ? { ...data } : null)
+  // Never leave a direct imageDataUrl at the top level.  The conversation
+  // visual extractor removes pixels from `screenshot`; keeping a duplicate
+  // top-level field would otherwise persist the screenshot in history.
+  const {
+    screenshot: _nestedScreenshot,
+    imageDataUrl: _pixels,
+    ...metadata
+  } = data
+  return {
+    ...metadata,
+    message:
+      typeof data.message === 'string' && data.message.trim()
+        ? data.message
+        : fallbackMessage,
+    ...(directScreenshot ? { screenshot: directScreenshot } : {}),
+  }
+}
+
+/**
+ * Captures a short-lived, context-bound observation token and the matching
+ * screenshot.  Mutating desktop actions use the returned observationId to
+ * ensure the foreground window and display have not changed since this read.
+ */
+export async function desktop_observe(): Promise<FunctionResult> {
+  try {
+    const desktopAPI = requireDesktopAPI()
+    const observeScreen = (
+      desktopAPI as unknown as {
+        observeScreen?: () => Promise<DesktopObservationResponse>
+      }
+    ).observeScreen
+    if (typeof observeScreen !== 'function') {
+      return {
+        success: false,
+        error: '当前桌面桥接不支持安全观察令牌，请重启或更新 Alice 后重试。',
+      }
+    }
+
+    const result = await observeScreen()
+    if (!result.success || !result.data) {
+      return { success: false, error: result.error || '屏幕观察失败。' }
+    }
+
+    return {
+      success: true,
+      data: normalizeDesktopObservationData(
+        result.data,
+        '已观察当前屏幕并生成短期观察令牌，供视觉模型分析。'
+      ),
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
 export async function capture_desktop_screen(): Promise<FunctionResult> {
   try {
     const result = await requireDesktopAPI().captureScreen()
@@ -171,10 +242,10 @@ export async function capture_desktop_screen(): Promise<FunctionResult> {
     // The conversation layer strips it before adding the tool message to history.
     return {
       success: true,
-      data: {
-        message: '已捕获当前屏幕截图，供视觉模型分析。',
-        screenshot: result.data,
-      },
+      data: normalizeDesktopObservationData(
+        result.data,
+        '已捕获当前屏幕截图，供视觉模型分析。'
+      ),
     }
   } catch (error: any) {
     return { success: false, error: error.message }
@@ -182,7 +253,7 @@ export async function capture_desktop_screen(): Promise<FunctionResult> {
 }
 
 export async function desktop_action(
-  args: Record<string, any>
+  args: DesktopActionArgs
 ): Promise<FunctionResult> {
   try {
     const result = await requireDesktopAPI().runAction(args)

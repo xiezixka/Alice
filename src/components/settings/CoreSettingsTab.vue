@@ -538,7 +538,7 @@
               v-if="
                 currentSettings.assistantTools.includes(
                   'capture_desktop_screen'
-                )
+                ) || currentSettings.assistantTools.includes('desktop_observe')
               "
               type="button"
               class="btn btn-sm btn-outline w-full sm:w-auto"
@@ -1085,9 +1085,9 @@ const microphonePermissionMessage = computed(() => {
 })
 
 const desktopPermissionMessage = computed(() => {
-  const needsScreenCapture = props.currentSettings.assistantTools.includes(
-    'capture_desktop_screen'
-  )
+  const needsScreenCapture =
+    props.currentSettings.assistantTools.includes('capture_desktop_screen') ||
+    props.currentSettings.assistantTools.includes('desktop_observe')
   const needsAccessibility =
     props.currentSettings.assistantTools.includes('desktop_action')
   if (!needsScreenCapture && !needsAccessibility) return ''

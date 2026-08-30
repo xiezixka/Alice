@@ -97,6 +97,7 @@ describe('useSettingsStore boolean settings', () => {
     expect(store.settings.assistantTools).toEqual(
       expect.arrayContaining([
         'open_path',
+        'desktop_observe',
         'capture_desktop_screen',
         'desktop_action',
         'organize_files',

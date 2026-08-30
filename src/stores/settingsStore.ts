@@ -207,6 +207,7 @@ const defaultSettings: AliceSettings = {
     'recall_memories',
     'open_path',
     'desktop_capabilities',
+    'desktop_observe',
     'capture_desktop_screen',
     'desktop_action',
     'list_directory_detailed',
@@ -460,6 +461,23 @@ export const useSettingsStore = defineStore('settings', () => {
       validated.assistantUiMode !== 'glass'
     ) {
       validated.assistantUiMode = defaultSettings.assistantUiMode
+      migrated = true
+    }
+
+    // The observation-token flow is required for safe coordinate actions in
+    // newer desktop bridges.  Migrate the original desktop-agent preset when
+    // it already opted into both screen capture and desktop actions, while
+    // preserving a user's deliberate privacy choice when either tool is off.
+    if (
+      Array.isArray(validated.assistantTools) &&
+      validated.assistantTools.includes('capture_desktop_screen') &&
+      validated.assistantTools.includes('desktop_action') &&
+      !validated.assistantTools.includes('desktop_observe')
+    ) {
+      validated.assistantTools = [
+        ...validated.assistantTools,
+        'desktop_observe',
+      ]
       migrated = true
     }
 

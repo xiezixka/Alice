@@ -330,6 +330,7 @@ function getToolInfo(name: string): {
     get_current_datetime: '当前日期与时间',
     open_path: '打开应用/网址',
     desktop_capabilities: '查看桌面操作能力',
+    desktop_observe: '观察屏幕（安全令牌）',
     capture_desktop_screen: '读取当前屏幕',
     desktop_action: '执行桌面操作',
     manage_clipboard: '读写剪贴板',
@@ -366,6 +367,8 @@ function getToolInfo(name: string): {
     get_current_datetime: '允许 Alice 获取当前日期和时间',
     open_path: '允许 Alice 打开电脑上的应用、网址、文件和文件夹',
     desktop_capabilities: '查看当前系统可用的桌面自动化动作',
+    desktop_observe:
+      '在授权后观察当前屏幕并生成短期操作令牌，供视觉模型定位界面',
     capture_desktop_screen: '在授权后读取当前主屏幕，供视觉模型理解界面',
     desktop_action: '在确认后点击、输入、聚焦窗口或打开应用',
     manage_clipboard: '允许 Alice 读写电脑剪贴板',

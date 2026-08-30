@@ -15,7 +15,8 @@ export async function buildToolsForProvider(): Promise<any[]> {
   if (settings.assistantTools && settings.assistantTools.length > 0) {
     for (const toolName of settings.assistantTools) {
       if (
-        toolName === 'capture_desktop_screen' &&
+        (toolName === 'capture_desktop_screen' ||
+          toolName === 'desktop_observe') &&
         !isVisionCapableModel(settings.aiProvider, settings.assistantModel)
       ) {
         continue
