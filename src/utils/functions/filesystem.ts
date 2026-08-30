@@ -1,6 +1,7 @@
 import type {
   DesktopActionArgs,
   DesktopObservationResponse,
+  DesktopReplyArgs,
 } from '../../types/desktop'
 
 interface FunctionResult {
@@ -286,6 +287,36 @@ export async function desktop_action(
     return result.success
       ? { success: true, data: result }
       : { success: false, error: result.error }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Send a reply in the already-open chat that the model just inspected.
+ *
+ * This is intentionally separate from the generic desktop_action tool: the
+ * main process can show one confirmation containing the exact recipient and
+ * body, then type and send as one token-bound operation.  It never discovers
+ * or opens a background chat account.
+ */
+export async function desktop_reply_message(
+  args: DesktopReplyArgs
+): Promise<FunctionResult> {
+  try {
+    const desktopAPI = requireDesktopAPI() as typeof window.desktopAPI & {
+      replyMessage?: (request: DesktopReplyArgs) => Promise<any>
+    }
+    if (typeof desktopAPI.replyMessage !== 'function') {
+      return {
+        success: false,
+        error: '当前桌面桥接不支持安全的聊天回复，请重启或更新 Alice 后重试。',
+      }
+    }
+    const result = await desktopAPI.replyMessage(args)
+    return result.success
+      ? { success: true, data: result }
+      : { success: false, error: result.error || '发送聊天回复失败。' }
   } catch (error: any) {
     return { success: false, error: error.message }
   }

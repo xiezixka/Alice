@@ -11,6 +11,8 @@ import type {
   DesktopActionArgs,
   DesktopActionResponse,
   DesktopObservationResponse,
+  DesktopReplyArgs,
+  DesktopReplyResponse,
 } from '../types/desktop'
 
 declare module '*.vue' {
@@ -151,6 +153,7 @@ interface AliceDesktopAPI {
   observeScreen: () => Promise<DesktopObservationResponse>
   captureScreen: () => Promise<DesktopObservationResponse>
   runAction: (args: DesktopActionArgs) => Promise<DesktopActionResponse>
+  replyMessage: (args: DesktopReplyArgs) => Promise<DesktopReplyResponse>
 }
 
 interface AliceCustomToolsAPI {

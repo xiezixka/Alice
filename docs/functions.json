@@ -225,6 +225,44 @@
   },
   {
     "type": "function",
+    "name": "desktop_reply_message",
+    "description": "在刚刚通过 desktop_observe 检查过的、已经打开的聊天会话中回复消息。发送前会弹出确认框，展示收件人、正文和目标窗口；必须提供 observationId，不能用于后台发现、读取或发送未打开的聊天。默认使用 Enter 发送，也可选择 Ctrl+Enter 或 Cmd+Enter。执行后会尽量返回新的屏幕观察用于核对。",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "observationId": {
+          "type": "string",
+          "description": "最近一次 desktop_observe 返回的短期观察令牌。令牌过期、窗口变化或显示器变化时必须重新观察。"
+        },
+        "recipient": {
+          "type": "string",
+          "description": "模型从当前打开会话中看到的收件人或会话名称；会原样展示在确认框中。"
+        },
+        "body": {
+          "type": "string",
+          "description": "要发送的回复正文，最多 10000 个字符，可包含换行。"
+        },
+        "sendShortcut": {
+          "type": "string",
+          "enum": ["ENTER", "CTRL+ENTER", "CMD+ENTER"],
+          "description": "发送快捷键。聊天应用通常使用 ENTER；只有从界面观察到应用要求时才选择 CTRL+ENTER 或 CMD+ENTER。"
+        },
+        "expectedApp": {
+          "type": "string",
+          "description": "可选的目标应用名称。提供后会与观察到的前台应用做不区分大小写的包含匹配，不匹配则拒绝发送。"
+        },
+        "expectedWindowTitle": {
+          "type": "string",
+          "description": "可选的目标窗口标题。提供后会与观察到的前台窗口标题做包含匹配，不匹配则拒绝发送。"
+        }
+      },
+      "required": ["observationId", "recipient", "body"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "type": "function",
     "name": "list_directory_detailed",
     "description": "Lists files and folders with type, size, and modification time. Read-only.",
     "strict": true,

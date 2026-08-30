@@ -42,6 +42,11 @@ import {
 } from './desktopCoordinates'
 import { selectPrimaryCaptureSource } from './desktopCaptureSelection'
 import { sameForegroundContext as foregroundContextsMatch } from './foregroundContext'
+import {
+  matchesDesktopReplyContext,
+  parseDesktopReplyRequest,
+  type NormalizedDesktopReplyRequest,
+} from '../../src/utils/desktopReply'
 
 const execFileAsync = promisify(execFile)
 
@@ -187,6 +192,7 @@ class DesktopManager {
       'desktop:observeScreen',
       'desktop:captureScreen',
       'desktop:runAction',
+      'desktop:replyMessage',
       'desktop:executeCommand',
     ]) {
       ipcMain.removeHandler(channel)
@@ -814,6 +820,272 @@ class DesktopManager {
       }
     })
 
+    /**
+     * Send a reply in the already-open chat that was just observed.
+     *
+     * This high-level operation deliberately keeps the recipient/body in a
+     * single confirmation dialog and consumes the observation token before
+     * injecting native input.  It is safer than asking a model to issue a
+     * separate generic `type` and `hotkey` call: a stale token, changed
+     * foreground window, or cancelled confirmation can never fall through to
+     * an unreviewed send.
+     */
+    ipcMain.handle('desktop:replyMessage', async (event, args) => {
+      let request: NormalizedDesktopReplyRequest | undefined
+      try {
+        const parsed = parseDesktopReplyRequest(args)
+        if (!parsed.success) return parsed
+        request = parsed.request
+
+        const accessibility = this.ensureAccessibilityApproved()
+        if (!accessibility.success) return accessibility
+
+        const initialContext = await this.getCurrentObservationContext()
+        if (!initialContext) {
+          this.consumeObservation(request.observationId)
+          return {
+            success: false,
+            error:
+              '无法确认当前前台聊天窗口。请重新调用 desktop_observe，并保持目标会话处于前台。',
+            observationId: request.observationId,
+          }
+        }
+
+        const initialValidation = validateObservation(
+          request.observationId,
+          initialContext
+        )
+        if (!initialValidation.valid) {
+          this.consumeObservation(request.observationId)
+          return {
+            success: false,
+            error: this.describeObservationValidationFailure(
+              initialValidation.reason
+            ),
+            observationId: request.observationId,
+          }
+        }
+
+        if (!matchesDesktopReplyContext(request, initialContext)) {
+          this.consumeObservation(request.observationId)
+          return {
+            success: false,
+            error:
+              '当前前台应用或窗口与请求指定的聊天目标不一致。为避免发错会话，操作已取消。',
+            observationId: request.observationId,
+          }
+        }
+        if (this.isAliceOwnerContext(initialContext)) {
+          this.consumeObservation(request.observationId)
+          return {
+            success: false,
+            error:
+              '当前前台窗口是 Alice 自身，不能把回复发送到助手窗口；请先打开目标聊天会话并重新观察。',
+            observationId: request.observationId,
+          }
+        }
+
+        const owner = BrowserWindow.fromWebContents(event.sender)
+        const targetApp = initialContext.foregroundApp || '未知应用'
+        const targetWindowTitle = initialContext.windowTitle || '未知窗口'
+        const detail = [
+          `目标应用：${targetApp}`,
+          `目标窗口：${targetWindowTitle}`,
+          `收件人/会话：${request.recipient}`,
+          `发送快捷键：${request.sendShortcut}`,
+          '',
+          '回复正文：',
+          request.body,
+          '',
+          '只有在目标会话和正文都正确时才允许发送。',
+        ].join('\n')
+        const confirmationOptions = {
+          type: 'warning' as const,
+          buttons: ['取消', '确认发送'],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true,
+          title: '确认发送聊天回复',
+          message: `Alice 准备回复“${request.recipient}”。`,
+          detail:
+            detail.length > 12_000 ? `${detail.slice(0, 12_000)}\n…` : detail,
+        }
+        const confirmation = owner
+          ? await dialog.showMessageBox(owner, confirmationOptions)
+          : await dialog.showMessageBox(confirmationOptions)
+        if (confirmation.response !== 1) {
+          // Keep the still-valid token reusable after an explicit cancel. The
+          // next attempt will show a fresh confirmation with its own body.
+          return {
+            success: false,
+            error: '用户取消了聊天回复。',
+            observationId: request.observationId,
+          }
+        }
+
+        // The confirmation window can temporarily become frontmost. Restore
+        // the observed chat and validate the same token immediately before
+        // sending, just like the low-level desktop_action path.
+        const postConfirmationContext = await this.readContextAfterConfirmation(
+          owner,
+          initialContext
+        )
+        if (!postConfirmationContext) {
+          this.consumeObservation(request.observationId)
+          return {
+            success: false,
+            error:
+              '确认后无法再次确认目标聊天窗口，操作已安全取消；请重新观察后重试。',
+            observationId: request.observationId,
+          }
+        }
+        const postValidation = validateObservation(
+          request.observationId,
+          postConfirmationContext
+        )
+        if (!postValidation.valid) {
+          this.consumeObservation(request.observationId)
+          return {
+            success: false,
+            error: this.describeObservationValidationFailure(
+              postValidation.reason
+            ),
+            observationId: request.observationId,
+          }
+        }
+        if (!matchesDesktopReplyContext(request, postConfirmationContext)) {
+          this.consumeObservation(request.observationId)
+          return {
+            success: false,
+            error:
+              '确认后前台聊天目标发生变化，操作已安全取消；请重新观察后重试。',
+            observationId: request.observationId,
+          }
+        }
+        if (this.isAliceOwnerContext(postConfirmationContext)) {
+          this.consumeObservation(request.observationId)
+          return {
+            success: false,
+            error:
+              '确认后 Alice 窗口仍处于前台，操作已安全取消；请重新打开目标聊天会话。',
+            observationId: request.observationId,
+          }
+        }
+
+        // Consume before native input. If typing or sending fails, the token
+        // cannot be replayed against a potentially changed conversation.
+        this.consumeObservation(request.observationId)
+        let typed = false
+        try {
+          await this.executeDesktopAction({
+            action: 'type',
+            text: request.body,
+          })
+          typed = true
+          // Allow chat composers to render the pasted text before the send
+          // shortcut is delivered, especially on slower Windows clients.
+          await new Promise(resolve => setTimeout(resolve, 100))
+
+          // Typing and sending are intentionally separate native events. A
+          // user (or another app) can steal focus during the short delay, so
+          // re-read the foreground identity immediately before the send key.
+          // If it changed, leave the text unsent and require a fresh observe;
+          // never fire the shortcut into an unrelated window.
+          const beforeSendContext = await this.getCurrentObservationContext()
+          if (
+            !beforeSendContext ||
+            !this.sameDesktopObservationContext(
+              postConfirmationContext,
+              beforeSendContext
+            ) ||
+            !matchesDesktopReplyContext(request, beforeSendContext) ||
+            this.isAliceOwnerContext(beforeSendContext)
+          ) {
+            return {
+              success: false,
+              action: 'reply_message' as const,
+              recipient: request.recipient,
+              sent: false,
+              targetApp,
+              targetWindowTitle,
+              sendShortcut: request.sendShortcut,
+              error:
+                '回复正文已输入，但发送前前台聊天窗口发生变化；为避免误发，未发送快捷键。请重新观察后重试。',
+            }
+          }
+          await this.executeDesktopAction({
+            action: 'hotkey',
+            keys: request.sendShortcut,
+          })
+        } catch (error) {
+          return {
+            success: false,
+            action: 'reply_message' as const,
+            recipient: request.recipient,
+            sent: false,
+            targetApp,
+            targetWindowTitle,
+            sendShortcut: request.sendShortcut,
+            error: typed
+              ? `正文已输入但发送快捷键失败：${
+                  error instanceof Error ? error.message : String(error)
+                }`
+              : `回复正文输入失败：${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+          }
+        }
+
+        // Best-effort visual verification. The screenshot is returned only to
+        // the current model turn; the conversation layer strips its pixels
+        // before persisting tool history.
+        const verification = await this.captureDesktopFrame(event, {
+          requestPermission: false,
+          createObservation: true,
+        })
+        if (!verification.success) {
+          return {
+            success: true,
+            action: 'reply_message' as const,
+            recipient: request.recipient,
+            sent: true,
+            targetApp,
+            targetWindowTitle,
+            sendShortcut: request.sendShortcut,
+            message: '聊天回复已发送，但发送后的屏幕复核暂不可用。',
+            verification: {
+              status: 'unavailable' as const,
+              message: verification.error,
+            },
+          }
+        }
+        const { imageDataUrl: _verificationPixels, ...verificationMetadata } =
+          verification.data
+        return {
+          success: true,
+          action: 'reply_message' as const,
+          recipient: request.recipient,
+          sent: true,
+          targetApp,
+          targetWindowTitle,
+          sendShortcut: request.sendShortcut,
+          message: '聊天回复已发送，请核对返回的屏幕复核结果。',
+          verification: {
+            status: 'captured' as const,
+            ...verificationMetadata,
+          },
+          screenshot: verification.data,
+        }
+      } catch (error) {
+        if (request?.observationId)
+          this.consumeObservation(request.observationId)
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      }
+    })
+
     ipcMain.handle(
       'desktop:executeCommand',
       async (event, command: unknown) => {
@@ -1110,6 +1382,27 @@ class DesktopManager {
     return foregroundContextsMatch(first, second)
   }
 
+  /**
+   * Compare the full desktop context between two closely-spaced reads. The
+   * foreground helper covers native window identity; display geometry is also
+   * compared so a monitor move/reconfiguration cannot redirect a send.
+   */
+  private sameDesktopObservationContext(
+    first: DesktopObservationContext,
+    second: DesktopObservationContext
+  ): boolean {
+    return (
+      foregroundContextsMatch(first, second) &&
+      String(first.displayId ?? first.screenId ?? '') ===
+        String(second.displayId ?? second.screenId ?? '') &&
+      first.originX === second.originX &&
+      first.originY === second.originY &&
+      first.width === second.width &&
+      first.height === second.height &&
+      first.scaleFactor === second.scaleFactor
+    )
+  }
+
   /** Read the foreground app/window without prompting for new permissions. */
   private async readForegroundContext(): Promise<ForegroundContext> {
     try {
@@ -1354,6 +1647,18 @@ $handleText = if ($handle -ne [IntPtr]::Zero) { $handle.ToInt64().ToString() } e
         .trim()
         .toLowerCase()
     return combined.includes('alice')
+  }
+
+  /**
+   * Guard the high-level send operation from targeting Alice itself without
+   * mistaking a legitimate chat contact/window named “Alice” for the owner
+   * process. Prefer the foreground app identity; fall back to the title only
+   * when the native bridge could not provide an app name.
+   */
+  private isAliceOwnerContext(context: DesktopObservationContext): boolean {
+    const appName = `${context.foregroundApp || ''}`.trim().toLowerCase()
+    if (appName) return appName.includes('alice')
+    return `${context.windowTitle || ''}`.trim().toLowerCase().includes('alice')
   }
 
   private actionRequiresObservation(action: DesktopAction): boolean {

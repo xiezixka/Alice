@@ -12,6 +12,7 @@ import {
   desktop_observe,
   capture_desktop_screen,
   desktop_action,
+  desktop_reply_message,
   execute_command,
 } from './functions/filesystem'
 import {
@@ -43,7 +44,11 @@ function isScreenCaptureAllowedForModel(
   toolName: string,
   settings: any
 ): boolean {
-  if (toolName !== 'capture_desktop_screen' && toolName !== 'desktop_observe') {
+  if (
+    toolName !== 'capture_desktop_screen' &&
+    toolName !== 'desktop_observe' &&
+    toolName !== 'desktop_reply_message'
+  ) {
     return true
   }
 
@@ -797,6 +802,7 @@ const functionRegistry: {
   desktop_observe,
   capture_desktop_screen,
   desktop_action,
+  desktop_reply_message,
   execute_command,
   schedule_task,
   manage_scheduled_tasks,
@@ -836,6 +842,9 @@ const functionSchemas = {
   desktop_observe: { required: [] },
   capture_desktop_screen: { required: [] },
   desktop_action: { required: ['action'] },
+  desktop_reply_message: {
+    required: ['observationId', 'recipient', 'body'],
+  },
   execute_command: { required: ['command'] },
   schedule_task: { required: ['name', 'schedule', 'action_type', 'details'] },
   manage_scheduled_tasks: { required: ['action'] },
@@ -876,7 +885,7 @@ export async function executeFunction(
     return `Error executing ${name}: 工具当前未启用，请先在助手设置中启用后重试。`
   }
   if (!isScreenCaptureAllowedForModel(name, effectiveSettings)) {
-    return `Error executing ${name}: 当前模型不支持视觉输入，已拒绝读取屏幕。请切换到视觉模型后重试。`
+    return `Error executing ${name}: 当前模型不支持视觉输入，已拒绝屏幕观察或桌面聊天回复。请切换到视觉模型后重试。`
   }
 
   const func = functionRegistry[name]

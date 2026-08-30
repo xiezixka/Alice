@@ -816,6 +816,8 @@ export const useConversationStore = defineStore('conversation', () => {
       capture_desktop_screen: '🖥️ 正在读取当前屏幕…',
       desktop_capabilities: '🧩 正在检查桌面操作能力…',
       desktop_action: '🖱️ 正在执行桌面操作…',
+      desktop_reply_message: (args: any) =>
+        `💬 正在准备回复“${args?.recipient || '当前聊天'}”…`,
       execute_command: (args: any) => `💻 正在执行：${args?.command || '命令'}`,
       list_directory: (args: any) => `📁 正在列出：${args?.path || '目录'}`,
       list_directory_detailed: (args: any) =>
@@ -853,6 +855,7 @@ export const useConversationStore = defineStore('conversation', () => {
       execute_command: '✅ 命令已执行。',
       desktop_observe: '✅ 屏幕观察完成，已生成短期操作令牌。',
       desktop_action: '✅ 桌面操作已完成。',
+      desktop_reply_message: '✅ 聊天回复已发送并完成复核。',
       organize_files: '✅ 文件整理已完成。',
       undo_file_organization: '✅ 文件整理已撤销。',
       create_email_draft: '✅ 邮件草稿已创建。',

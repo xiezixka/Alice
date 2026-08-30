@@ -98,6 +98,36 @@ export interface DesktopActionArgs {
   coordinateSpace?: DesktopActionCoordinateSpace
 }
 
+/**
+ * High-level reply request for an already-open chat window.  The request is
+ * intentionally bound to a fresh observation token; the main process shows a
+ * confirmation dialog before typing or sending anything.
+ */
+export interface DesktopReplyArgs {
+  observationId: string
+  recipient: string
+  body: string
+  sendShortcut?: 'ENTER' | 'CTRL+ENTER' | 'CMD+ENTER'
+  expectedApp?: string
+  expectedWindowTitle?: string
+}
+
+export interface DesktopReplyResponse {
+  success: boolean
+  action?: 'reply_message'
+  recipient?: string
+  sent?: boolean
+  targetApp?: string
+  targetWindowTitle?: string
+  sendShortcut?: 'ENTER' | 'CTRL+ENTER' | 'CMD+ENTER'
+  message?: string
+  error?: string
+  observationId?: string
+  verification?: DesktopActionVerification
+  screenshot?: DesktopScreenshot
+  [key: string]: unknown
+}
+
 export interface DesktopActionVerification {
   status: 'captured' | 'verified' | 'unavailable' | 'failed'
   message?: string

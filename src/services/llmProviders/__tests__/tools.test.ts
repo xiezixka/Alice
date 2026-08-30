@@ -85,6 +85,42 @@ describe('buildToolsForProvider', () => {
     )
   })
 
+  it('does not expose atomic chat replies without both desktop prerequisites', async () => {
+    const settingsStore = useSettingsStore()
+    settingsStore.updateSetting('aiProvider', 'deepseek')
+    settingsStore.updateSetting(
+      'assistantModel',
+      'deepseek-v4-flash-vision-exp'
+    )
+    settingsStore.updateSetting('assistantTools', ['desktop_reply_message'])
+
+    const { buildToolsForProvider } = await import('../tools')
+    const tools = await buildToolsForProvider()
+    expect(
+      tools.some((tool: any) => tool.name === 'desktop_reply_message')
+    ).toBe(false)
+  })
+
+  it('exposes atomic chat replies only for a vision model with observation/action enabled', async () => {
+    const settingsStore = useSettingsStore()
+    settingsStore.updateSetting('aiProvider', 'deepseek')
+    settingsStore.updateSetting(
+      'assistantModel',
+      'deepseek-v4-flash-vision-exp'
+    )
+    settingsStore.updateSetting('assistantTools', [
+      'desktop_reply_message',
+      'desktop_observe',
+      'desktop_action',
+    ])
+
+    const { buildToolsForProvider } = await import('../tools')
+    const tools = await buildToolsForProvider()
+    expect(
+      tools.some((tool: any) => tool.name === 'desktop_reply_message')
+    ).toBe(true)
+  })
+
   it('exposes screen capture to the DeepSeek vision model', async () => {
     const settingsStore = useSettingsStore()
     settingsStore.updateSetting('aiProvider', 'deepseek')

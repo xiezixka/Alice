@@ -631,6 +631,7 @@ const desktopAgentToolPreset = [
   'desktop_observe',
   'capture_desktop_screen',
   'desktop_action',
+  'desktop_reply_message',
   'list_directory_detailed',
   'find_files',
   'organize_files',

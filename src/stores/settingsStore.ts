@@ -210,6 +210,7 @@ const defaultSettings: AliceSettings = {
     'desktop_observe',
     'capture_desktop_screen',
     'desktop_action',
+    'desktop_reply_message',
     'list_directory_detailed',
     'find_files',
     'organize_files',
@@ -477,6 +478,23 @@ export const useSettingsStore = defineStore('settings', () => {
       validated.assistantTools = [
         ...validated.assistantTools,
         'desktop_observe',
+      ]
+      migrated = true
+    }
+
+    // The atomic open-chat reply tool is a safer convenience wrapper around
+    // the existing observation/action pair. Only add it for users who had
+    // already opted into both desktop observation and actions; an explicit
+    // privacy choice to disable either capability is preserved.
+    if (
+      Array.isArray(validated.assistantTools) &&
+      validated.assistantTools.includes('desktop_observe') &&
+      validated.assistantTools.includes('desktop_action') &&
+      !validated.assistantTools.includes('desktop_reply_message')
+    ) {
+      validated.assistantTools = [
+        ...validated.assistantTools,
+        'desktop_reply_message',
       ]
       migrated = true
     }

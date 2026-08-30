@@ -56,11 +56,26 @@ export function isAssistantToolEnabled(
   }
 
   const configuredTools = settings.assistantTools
-  return (
+  const explicitlyEnabled =
     Array.isArray(configuredTools) &&
     configuredTools.some(
       configuredName =>
         typeof configuredName === 'string' && configuredName === toolName
     )
-  )
+
+  if (!explicitlyEnabled) return false
+
+  // The high-level reply operation is only meaningful when the underlying
+  // observation/action capabilities are also enabled.  Requiring both keeps
+  // a stale or hand-edited settings file from exposing a send surface that
+  // cannot be paired with a fresh, context-bound observation token.
+  if (toolName === 'desktop_reply_message') {
+    return (
+      Array.isArray(configuredTools) &&
+      configuredTools.includes('desktop_observe') &&
+      configuredTools.includes('desktop_action')
+    )
+  }
+
+  return true
 }

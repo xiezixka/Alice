@@ -178,6 +178,8 @@ contextBridge.exposeInMainWorld('desktopAPI', {
   captureScreen: () => aliceIPC.invoke('desktop:captureScreen'),
   runAction: (args: Record<string, any>) =>
     aliceIPC.invoke('desktop:runAction', args),
+  replyMessage: (args: Record<string, any>) =>
+    aliceIPC.invoke('desktop:replyMessage', args),
   executeCommand: (command: string) =>
     aliceIPC.invoke('desktop:executeCommand', command),
 })

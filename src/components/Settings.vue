@@ -333,6 +333,7 @@ function getToolInfo(name: string): {
     desktop_observe: '观察屏幕（安全令牌）',
     capture_desktop_screen: '读取当前屏幕',
     desktop_action: '执行桌面操作',
+    desktop_reply_message: '回复已打开聊天',
     manage_clipboard: '读写剪贴板',
     save_memory: '保存记忆',
     delete_memory: '删除记忆',
@@ -371,6 +372,8 @@ function getToolInfo(name: string): {
       '在授权后观察当前屏幕并生成短期操作令牌，供视觉模型定位界面',
     capture_desktop_screen: '在授权后读取当前主屏幕，供视觉模型理解界面',
     desktop_action: '在确认后点击、输入、聚焦窗口或打开应用',
+    desktop_reply_message:
+      '在确认收件人和正文后，向已打开的聊天会话输入并发送回复',
     manage_clipboard: '允许 Alice 读写电脑剪贴板',
     save_memory: '允许 Alice 保存长期记忆',
     delete_memory: '允许 Alice 删除长期记忆',
@@ -571,7 +574,12 @@ const persistBackgroundWakeSettings = async () => {
   // tick. Wait for the existing draft watcher to copy those values into the
   // Pinia store, then persist without requiring an unrelated API-key test.
   await nextTick()
-  const success = await settingsStore.saveSettingsToFile()
+  const success = await settingsStore.saveSettingsToFile({
+    // If an enabled background session is being fail-closed because the user
+    // entered an invalid wake-word draft, persist the disabled/empty state
+    // instead of leaving a stale background flag on disk.
+    allowInvalidWakeWord: true,
+  })
   if (success) {
     settingsStore.successMessage = '后台唤醒配置已保存。'
     if (window.aliceIPC && window.location.hash === '#settings') {

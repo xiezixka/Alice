@@ -2,6 +2,7 @@ import { useSettingsStore } from '../../stores/settingsStore'
 import { useCustomToolsStore } from '../../stores/customToolsStore'
 import {
   PREDEFINED_OPENAI_TOOLS,
+  isAssistantToolEnabled,
   type ApiRequestBodyFunctionTool,
 } from '../../utils/assistantTools'
 import { isVisionCapableModel, PROVIDER_CONFIGS } from './providerCatalog'
@@ -14,9 +15,13 @@ export async function buildToolsForProvider(): Promise<any[]> {
 
   if (settings.assistantTools && settings.assistantTools.length > 0) {
     for (const toolName of settings.assistantTools) {
+      if (!isAssistantToolEnabled(toolName, settings)) {
+        continue
+      }
       if (
         (toolName === 'capture_desktop_screen' ||
-          toolName === 'desktop_observe') &&
+          toolName === 'desktop_observe' ||
+          toolName === 'desktop_reply_message') &&
         !isVisionCapableModel(settings.aiProvider, settings.assistantModel)
       ) {
         continue

@@ -52,6 +52,7 @@ export const INVOKE_CHANNELS = new Set([
   'desktop:observeScreen',
   'desktop:captureScreen',
   'desktop:runAction',
+  'desktop:replyMessage',
   'desktop:executeCommand',
   'http:request',
   'http:stream-start',

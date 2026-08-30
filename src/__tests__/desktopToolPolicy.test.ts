@@ -90,6 +90,32 @@ describe('execution-time tool policy', () => {
     expect(observeScreen).not.toHaveBeenCalled()
   })
 
+  it('blocks open-chat replies for an enabled text-only model', async () => {
+    const replyMessage = vi.fn()
+    ;(globalThis as any).window = { desktopAPI: { replyMessage } }
+
+    const result = await executeFunction(
+      'desktop_reply_message',
+      {
+        observationId: 'obs-1',
+        recipient: '小王',
+        body: '明天见',
+      },
+      {
+        assistantTools: [
+          'desktop_reply_message',
+          'desktop_observe',
+          'desktop_action',
+        ],
+        aiProvider: 'deepseek',
+        assistantModel: 'deepseek-v4-flash',
+      }
+    )
+
+    expect(result).toContain('当前模型不支持视觉输入')
+    expect(replyMessage).not.toHaveBeenCalled()
+  })
+
   it('allows screen capture for a configured vision model', async () => {
     const captureScreen = vi.fn().mockResolvedValue({
       success: true,
@@ -184,6 +210,58 @@ describe('execution-time tool policy', () => {
     expect(observeScreen).toHaveBeenCalledTimes(1)
   })
 
+  it('executes an enabled atomic chat reply through the desktop bridge', async () => {
+    const replyMessage = vi.fn().mockResolvedValue({
+      success: true,
+      action: 'reply_message',
+      recipient: '小王',
+      sent: true,
+      message: '已发送',
+    })
+    ;(globalThis as any).window = { desktopAPI: { replyMessage } }
+
+    const result = await executeFunction(
+      'desktop_reply_message',
+      {
+        observationId: 'obs-1',
+        recipient: '小王',
+        body: '明天见',
+      },
+      {
+        assistantTools: [
+          'desktop_reply_message',
+          'desktop_observe',
+          'desktop_action',
+        ],
+      }
+    )
+
+    expect(result).toContain('reply_message')
+    expect(replyMessage).toHaveBeenCalledWith({
+      observationId: 'obs-1',
+      recipient: '小王',
+      body: '明天见',
+    })
+  })
+
+  it('blocks the atomic chat reply when its underlying tools are disabled', async () => {
+    const replyMessage = vi.fn()
+    ;(globalThis as any).window = { desktopAPI: { replyMessage } }
+
+    const result = await executeFunction(
+      'desktop_reply_message',
+      {
+        observationId: 'obs-1',
+        recipient: '小王',
+        body: '明天见',
+      },
+      { assistantTools: ['desktop_reply_message'] }
+    )
+
+    expect(result).toContain('工具当前未启用')
+    expect(replyMessage).not.toHaveBeenCalled()
+  })
+
   it('falls back to the active settings store when no snapshot is supplied', async () => {
     const { useSettingsStore } = await import('../stores/settingsStore')
     const settingsStore = useSettingsStore()
@@ -244,6 +322,28 @@ describe('desktop tool execution policy', () => {
     expect(isAssistantToolEnabled('desktop_observe', settings)).toBe(true)
     expect(isAssistantToolEnabled('desktop_action', settings)).toBe(true)
     expect(isAssistantToolEnabled('organize_files', settings)).toBe(false)
+  })
+
+  it('requires observation and action tools for the atomic chat reply tool', () => {
+    expect(
+      isAssistantToolEnabled('desktop_reply_message', {
+        assistantTools: ['desktop_reply_message'],
+      })
+    ).toBe(false)
+    expect(
+      isAssistantToolEnabled('desktop_reply_message', {
+        assistantTools: ['desktop_reply_message', 'desktop_observe'],
+      })
+    ).toBe(false)
+    expect(
+      isAssistantToolEnabled('desktop_reply_message', {
+        assistantTools: [
+          'desktop_reply_message',
+          'desktop_observe',
+          'desktop_action',
+        ],
+      })
+    ).toBe(true)
   })
 
   it('fails closed when the predefined tool list is malformed', () => {
