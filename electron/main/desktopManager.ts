@@ -551,6 +551,10 @@ class DesktopManager {
     ipcMain.handle('desktop:runAction', async (event, args) => {
       try {
         const action = this.parseDesktopAction(args)
+        if (action.action !== 'open_app') {
+          const accessibility = this.ensureAccessibilityApproved()
+          if (!accessibility.success) return accessibility
+        }
         const owner = BrowserWindow.fromWebContents(event.sender)
         const confirmation = owner
           ? await dialog.showMessageBox(owner, {
@@ -721,6 +725,32 @@ class DesktopManager {
       this.screenCaptureApprovedForSession = true
     }
     return { success: true }
+  }
+
+  private ensureAccessibilityApproved():
+    | { success: true }
+    | { success: false; error: string } {
+    if (process.platform !== 'darwin') return { success: true }
+
+    try {
+      // This is deliberately a non-prompting check. The user can use the
+      // settings shortcut shown in the renderer to grant access, and no
+      // desktop action should be attempted while the permission is missing.
+      if (systemPreferences.isTrustedAccessibilityClient(false)) {
+        return { success: true }
+      }
+    } catch (error) {
+      console.warn(
+        '[DesktopManager] Could not read macOS accessibility permission:',
+        error
+      )
+    }
+
+    return {
+      success: false,
+      error:
+        'macOS 尚未允许 Alice 使用辅助功能。请在“系统设置 > 隐私与安全性 > 辅助功能”中允许 Alice 后重试。',
+    }
   }
 
   private async pathExists(target: string): Promise<boolean> {
