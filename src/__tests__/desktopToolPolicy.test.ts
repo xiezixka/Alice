@@ -54,6 +54,22 @@ describe('execution-time tool policy', () => {
     expect(runAction).not.toHaveBeenCalled()
   })
 
+  it('falls back to the active settings store when no snapshot is supplied', async () => {
+    const { useSettingsStore } = await import('../stores/settingsStore')
+    const settingsStore = useSettingsStore()
+    settingsStore.updateSetting('assistantTools', [])
+    const runAction = vi.fn()
+    ;(globalThis as any).window = { desktopAPI: { runAction } }
+
+    const result = await executeFunction('desktop_action', {
+      action: 'open_app',
+      target: '日历',
+    })
+
+    expect(result).toContain('工具当前未启用')
+    expect(runAction).not.toHaveBeenCalled()
+  })
+
   it('executes an enabled and valid custom tool, but never a disabled one', async () => {
     const execute = vi.fn().mockResolvedValue({
       success: true,
