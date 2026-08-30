@@ -17,6 +17,7 @@ import {
   shouldContinueVadMountWork,
   shouldRestartVadAfterStop,
 } from './vadLifecycle'
+import { shouldApplyTranscriptionResult } from './audioProcessingGuard'
 
 let ipcListenersRegistered = false
 
@@ -55,6 +56,9 @@ export function useAudioProcessing() {
   let restartAfterStop = false
   let disposed = false
   let mounted = false
+  // Every true/false recording request transition starts a new generation.
+  // Async STT results from an older generation must never become commands.
+  let recordingGeneration = 0
 
   const isWakeWordModeEnabled = () =>
     settingsStore.config.sttProvider === 'local' &&
@@ -516,12 +520,28 @@ export function useAudioProcessing() {
       return
     }
 
+    const requestGeneration = recordingGeneration
     setAudioState('PROCESSING_AUDIO')
 
     try {
       const wavBuffer = float32ArrayToWav(audio, 16000)
       const transcription =
         await conversationStore.transcribeAudioMessage(wavBuffer)
+
+      if (
+        !shouldApplyTranscriptionResult({
+          requestGeneration,
+          currentGeneration: recordingGeneration,
+          isRecordingRequested: isRecordingRequested.value,
+          audioState: audioState.value,
+        })
+      ) {
+        console.log(
+          '[Audio Processing] Ignoring stale transcription result after recording lifecycle changed.'
+        )
+        isSpeechDetected.value = false
+        return
+      }
 
       if (transcription && transcription.trim()) {
         if (isWakeWordModeEnabled()) {
@@ -574,6 +594,7 @@ export function useAudioProcessing() {
   }
 
   watch(isRecordingRequested, isRequested => {
+    recordingGeneration += 1
     console.log(
       `[VAD Lifecycle] Mic request changed to: ${isRequested}. Current state: ${audioState.value}`
     )
@@ -675,6 +696,7 @@ export function useAudioProcessing() {
     // obsolete completion cannot resurrect the microphone after unmount.
     mounted = false
     disposed = true
+    recordingGeneration += 1
     vadLifecycle.invalidate()
     void destroyVAD()
     clearWakeSession()
