@@ -130,7 +130,7 @@ import {
   validateHttpBridgeUrl,
 } from './securityBoundaries'
 import { setTrayBackgroundListening } from './trayManager'
-import { buildRelaunchArgs } from './backgroundLaunch'
+import { BACKGROUND_LAUNCH_ARG, buildRelaunchArgs } from './backgroundLaunch'
 
 const USER_DATA_PATH = app.getPath('userData')
 const GENERATED_IMAGES_DIR_NAME = 'generated_images'
@@ -776,7 +776,7 @@ export function registerIPCHandlers(): void {
           try {
             app.setLoginItemSettings({
               openAtLogin: settingsToSave.launchAtLogin === true,
-              args: ['--alice-background'],
+              args: [BACKGROUND_LAUNCH_ARG],
             })
           } catch (error) {
             console.warn(
