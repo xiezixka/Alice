@@ -817,10 +817,26 @@ class DesktopManager {
       platform === 'darwin'
         ? systemPreferences.getMediaAccessStatus('microphone')
         : 'unknown'
+    let accessibilityPermission = 'unknown'
+    if (platform === 'darwin') {
+      try {
+        // A non-prompting check keeps capability inspection side-effect free.
+        accessibilityPermission =
+          systemPreferences.isTrustedAccessibilityClient(false)
+            ? 'granted'
+            : 'denied'
+      } catch (error) {
+        console.warn(
+          '[DesktopManager] Could not read macOS accessibility permission:',
+          error
+        )
+      }
+    }
     return {
       platform,
       osVersion: os.release(),
       microphonePermission,
+      accessibilityPermission,
       supportedActions: ['open_app', 'focus_window', 'click', 'type', 'hotkey'],
       screenCapture: {
         supported:

@@ -497,6 +497,13 @@
             <span class="font-medium">麦克风权限：</span>
             {{ microphonePermissionMessage }}
           </div>
+          <div
+            v-if="desktopPermissionMessage"
+            class="rounded-md border border-gray-700/60 bg-gray-950/40 px-3 py-2 text-xs text-gray-300"
+          >
+            <span class="font-medium">桌面权限：</span>
+            {{ desktopPermissionMessage }}
+          </div>
           <div class="flex flex-wrap gap-2">
             <button
               v-if="!currentSettings.backgroundListeningEnabled"
@@ -913,6 +920,9 @@ const serviceStatus = ref<{
   embeddings: { status: 'offline' },
 })
 const microphonePermission = ref('unknown')
+const desktopPlatform = ref('unknown')
+const screenCapturePermission = ref('unknown')
+const accessibilityPermission = ref('unknown')
 
 const availableVoices = ref<Voice[]>([])
 const isRefreshingVoices = ref(false)
@@ -1009,6 +1019,43 @@ const microphonePermissionMessage = computed(() => {
     default:
       return `系统状态：${microphonePermission.value}`
   }
+})
+
+const desktopPermissionMessage = computed(() => {
+  const needsScreenCapture = props.currentSettings.assistantTools.includes(
+    'capture_desktop_screen'
+  )
+  const needsAccessibility = props.currentSettings.assistantTools.includes(
+    'desktop_action'
+  )
+  if (!needsScreenCapture && !needsAccessibility) return ''
+
+  if (desktopPlatform.value === 'darwin') {
+    const missing: string[] = []
+    if (
+      needsScreenCapture &&
+      screenCapturePermission.value !== 'granted'
+    ) {
+      missing.push('屏幕录制')
+    }
+    if (
+      needsAccessibility &&
+      accessibilityPermission.value !== 'granted'
+    ) {
+      missing.push('辅助功能')
+    }
+    return missing.length
+      ? `macOS 尚未允许：${missing.join('、')}；点击下方对应按钮打开设置。`
+      : 'macOS 屏幕录制和辅助功能权限均已允许。'
+  }
+
+  if (desktopPlatform.value === 'win32') {
+    return 'Windows 桌面操作已提供；部分高权限应用需以相同权限级别运行。'
+  }
+  if (desktopPlatform.value === 'linux') {
+    return 'Linux 桌面操作需要 xdotool；屏幕捕获还取决于当前桌面会话。'
+  }
+  return '正在读取当前系统的桌面权限状态。'
 })
 
 const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
@@ -1166,7 +1213,12 @@ const updateMicrophonePermission = async () => {
       return
     }
     const capabilities = await window.desktopAPI.getCapabilities()
+    desktopPlatform.value = capabilities.platform || 'unknown'
     microphonePermission.value = capabilities.microphonePermission || 'unknown'
+    screenCapturePermission.value =
+      capabilities.screenCapture?.permission || 'unknown'
+    accessibilityPermission.value =
+      capabilities.accessibilityPermission || 'unknown'
   } catch (error) {
     console.warn('Failed to get microphone permission status:', error)
     microphonePermission.value = 'unknown'
