@@ -1170,6 +1170,12 @@ const handleBackgroundListeningToggle = async (event: Event) => {
     // explicit "启用后台唤醒" button. This avoids persisting a misleading
     // enabled state when the OS denies access or no input device is present.
     await enableBackgroundWake()
+    if (!props.currentSettings.backgroundListeningEnabled) {
+      // The native checkbox toggles before the async permission check
+      // completes. Roll it back immediately on failure so the visual state
+      // never claims that background listening is active.
+      ;(event.target as HTMLInputElement).checked = false
+    }
     return
   }
 
