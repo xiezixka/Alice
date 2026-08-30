@@ -24,6 +24,13 @@ function hasUpdateConfig(): boolean {
   return available
 }
 
+function isExpectedNoReleaseError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /No published versions on GitHub|latest\.yml.*(?:404|not found)|HTTP code 404/i.test(
+    message
+  )
+}
+
 export function initializeUpdater(): void {
   log.transports.file.level = 'info'
   autoUpdater.logger = log
@@ -121,6 +128,15 @@ function setupAutoUpdaterEvents(): void {
   })
 
   autoUpdater.on('error', err => {
+    // A self-built package can contain app-update.yml before the first GitHub
+    // Release exists. electron-updater reports that normal bootstrap state as
+    // an error; do not surface it as a broken update system to the user.
+    if (isExpectedNoReleaseError(err)) {
+      log.info(
+        '[AutoUpdater] No published GitHub release is available yet; skipping update notification.'
+      )
+      return
+    }
     log.error('[AutoUpdater] Error details:', err)
     const win = getMainWindow()
     win?.webContents.send('update-error', {
@@ -242,6 +258,12 @@ export function checkForUpdates(): void {
   log.info('[AutoUpdater] Production mode - checking GitHub releases')
 
   autoUpdater.checkForUpdates().catch(err => {
+    if (isExpectedNoReleaseError(err)) {
+      log.info(
+        '[AutoUpdater] No published GitHub release is available yet; automatic update check skipped.'
+      )
+      return
+    }
     console.error('[AutoUpdater] Error during update check:', err)
     log.error('[AutoUpdater] Update check failed:', err)
   })
