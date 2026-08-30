@@ -37,6 +37,9 @@ export interface DesktopScreenshot {
 export interface DesktopObservationContextMetadata {
   displayId?: string | number
   screenId?: string | number
+  /** Global logical origin of the observed display. */
+  originX?: number
+  originY?: number
   width?: number
   height?: number
   scaleFactor?: number

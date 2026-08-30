@@ -91,6 +91,8 @@ type DesktopCaptureData = {
   expiresAt?: string
   expiresAtMs?: number
   context: {
+    originX: number
+    originY: number
     foregroundApp?: string
     windowTitle?: string
     confidence: ForegroundContext['confidence']
@@ -972,6 +974,8 @@ class DesktopManager {
         capturedAt: observedAt.toISOString(),
         observedAt: observedAt.toISOString(),
         context: {
+          originX: primaryDisplay.bounds.x,
+          originY: primaryDisplay.bounds.y,
           foregroundApp: foreground.foregroundApp,
           windowTitle: foreground.windowTitle,
           confidence: foreground.confidence,
@@ -989,6 +993,8 @@ class DesktopManager {
         try {
           const observation = createObservation({
             displayId,
+            originX: primaryDisplay.bounds.x,
+            originY: primaryDisplay.bounds.y,
             width: displaySize.width,
             height: displaySize.height,
             scaleFactor: primaryDisplay.scaleFactor,
@@ -1263,6 +1269,8 @@ try { $processName = (Get-Process -Id $processId -ErrorAction Stop).ProcessName 
     const display = screen.getPrimaryDisplay()
     return {
       displayId: String(display.id),
+      originX: display.bounds.x,
+      originY: display.bounds.y,
       width: display.size.width,
       height: display.size.height,
       scaleFactor: display.scaleFactor,

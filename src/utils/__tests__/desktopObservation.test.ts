@@ -118,6 +118,47 @@ describe('DesktopObservationStore', () => {
     })
   })
 
+  it('binds an optional display origin when one is supplied', () => {
+    const store = new DesktopObservationStore({
+      now: () => 55_000,
+      idFactory: () => 'obs-origin',
+    })
+    const observed = context({ originX: -1920, originY: 40 })
+    const observation = store.create(observed)
+
+    expect(store.validate(observation.observationId, observed).valid).toBe(true)
+    expect(
+      store.validate(
+        observation.observationId,
+        context({ originX: 0, originY: 40 })
+      )
+    ).toMatchObject({ valid: false, reason: 'context-changed' })
+    expect(
+      store.validate(
+        observation.observationId,
+        context({ originX: -1920, originY: 41 })
+      )
+    ).toMatchObject({ valid: false, reason: 'context-changed' })
+  })
+
+  it('keeps legacy contexts without an origin compatible', () => {
+    const store = new DesktopObservationStore({
+      now: () => 56_000,
+      idFactory: () => 'obs-legacy-origin',
+    })
+    const legacy = context()
+    const observation = store.create(legacy)
+
+    expect(store.validate(observation.observationId, legacy).valid).toBe(true)
+    expect(
+      store.validate(observation.observationId, {
+        ...legacy,
+        originX: 0,
+        originY: 0,
+      })
+    ).toMatchObject({ valid: false, reason: 'context-changed' })
+  })
+
   it('rejects forged IDs and does not overwrite a colliding ID', () => {
     const ids = ['fixed-id', 'fixed-id', 'second-id']
     const store = new DesktopObservationStore({

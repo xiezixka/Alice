@@ -32,6 +32,9 @@ export interface DesktopObservationContext {
   readonly displayId?: string | number
   /** Alias used by some native display APIs. */
   readonly screenId?: string | number
+  /** Display origin in the global logical coordinate space. */
+  readonly originX?: number
+  readonly originY?: number
   readonly width?: number
   readonly height?: number
   readonly scaleFactor?: number
@@ -251,6 +254,19 @@ function requireFinitePositiveNumber(value: unknown, label: string): number {
   return value
 }
 
+function requireOptionalFiniteNumber(
+  value: unknown,
+  label: string
+): number | undefined {
+  if (value === undefined) return undefined
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new InvalidDesktopObservationContextError(
+      `${label} must be a finite number`
+    )
+  }
+  return value
+}
+
 function requireDisplayId(value: unknown): string {
   return requireDisplayIdWithLabel(value, 'displayId')
 }
@@ -301,6 +317,8 @@ function hasDisplayContext(context: DesktopObservationContext): boolean {
   return (
     context.displayId !== undefined ||
     context.screenId !== undefined ||
+    context.originX !== undefined ||
+    context.originY !== undefined ||
     context.width !== undefined ||
     context.height !== undefined ||
     context.scaleFactor !== undefined
@@ -347,8 +365,20 @@ export function getObservationFingerprints(
       context.scaleFactor,
       'scaleFactor'
     )
+    const originX = requireOptionalFiniteNumber(context.originX, 'originX')
+    const originY = requireOptionalFiniteNumber(context.originY, 'originY')
     screenFingerprint = `screen:v1:${fingerprint(
-      JSON.stringify({ displayId, width, height, scaleFactor })
+      JSON.stringify({
+        displayId,
+        width,
+        height,
+        scaleFactor,
+        // Keep absent origins distinct from an explicit (0, 0), while
+        // allowing legacy callers that do not provide bounds origins to keep
+        // their existing create/validate behavior.
+        originX: originX ?? null,
+        originY: originY ?? null,
+      })
     )}`
   }
 
