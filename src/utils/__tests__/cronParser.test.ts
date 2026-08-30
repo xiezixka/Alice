@@ -1,35 +1,44 @@
 import { describe, expect, it } from 'vitest'
 import { parseNaturalLanguageToCron, parseSchedule } from '../cronParser'
 
-const now = new Date('2026-08-30T10:00:00.000+08:00')
+// Construct the reference instant from local wall-clock components so these
+// assertions remain deterministic on runners in different time zones.  The
+// parser intentionally interprets "今天/明天" in the user's local timezone.
+const now = new Date(2026, 7, 30, 10, 0, 0, 0)
+const localTime = (dayOffset: number, hour: number, minute: number) => {
+  const value = new Date(now)
+  value.setDate(value.getDate() + dayOffset)
+  value.setHours(hour, minute, 0, 0)
+  return value.toISOString()
+}
 
 describe('parseSchedule', () => {
   it('parses relative English time as a one-time ISO timestamp', () => {
     expect(parseSchedule('in 5 minutes', now)).toEqual({
       scheduleType: 'once',
-      runAt: '2026-08-30T02:05:00.000Z',
+      runAt: new Date(now.getTime() + 5 * 60 * 1000).toISOString(),
     })
   })
 
   it('parses relative Chinese time as a one-time ISO timestamp', () => {
     expect(parseSchedule('30分钟后', now)).toEqual({
       scheduleType: 'once',
-      runAt: '2026-08-30T02:30:00.000Z',
+      runAt: new Date(now.getTime() + 30 * 60 * 1000).toISOString(),
     })
   })
 
   it('parses an explicit day without turning it into a daily recurrence', () => {
     expect(parseSchedule('今天下午4点45分', now)).toEqual({
       scheduleType: 'once',
-      runAt: '2026-08-30T08:45:00.000Z',
+      runAt: localTime(0, 16, 45),
     })
     expect(parseSchedule('tomorrow at 9:15 AM', now)).toEqual({
       scheduleType: 'once',
-      runAt: '2026-08-31T01:15:00.000Z',
+      runAt: localTime(1, 9, 15),
     })
     expect(parseSchedule('明天晚上 9 点半', now)).toEqual({
       scheduleType: 'once',
-      runAt: '2026-08-31T13:30:00.000Z',
+      runAt: localTime(1, 21, 30),
     })
   })
 
