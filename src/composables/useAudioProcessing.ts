@@ -587,6 +587,19 @@ export function useAudioProcessing() {
       }
     } catch (error) {
       console.error('[Audio Processing] Error during transcription:', error)
+      if (
+        !shouldApplyTranscriptionResult({
+          requestGeneration,
+          currentGeneration: recordingGeneration,
+          isRecordingRequested: isRecordingRequested.value,
+          audioState: audioState.value,
+        })
+      ) {
+        // A late failure from a request the user has already stopped should
+        // not overwrite the newer lifecycle state with a misleading error.
+        isSpeechDetected.value = false
+        return
+      }
       generalStore.statusMessage = '错误：语音转写失败'
       setAudioState(isRecordingRequested.value ? 'LISTENING' : 'IDLE')
       isSpeechDetected.value = false
