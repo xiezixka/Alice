@@ -86,7 +86,7 @@ Alice can interact with your local system with user-approved permissions:
 With the local STT model, you can set a **wake-up word** (like "Hey, Siri").
 
 - 自定义唤醒词支持中文、英文或混合短语，保存时会统一 Unicode 格式并合并多余空格；唤醒词最多 40 个字符，仅含空白、纯标点或控制字符的值会被拒绝（清空输入则表示关闭唤醒词门控）。
-- When **后台语音监听** is enabled, Alice keeps the local VAD session active while hidden in the system tray, but only processes requests after the wake word is spoken.
+- When **后台语音监听** is enabled, Alice keeps the local VAD session active while hidden in the system tray. VAD segments are transcribed locally, but only a transcript that matches the wake word is forwarded as an assistant command.
 - Default mode is **auto language detection**, but you can also select a specific language in settings.
 - In **Core Settings**, enable **后台语音监听** to keep VAD active while the avatar is hidden in the system tray. This requires local STT + wake word mode; closing the avatar hides it instead of quitting, and **退出 Alice** remains available from the tray menu.
 - **开机启动 Alice** uses the operating system login-item mechanism. When paired with background listening, Alice starts hidden and waits for the wake word.

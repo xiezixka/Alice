@@ -135,7 +135,7 @@ Alice supports OpenAI, OpenRouter, DeepSeek, MiniMax, Z.ai, and local LLM infere
 
 - Select **本地（Go 后端）** as the STT provider and enable **启用唤醒词**.
 - You may enter a Chinese, English, or mixed wake phrase. Alice normalizes Unicode and whitespace when saving; phrases are limited to 40 characters and values made only of punctuation, whitespace, or control characters are rejected (clearing the field explicitly disables the wake-word gate for push-to-talk use).
-- In the same section, enable **后台语音监听**. Alice keeps the VAD microphone session alive while the window is hidden in the system tray and only sends audio for processing after the wake word is detected.
+- In the same section, enable **后台语音监听**. Alice keeps the VAD microphone session alive while the window is hidden in the system tray; VAD segments are transcribed locally, but only a transcript that matches the wake word is forwarded as an assistant command.
 - For Chinese conversations, keep the local STT language set to **中文** and select **本地 TTS → zh_CN-huayan-medium** for the bundled Chinese female voice. The macOS installer includes this Piper model; other voices can still be selected from the voice list.
 - The current installer includes the multilingual **Whisper Base** model for local STT. The model selector is intentionally fixed to Base; Tiny/Small/Medium/Large are not downloaded or activated by this build.
 - Use **检查麦克风** before enabling the feature to request permission explicitly and verify the audio device; the temporary test stream is released immediately after the check.
