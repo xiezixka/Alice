@@ -502,9 +502,14 @@
               v-if="!currentSettings.backgroundListeningEnabled"
               type="button"
               class="btn btn-sm btn-outline btn-info w-full sm:w-auto"
+              :disabled="isEnablingBackgroundWake || isCheckingMicrophone"
               @click="enableBackgroundWake"
             >
-              启用后台唤醒
+              <span
+                v-if="isEnablingBackgroundWake"
+                class="loading loading-spinner loading-xs"
+              ></span>
+              {{ isEnablingBackgroundWake ? '正在准备后台唤醒…' : '启用后台唤醒' }}
             </button>
             <button
               type="button"
@@ -913,6 +918,7 @@ const availableVoices = ref<Voice[]>([])
 const isRefreshingVoices = ref(false)
 const isPreviewingVoice = ref(false)
 const isCheckingMicrophone = ref(false)
+const isEnablingBackgroundWake = ref(false)
 const microphoneCheckResult = ref('')
 const showVoiceHelp = ref(false)
 const ragStats = ref({ documents: 0, chunks: 0 })
@@ -1005,17 +1011,6 @@ const microphonePermissionMessage = computed(() => {
   }
 })
 
-const enableBackgroundWake = () => {
-  if (props.currentSettings.sttProvider !== 'local') {
-    emit('update:setting', 'sttProvider', 'local')
-  }
-  emit('update:setting', 'localSttEnabled', true)
-  if (!props.currentSettings.localSttWakeWord?.trim()) {
-    emit('update:setting', 'localSttWakeWord', 'alice')
-  }
-  emit('update:setting', 'backgroundListeningEnabled', true)
-}
-
 const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
   new Promise<T>((resolve, reject) => {
     const timer = setTimeout(
@@ -1034,15 +1029,15 @@ const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
     )
   })
 
-const checkMicrophone = async () => {
-  if (isCheckingMicrophone.value) return
+const checkMicrophone = async (): Promise<boolean> => {
+  if (isCheckingMicrophone.value) return false
 
   isCheckingMicrophone.value = true
   microphoneCheckResult.value = ''
   try {
     if (!navigator.mediaDevices?.getUserMedia) {
       microphoneCheckResult.value = '当前运行环境不支持麦克风检测。'
-      return
+      return false
     }
 
     if (window.desktopAPI?.requestMicrophoneAccess) {
@@ -1054,7 +1049,7 @@ const checkMicrophone = async () => {
       if (!access.success) {
         microphoneCheckResult.value =
           access.error || '系统未允许 Alice 使用麦克风。'
-        return
+        return false
       }
     }
 
@@ -1066,6 +1061,7 @@ const checkMicrophone = async () => {
     await updateMicrophonePermission()
     microphoneCheckResult.value =
       '麦克风可用，权限已确认；检测音频流已立即关闭。'
+    return true
   } catch (error) {
     await updateMicrophonePermission()
     const errorMessage = error instanceof Error ? error.message : ''
@@ -1073,8 +1069,42 @@ const checkMicrophone = async () => {
       ? `${errorMessage} 如果没有看到系统提示，请点击“打开麦克风设置”后允许 Alice。`
       : '无法访问麦克风。请检查系统权限，并确认没有其他应用独占设备。'
     console.warn('Microphone check failed:', error)
+    return false
   } finally {
     isCheckingMicrophone.value = false
+  }
+}
+
+const enableBackgroundWake = async () => {
+  if (isEnablingBackgroundWake.value || isCheckingMicrophone.value) return
+
+  isEnablingBackgroundWake.value = true
+  try {
+    // Request and verify access before changing the persisted setting. This
+    // prevents a denied permission from leaving the UI in a misleading
+    // "background listening enabled" state.
+    const microphoneReady =
+      microphonePermission.value === 'granted' || (await checkMicrophone())
+    if (!microphoneReady) {
+      if (!microphoneCheckResult.value) {
+        microphoneCheckResult.value =
+          '请先完成麦克风授权，后台唤醒不会在未授权时开启。'
+      }
+      return
+    }
+
+    if (props.currentSettings.sttProvider !== 'local') {
+      emit('update:setting', 'sttProvider', 'local')
+    }
+    emit('update:setting', 'localSttEnabled', true)
+    if (!props.currentSettings.localSttWakeWord?.trim()) {
+      emit('update:setting', 'localSttWakeWord', 'alice')
+    }
+    emit('update:setting', 'backgroundListeningEnabled', true)
+    microphoneCheckResult.value =
+      '麦克风已授权；后台唤醒已开启，Alice 将在托盘中等待唤醒词。'
+  } finally {
+    isEnablingBackgroundWake.value = false
   }
 }
 
