@@ -40,6 +40,7 @@ import {
   mapDisplayPointToNative,
   type DesktopDisplayBounds,
 } from './desktopCoordinates'
+import { selectPrimaryCaptureSource } from './desktopCaptureSelection'
 
 const execFileAsync = promisify(execFile)
 
@@ -907,9 +908,11 @@ class DesktopManager {
         thumbnailSize,
         fetchWindowIcons: false,
       })
-      const source =
-        sources.find(item => item.display_id === String(primaryDisplay.id)) ||
-        sources[0]
+      const sourceSelection = selectPrimaryCaptureSource(
+        sources,
+        String(primaryDisplay.id)
+      )
+      const source = sourceSelection.source
       if (!source || source.thumbnail.isEmpty()) {
         const permissionHint =
           process.platform === 'darwin'
@@ -917,9 +920,13 @@ class DesktopManager {
             : process.platform === 'win32'
               ? '请确认 Windows 隐私设置允许桌面应用捕获屏幕，并检查目标窗口是否以更高权限运行。'
               : '请确认当前桌面会话支持屏幕捕获；Wayland 环境可能需要切换到 X11。'
+        const sourceHint =
+          sourceSelection.reason === 'no-matching-source'
+            ? '未找到与当前主显示器对应的屏幕源；请重试，或暂时断开异常的外接显示器。'
+            : ''
         return {
           success: false,
-          error: `未能读取屏幕内容。${permissionHint}`,
+          error: `未能读取屏幕内容。${sourceHint}${permissionHint}`,
         }
       }
 

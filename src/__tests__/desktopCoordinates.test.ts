@@ -151,6 +151,30 @@ describe('desktop coordinate mapping', () => {
     ).toThrowError(expect.objectContaining({ code: 'out-of-bounds' }))
   })
 
+  it('keeps exact screen right and bottom edges inside the display', () => {
+    const bounds = { x: 10, y: 20, width: 800, height: 600 }
+
+    expect(
+      mapDisplayPointToNative({
+        x: 810,
+        y: 620,
+        scaleFactor: 1,
+        platform: 'darwin',
+        displayBounds: bounds,
+      })
+    ).toEqual({ x: 809, y: 619 })
+
+    expect(
+      mapDisplayPointToNative({
+        x: 810,
+        y: 620,
+        scaleFactor: 2,
+        platform: 'win32',
+        displayBounds: bounds,
+      })
+    ).toEqual({ x: 1618, y: 1238 })
+  })
+
   it('accepts negative multi-monitor origins and rounds fractional results safely', () => {
     const result = mapImagePoint({
       point: { x: 1, y: 1 },

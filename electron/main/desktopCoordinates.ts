@@ -455,6 +455,7 @@ export function mapDisplayPointToNative(
     )
   }
 
+  let addressablePoint = point
   if (input.displayBounds !== undefined) {
     const bounds = validateBounds(input.displayBounds, 'displayBounds')
     const outside =
@@ -468,11 +469,22 @@ export function mapDisplayPointToNative(
         `display point (${point.x}, ${point.y}) is outside the observed display bounds`
       )
     }
+
+    // A display rectangle's right/bottom edge is an exclusive geometric
+    // boundary: native pointer APIs address the last pixel inside it instead
+    // of the coordinate at `origin + size`.  Clamp an exact edge (and points
+    // that round beyond the last integer pixel) to the addressable integer
+    // bounds.  Points outside the observed rectangle still fail closed above.
+    const boundsIntegers = integerBounds(bounds)
+    addressablePoint = {
+      x: clamp(point.x, boundsIntegers.minX, boundsIntegers.maxX),
+      y: clamp(point.y, boundsIntegers.minY, boundsIntegers.maxY),
+    }
   }
 
   const nativeScale = input.platform === 'win32' ? scaleFactor : 1
-  const x = Math.round(point.x * nativeScale)
-  const y = Math.round(point.y * nativeScale)
+  const x = Math.round(addressablePoint.x * nativeScale)
+  const y = Math.round(addressablePoint.y * nativeScale)
   return {
     x: Object.is(x, -0) ? 0 : x,
     y: Object.is(y, -0) ? 0 : y,
