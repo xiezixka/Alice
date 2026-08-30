@@ -4,6 +4,11 @@
   appId: 'aliceaiapp',
   asar: true,
   productName: 'Alice AI App',
+  // Vite's Electron output is intentionally gitignored, but it is the
+  // production main/preload entrypoint and must still be copied into app.asar.
+  // With electron-builder 26 the default ignored-file pass can drop that
+  // directory even when it is listed explicitly in `files`.
+  disableDefaultIgnoredFiles: true,
   directories: {
     output: 'release/${version}',
   },
