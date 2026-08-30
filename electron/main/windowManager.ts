@@ -379,6 +379,13 @@ export function isMainWindowSilent(): boolean {
 
 export function focusMainWindow(): boolean {
   if (win && !win.isDestroyed()) {
+    // A Dock/tray activation can arrive while macOS (or the user) has
+    // minimized the native BrowserWindow. Restore that OS-level state before
+    // applying the compact-window transition; otherwise `show()`/`focus()`
+    // may leave the window hidden behind the Dock.
+    if (win.isMinimized()) {
+      win.restore()
+    }
     // A tray click / Dock activation is an explicit request to work with
     // Alice. Expand the macOS island before focusing it so the user is never
     // left with an apparently unresponsive 240×44 surface. Keep the legacy
