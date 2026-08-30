@@ -85,11 +85,18 @@ export function parseWakeWord(
 ): WakeWordMatch {
   const original = typeof transcription === 'string' ? transcription : ''
   const normalizedTranscript = normalizeForMatching(original)
-  const rawWakeWord = typeof wakeWord === 'string' ? wakeWord : ''
+  const hasStringWakeWord = typeof wakeWord === 'string'
+  const rawWakeWord = hasStringWakeWord ? wakeWord : ''
   const wakeWordValidation = validateWakeWord(rawWakeWord)
   const normalizedWakeWord = normalizeForMatching(wakeWordValidation.value)
 
   if (!normalizedTranscript) {
+    return { hasWakeWord: false, command: '' }
+  }
+  if (!hasStringWakeWord) {
+    // A malformed runtime setting must never fall back to direct command
+    // mode. Settings migration normally guarantees a string, but this guard
+    // keeps a stale/externally supplied value fail-closed as well.
     return { hasWakeWord: false, command: '' }
   }
   // An exactly empty value is used by the push-to-talk path to mean “no

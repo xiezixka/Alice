@@ -69,10 +69,7 @@ export function useAudioProcessing() {
     // stay behind the wake-word gate so malformed settings cannot silently
     // turn microphone input into commands. The parser fails closed for the
     // invalid values, while the settings UI/store rejects them at save time.
-    const hasWakeWordInput =
-      typeof configuredWakeWord === 'string'
-        ? configuredWakeWord.length > 0
-        : configuredWakeWord != null
+    const hasWakeWordInput = configuredWakeWord !== ''
 
     return (
       settingsStore.config.sttProvider === 'local' &&

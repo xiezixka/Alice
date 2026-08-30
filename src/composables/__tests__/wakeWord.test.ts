@@ -143,6 +143,15 @@ describe('parseWakeWord', () => {
     })
   })
 
+  it('fails closed when a malformed non-string wake setting reaches runtime', () => {
+    expect(
+      parseWakeWord('直接执行这个任务', undefined as unknown as string)
+    ).toEqual({
+      hasWakeWord: false,
+      command: '',
+    })
+  })
+
   it('returns the transcript when wake-word mode has no configured word', () => {
     expect(parseWakeWord('直接执行这个任务', '')).toEqual({
       hasWakeWord: true,
