@@ -32,4 +32,22 @@ describe('extractToolVisualOutput', () => {
     expect(result.visual).toBeUndefined()
     expect(result.text).toContain('not-an-image')
   })
+
+  it('removes legacy top-level screenshot pixels before persisting tool text', () => {
+    const result = extractToolVisualOutput(
+      JSON.stringify({
+        message: 'observed',
+        imageDataUrl: screenshot,
+        screenshot: {
+          imageDataUrl: screenshot,
+          width: 800,
+          height: 500,
+        },
+      })
+    )
+
+    expect(result.visual?.imageUrl).toBe(screenshot)
+    expect(result.text).not.toContain(screenshot)
+    expect(result.text).not.toContain('imageDataUrl')
+  })
 })

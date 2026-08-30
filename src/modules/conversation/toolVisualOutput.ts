@@ -12,6 +12,8 @@ interface ScreenshotPayload {
 interface ToolResultPayload {
   message?: unknown
   screenshot?: ScreenshotPayload
+  /** Legacy desktop bridges sometimes put the pixels directly on the result. */
+  imageDataUrl?: unknown
   [key: string]: unknown
 }
 
@@ -38,7 +40,13 @@ export function extractToolVisualOutput(content: string): {
     return { text: content }
   }
 
-  const imageDataUrl = payload.screenshot?.imageDataUrl
+  const legacyImageDataUrl = payload.imageDataUrl
+  const screenshotPayload =
+    payload.screenshot ||
+    (typeof legacyImageDataUrl === 'string'
+      ? (payload as ScreenshotPayload)
+      : undefined)
+  const imageDataUrl = screenshotPayload?.imageDataUrl
   if (
     typeof imageDataUrl !== 'string' ||
     imageDataUrl.length > MAX_DATA_URL_LENGTH ||
@@ -47,7 +55,9 @@ export function extractToolVisualOutput(content: string): {
     return { text: content }
   }
 
-  const { screenshot, ...rest } = payload
+  // Drop both the canonical nested pixels and any legacy top-level duplicate
+  // before serializing the text that is persisted in conversation history.
+  const { screenshot, imageDataUrl: _legacyPixels, ...rest } = payload
   const screenshotMetadata = screenshot
     ? { ...screenshot, imageDataUrl: undefined }
     : undefined
@@ -62,8 +72,8 @@ export function extractToolVisualOutput(content: string): {
       ? payload.message.trim()
       : '已捕获当前屏幕截图，供视觉模型分析。'
   const detail =
-    screenshot?.detail === 'low' || screenshot?.detail === 'auto'
-      ? screenshot.detail
+    screenshotPayload?.detail === 'low' || screenshotPayload?.detail === 'auto'
+      ? screenshotPayload.detail
       : 'high'
 
   return {
