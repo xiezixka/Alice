@@ -41,7 +41,9 @@ function getIndexHtmlPath(): string {
 let win: BrowserWindow | null = null
 let overlayWindow: BrowserWindow | null = null
 let settingsWindow: BrowserWindow | null = null
-const DEFAULT_MAIN_WINDOW_SIZE = { width: 500, height: 500 }
+// The default A layout is a wide floating capsule. Glass mode can resize this
+// window to its own card dimensions once the renderer has loaded settings.
+const DEFAULT_MAIN_WINDOW_SIZE = { width: 900, height: 300 }
 const MINI_MAIN_WINDOW_SIZE = { width: 210, height: 210 }
 let mainWindowRestoreSize = { ...DEFAULT_MAIN_WINDOW_SIZE }
 

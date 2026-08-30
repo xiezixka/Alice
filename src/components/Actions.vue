@@ -1,6 +1,6 @@
 <template>
   <div
-    class="actions-bar absolute bottom-0 py-2 z-20 flex flex-col w-full bg-black/60"
+    class="actions-bar absolute bottom-0 py-2 z-20 flex flex-col w-full bg-black/60 no-drag"
     :class="[
       `actions-bar--${props.uiMode}`,
       { 'actions-bar--mini': isMinimized },
@@ -9,7 +9,7 @@
     <div class="pb-2 rounded-lg flex items-center justify-center gap-8">
       <img
         :src="micIconSrc"
-        class="indicator"
+        class="indicator capsule-control"
         :class="{ mini: isMinimized }"
         @click="!isConfigState ? emit('toggleRecording') : null"
         @keydown.enter.prevent="!isConfigState ? emit('toggleRecording') : null"
@@ -23,9 +23,17 @@
         draggable="false"
         alt=""
       />
+      <span
+        class="capsule-waveform"
+        :class="{ active: waveformActive }"
+        role="img"
+        :aria-label="waveformAriaLabel"
+      >
+        <span v-for="bar in waveformBars" :key="bar" />
+      </span>
       <img
         :src="props.isTTSEnabled ? speakerIcon : speakerIconInactive"
-        class="indicator"
+        class="indicator capsule-control"
         :class="{ mini: isMinimized }"
         @click="!isConfigState ? emit('togglePlaying') : null"
         @keydown.enter.prevent="!isConfigState ? emit('togglePlaying') : null"
@@ -42,7 +50,7 @@
       <img
         v-if="!isMinimized"
         :src="chatIcon"
-        class="indicator"
+        class="indicator capsule-control"
         @click="!isConfigState ? changeSidebarView('chat') : null"
         @keydown.enter.prevent="
           !isConfigState ? changeSidebarView('chat') : null
@@ -66,7 +74,14 @@
         'h-4': isMinimized,
         'h-6': !isMinimized,
       }"
+      aria-live="polite"
+      :title="statusMessage"
     >
+      <span
+        class="capsule-status-dot"
+        :class="{ active: waveformActive }"
+        aria-hidden="true"
+      />
       <span
         :id="statusMessageId"
         class="status-message-text absolute"
@@ -88,7 +103,7 @@
 
   <template v-if="props.isElectron">
     <div
-      class="absolute w-full px-2 flex justify-between z-30 inside-actions"
+      class="absolute w-full px-2 flex justify-between z-30 inside-actions inside-actions--utility no-drag"
       :class="{ 'top-[80px]': isMinimized, 'top-[220px]': !isMinimized }"
     >
       <button
@@ -122,7 +137,9 @@
       </button>
     </div>
 
-    <div class="absolute w-full flex justify-center z-30 top-2 inside-actions">
+    <div
+      class="absolute w-full flex justify-center z-30 top-2 inside-actions inside-actions--menu no-drag"
+    >
       <div class="dropdown dropdown-hover dropdown-center">
         <button
           tabindex="0"
@@ -202,9 +219,10 @@ const {
 const baseWindowSize = computed(() =>
   props.uiMode === 'glass'
     ? { width: 640, height: 560 }
-    : { width: 500, height: 500 }
+    : { width: 900, height: 300 }
 )
 const SIDEBAR_WINDOW_WIDTH = 1340
+const SIDEBAR_WINDOW_HEIGHT = 560
 
 const statusMessageId = ref(
   `status-msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
@@ -266,6 +284,20 @@ const micAriaLabel = computed(() => {
   return isRecordingRequested.value ? '停止麦克风' : '开启麦克风'
 })
 
+const waveformBars = [1, 2, 3, 4, 5, 6, 7, 8]
+const waveformActive = computed(() =>
+  [
+    'LISTENING',
+    'PROCESSING_AUDIO',
+    'WAITING_FOR_RESPONSE',
+    'SPEAKING',
+    'GENERATING_IMAGE',
+  ].includes(props.audioState)
+)
+const waveformAriaLabel = computed(() =>
+  waveformActive.value ? 'Alice 正在处理音频' : '音频波形待命'
+)
+
 const closeActionLabel = computed(() =>
   settingsStore.config.backgroundListeningEnabled ? '隐藏到后台' : '关闭应用'
 )
@@ -307,7 +339,9 @@ const toggleSidebar = async () => {
     const targetWidth = openSidebar.value
       ? SIDEBAR_WINDOW_WIDTH
       : baseWindowSize.value.width
-    const targetHeight = baseWindowSize.value.height
+    const targetHeight = openSidebar.value
+      ? Math.max(baseWindowSize.value.height, SIDEBAR_WINDOW_HEIGHT)
+      : baseWindowSize.value.height
     ;(window as any).electron.resize({
       width: targetWidth,
       height: targetHeight,
@@ -338,7 +372,9 @@ const toggleMinimize = async () => {
           width: openSidebar.value
             ? SIDEBAR_WINDOW_WIDTH
             : baseWindowSize.value.width,
-          height: baseWindowSize.value.height,
+          height: openSidebar.value
+            ? Math.max(baseWindowSize.value.height, SIDEBAR_WINDOW_HEIGHT)
+            : baseWindowSize.value.height,
         })
       }
     }

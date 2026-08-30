@@ -94,8 +94,8 @@ const settingsStore = useSettingsStore()
 const scrollContainer = ref<HTMLElement>()
 const OPENAI_SUMMARIZATION_MODEL = 'gpt-5.6-luna'
 const DEFAULT_MAIN_WINDOW_SIZE = {
-  width: 500,
-  height: 500,
+  width: 900,
+  height: 300,
 }
 const WIZARD_WINDOW_SIZE = {
   width: 720,
@@ -400,8 +400,7 @@ const testOpenRouterKey = async () => {
     if (e.message?.includes('401')) {
       testResult.openrouter.error = 'API 密钥无效，请检查后重试。'
     } else if (e.message?.includes('429')) {
-      testResult.openrouter.error =
-        '请求过于频繁，请稍后重试。'
+      testResult.openrouter.error = '请求过于频繁，请稍后重试。'
     }
   } finally {
     isTesting.openrouter = false
@@ -428,8 +427,7 @@ const testZAIKey = async () => {
     await fetchAvailableModels()
     testResult.zai.success = true
   } catch (e: any) {
-    testResult.zai.error =
-      'API 密钥或编程套餐地址无效，或没有所需权限。'
+    testResult.zai.error = 'API 密钥或编程套餐地址无效，或没有所需权限。'
     if (e.message?.includes('401')) {
       testResult.zai.error = 'API 密钥无效，请检查后重试。'
     } else if (e.message?.includes('429')) {
@@ -497,8 +495,7 @@ const testDeepSeekKey = async () => {
     if (e.message?.includes('401')) {
       testResult.deepseek.error = 'API 密钥无效，请检查后重试。'
     } else if (e.message?.includes('429')) {
-      testResult.deepseek.error =
-        '请求过于频繁，请稍后重试。'
+      testResult.deepseek.error = '请求过于频繁，请稍后重试。'
     }
   } finally {
     isTesting.deepseek = false
@@ -534,13 +531,11 @@ const testCodexAuth = async () => {
 
     const result = await window.aliceIPC.invoke('codex-auth:start-login')
     if (!result?.success) {
-      testResult.codex.error =
-        result?.error || '无法启动 ChatGPT Codex 授权。'
+      testResult.codex.error = result?.error || '无法启动 ChatGPT Codex 授权。'
       return
     }
 
-    testResult.codex.error =
-      '浏览器授权页面已打开，请完成授权后返回 Alice。'
+    testResult.codex.error = '浏览器授权页面已打开，请完成授权后返回 Alice。'
   } catch (e: any) {
     testResult.codex.error =
       'ChatGPT Codex 授权失败：' + (e.message || String(e))
@@ -565,8 +560,7 @@ function handleCodexStatus(status: any) {
 function handleCodexLogin(payload: any) {
   if (payload?.success === false) {
     testResult.codex.success = false
-    testResult.codex.error =
-      payload?.error || 'ChatGPT Codex 授权失败。'
+    testResult.codex.error = payload?.error || 'ChatGPT Codex 授权失败。'
     return
   }
   void syncCodexStatus()
@@ -596,14 +590,11 @@ const testOllamaConnection = async () => {
     testResult.ollama.success = true
     await fetchAvailableModels()
   } catch (e: any) {
-    testResult.ollama.error =
-      '连接失败，请确认 Ollama 已启动且地址可访问。'
+    testResult.ollama.error = '连接失败，请确认 Ollama 已启动且地址可访问。'
     if (e.message?.includes('NetworkError') || e.message?.includes('fetch')) {
-      testResult.ollama.error =
-        '无法连接 Ollama 服务，请确认它正在此地址运行。'
+      testResult.ollama.error = '无法连接 Ollama 服务，请确认它正在此地址运行。'
     } else if (e.message?.includes('timeout')) {
-      testResult.ollama.error =
-        '连接超时，Ollama 可能仍在启动。'
+      testResult.ollama.error = '连接超时，Ollama 可能仍在启动。'
     }
   } finally {
     isTesting.ollama = false
@@ -640,8 +631,7 @@ const testLMStudioConnection = async () => {
       testResult.lmStudio.error =
         '无法连接 LM Studio 服务，请确认它正在此地址运行。'
     } else if (e.message?.includes('timeout')) {
-      testResult.lmStudio.error =
-        '连接超时，LM Studio 可能仍在启动。'
+      testResult.lmStudio.error = '连接超时，LM Studio 可能仍在启动。'
     }
   } finally {
     isTesting.lmStudio = false

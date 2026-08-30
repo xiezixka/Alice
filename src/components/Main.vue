@@ -147,16 +147,16 @@
             alt=""
             aria-hidden="true"
           />
-          <Actions
-            @takeScreenShot="handleTakeScreenshot"
-            @togglePlaying="handleToggleTTS"
-            @toggleRecording="handleToggleRecording"
-            :isElectron="isElectron"
-            :isTTSEnabled="isTTSEnabled"
-            :audioState="audioState"
-            :uiMode="uiMode"
-          />
         </div>
+        <Actions
+          @takeScreenShot="handleTakeScreenshot"
+          @togglePlaying="handleToggleTTS"
+          @toggleRecording="handleToggleRecording"
+          :isElectron="isElectron"
+          :isTTSEnabled="isTTSEnabled"
+          :audioState="audioState"
+          :uiMode="uiMode"
+        />
       </div>
       <Sidebar @processRequest="processRequestFromSidebar" />
     </div>
@@ -253,8 +253,12 @@ const isBlinking = vueRef(false)
 const baseWindowSize = computed(() =>
   uiMode.value === 'glass'
     ? { width: 640, height: 560 }
-    : { width: 500, height: 500 }
+    : { width: 900, height: 300 }
 )
+// The sidebar contains a full chat surface and needs more vertical room than
+// the compact capsule. Keep the capsule short at rest, then grow the native
+// window while the sidebar is open and restore the compact size on close.
+const SIDEBAR_WINDOW_HEIGHT = 560
 
 const glassStateLabel = computed(() => {
   const labels: Record<string, string> = {
@@ -285,9 +289,12 @@ const resizeForUiMode = () => {
   const width = openSidebar.value
     ? SIDEBAR_WINDOW_WIDTH
     : baseWindowSize.value.width
+  const height = openSidebar.value
+    ? Math.max(baseWindowSize.value.height, SIDEBAR_WINDOW_HEIGHT)
+    : baseWindowSize.value.height
   ;(window as any).electron.resize({
     width,
-    height: baseWindowSize.value.height,
+    height,
   })
 }
 
