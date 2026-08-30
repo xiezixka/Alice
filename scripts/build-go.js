@@ -6,6 +6,7 @@ import path from 'path'
 import os from 'os'
 import https from 'https'
 import { fileURLToPath } from 'url'
+import { resolveFFmpegPaths } from './setup-dependencies.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -33,14 +34,17 @@ const WHISPER_URLS = {
 
 // Piper TTS download URLs for different platforms (matching Go backend URLs)
 const PIPER_URLS = {
-  win32: 'https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip',
+  win32:
+    'https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip',
   darwin: {
     x64: 'https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_macos_x64.tar.gz',
-    arm64: 'https://raw.githubusercontent.com/pmbstyle/Alice/main/assets/binaries/piper-macos-arm64',
+    arm64:
+      'https://raw.githubusercontent.com/pmbstyle/Alice/main/assets/binaries/piper-macos-arm64',
   },
   linux: {
     x64: 'https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz',
-    arm64: 'https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_aarch64.tar.gz',
+    arm64:
+      'https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_aarch64.tar.gz',
   },
 }
 
@@ -88,12 +92,12 @@ function downloadFile(url, outputPath) {
 
         file.on('finish', () => {
           file.close(() => {
-            response.destroy()  // Properly close the HTTP response
+            response.destroy() // Properly close the HTTP response
             resolve()
           })
         })
 
-        file.on('error', (err) => {
+        file.on('error', err => {
           file.close()
           response.destroy()
           if (fs.existsSync(outputPath)) {
@@ -505,20 +509,25 @@ function extractPiper(archivePath, outputDir) {
 
               if (item.isDirectory()) {
                 if (item.name === 'espeak-ng-data') {
-                  const targetEspeakDataPath = path.join(outputDir, 'espeak-ng-data')
-                  console.log(`Copying espeak-ng-data directory from ${fullPath} to ${targetEspeakDataPath}`)
-                  
+                  const targetEspeakDataPath = path.join(
+                    outputDir,
+                    'espeak-ng-data'
+                  )
+                  console.log(
+                    `Copying espeak-ng-data directory from ${fullPath} to ${targetEspeakDataPath}`
+                  )
+
                   // Copy directory recursively
                   function copyDirRecursive(src, dest) {
                     if (!fs.existsSync(dest)) {
                       fs.mkdirSync(dest, { recursive: true })
                     }
-                    
+
                     const items = fs.readdirSync(src, { withFileTypes: true })
                     for (const item of items) {
                       const srcPath = path.join(src, item.name)
                       const destPath = path.join(dest, item.name)
-                      
+
                       if (item.isDirectory()) {
                         copyDirRecursive(srcPath, destPath)
                       } else {
@@ -526,7 +535,7 @@ function extractPiper(archivePath, outputDir) {
                       }
                     }
                   }
-                  
+
                   copyDirRecursive(fullPath, targetEspeakDataPath)
                   console.log(`Copied espeak-ng-data directory successfully`)
                   return true
@@ -635,7 +644,7 @@ async function ensurePiper() {
     } else if (downloadUrl.includes('piper-macos-arm64')) {
       archiveExt = '' // Direct binary
     }
-    
+
     const archivePath = path.join(backendBinDir, `piper-download${archiveExt}`)
 
     // Download the archive
@@ -643,7 +652,11 @@ async function ensurePiper() {
     console.log('✅ Piper download completed')
 
     // Handle direct binary for macOS ARM64
-    if (platform === 'darwin' && arch === 'arm64' && !archivePath.includes('.')) {
+    if (
+      platform === 'darwin' &&
+      arch === 'arm64' &&
+      !archivePath.includes('.')
+    ) {
       // Direct binary file
       const targetPath = path.join(backendBinDir, 'piper')
       fs.copyFileSync(archivePath, targetPath)
@@ -828,15 +841,21 @@ async function setupPiper() {
       return true
     } else if (platform === 'darwin') {
       // On macOS, try pip installation as fallback
-      console.log('🔄 Binary download failed, trying pip installation on macOS...')
+      console.log(
+        '🔄 Binary download failed, trying pip installation on macOS...'
+      )
       return await tryPipInstallation(piperPath)
     } else {
-      console.log('⚠️  Piper binary download failed, will fallback to runtime download')
+      console.log(
+        '⚠️  Piper binary download failed, will fallback to runtime download'
+      )
       return false
     }
   } catch (error) {
     if (platform === 'darwin') {
-      console.log('🔄 Error occurred, trying pip installation as fallback on macOS...')
+      console.log(
+        '🔄 Error occurred, trying pip installation as fallback on macOS...'
+      )
       return await tryPipInstallation(piperPath)
     }
     console.error('❌ Failed to setup Piper TTS:', error.message)
@@ -1051,33 +1070,31 @@ async function ensureFFmpeg() {
 }
 
 function setupFFmpegForUser() {
-  const platform = os.platform()
-  const homeDir = os.homedir()
-  const isWindows = platform === 'win32'
+  const paths = resolveFFmpegPaths()
+  const sourceFfmpeg = paths.sourceCandidates.find(candidate =>
+    fs.existsSync(candidate)
+  )
+  const targetFfmpeg = paths.targetPath
 
-  // Create user's local bin directory if it doesn't exist
-  const localBinDir = path.join(homeDir, '.local', 'bin')
-  if (!fs.existsSync(localBinDir)) {
-    fs.mkdirSync(localBinDir, { recursive: true })
-    console.log(`Created directory: ${localBinDir}`)
+  // Avoid creating a user directory when the build did not produce a native
+  // FFmpeg asset.  This keeps failed/partial builds from mutating user data.
+  if (!sourceFfmpeg) {
+    console.warn(
+      `⚠️  Bundled ${paths.binaryName} not found. Checked: ${paths.sourceCandidates.join(', ')}`
+    )
+    return
   }
 
-  // Copy bundled ffmpeg to user's PATH (handle Windows .exe extension)
-  const ffmpegName = isWindows ? 'ffmpeg.exe' : 'ffmpeg'
-  const sourceFfmpeg = path.join(
-    process.cwd(),
-    'resources',
-    'backend',
-    'bin',
-    ffmpegName
-  )
-  const targetFfmpeg = path.join(localBinDir, ffmpegName)
+  if (!fs.existsSync(paths.localBinDir)) {
+    fs.mkdirSync(paths.localBinDir, { recursive: true })
+    console.log(`Created directory: ${paths.localBinDir}`)
+  }
 
   if (fs.existsSync(sourceFfmpeg)) {
     try {
       fs.copyFileSync(sourceFfmpeg, targetFfmpeg)
       // Make executable on Unix-like systems
-      if (!isWindows) {
+      if (os.platform() !== 'win32') {
         fs.chmodSync(targetFfmpeg, '755')
       }
       console.log(`✅ Installed ffmpeg to user PATH: ${targetFfmpeg}`)
@@ -1186,7 +1203,7 @@ async function buildGoBackend() {
   try {
     await buildGoBackend()
     console.log('🎉 Build script completed successfully!')
-    process.exit(0)  // Explicitly exit with success code
+    process.exit(0) // Explicitly exit with success code
   } catch (error) {
     console.error('Build failed:', error.message)
     process.exit(1)

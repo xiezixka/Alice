@@ -9,6 +9,7 @@ import * as path from 'path'
 import * as fs from 'fs'
 import axios from 'axios'
 import { fileURLToPath } from 'node:url'
+import { selectMiniLMModelPath } from './backendPaths'
 
 // ES modules compatibility
 const __filename = fileURLToPath(import.meta.url)
@@ -77,6 +78,9 @@ export class BackendManager {
       console.log('[BackendManager] Using backend at:', backendPath)
       const backendDir = path.dirname(backendPath)
       const modelsDir = path.join(backendDir, 'models')
+      const minilmModelDir = this.resolveMiniLMModelDirectory(
+        path.join(modelsDir, 'minilm')
+      )
 
       // Set environment variables for Go backend
       const env = {
@@ -87,7 +91,7 @@ export class BackendManager {
         ENABLE_EMBEDDINGS: 'true',
         WHISPER_MODEL_PATH: path.join(modelsDir, 'whisper-base.bin'),
         PIPER_MODEL_PATH: path.join(modelsDir, 'piper'),
-        MINILM_MODEL_PATH: path.join(modelsDir, 'minilm'),
+        MINILM_MODEL_PATH: minilmModelDir,
       }
 
       // Spawn Go process
@@ -127,6 +131,56 @@ export class BackendManager {
       this.startupPromise = null
       return false
     }
+  }
+
+  /**
+   * Resolve a writable location for MiniLM when the app is running from a
+   * read-only package (mounted DMG/AppImage).  Bundled model files remain the
+   * preferred path so installed apps do not duplicate a complete model into
+   * user data.
+   */
+  private resolveMiniLMModelDirectory(bundledPath: string): string {
+    const userDataPath = path.join(app.getPath('userData'), 'models', 'minilm')
+    if (!app.isPackaged) return bundledPath
+
+    const requiredArtifacts = [
+      'multilingual-e5-small.onnx',
+      'multilingual-e5-small-tokenizer.json',
+    ]
+    const bundledHasRequiredArtifacts = requiredArtifacts.every(fileName =>
+      fs.existsSync(path.join(bundledPath, fileName))
+    )
+
+    let bundledWritable = false
+    if (!bundledHasRequiredArtifacts) {
+      try {
+        fs.mkdirSync(bundledPath, { recursive: true })
+        const probePath = path.join(
+          bundledPath,
+          `.alice-write-test-${process.pid}`
+        )
+        fs.writeFileSync(probePath, '')
+        fs.rmSync(probePath, { force: true })
+        bundledWritable = true
+      } catch {
+        bundledWritable = false
+      }
+    }
+
+    const selectedPath = selectMiniLMModelPath({
+      packaged: app.isPackaged,
+      bundledPath,
+      userDataPath,
+      bundledHasRequiredArtifacts,
+      bundledWritable,
+    })
+    if (selectedPath !== bundledPath) {
+      console.log(
+        '[BackendManager] Bundled MiniLM directory is read-only or incomplete; using user data:',
+        selectedPath
+      )
+    }
+    return selectedPath
   }
 
   /**

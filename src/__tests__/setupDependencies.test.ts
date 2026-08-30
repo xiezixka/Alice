@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { execFileSync } from 'node:child_process'
+import process from 'node:process'
 import { resolveFFmpegPaths } from '../../scripts/setup-dependencies.js'
 
 describe('resolveFFmpegPaths', () => {
@@ -31,5 +33,15 @@ describe('resolveFFmpegPaths', () => {
       '/workspace/Alice/resources/backend/bin/ffmpeg',
     ])
     expect(paths.targetPath).toBe('/Users/tester/.local/bin/ffmpeg')
+  })
+
+  it('accepts the current platform and architecture in the native-build guard', () => {
+    expect(() =>
+      execFileSync(
+        process.execPath,
+        ['scripts/assert-native-build.js', process.platform, process.arch],
+        { cwd: process.cwd(), stdio: 'pipe' }
+      )
+    ).not.toThrow()
   })
 })
