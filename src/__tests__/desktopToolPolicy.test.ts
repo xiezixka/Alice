@@ -54,6 +54,49 @@ describe('execution-time tool policy', () => {
     expect(runAction).not.toHaveBeenCalled()
   })
 
+  it('blocks screen capture for an enabled text-only model', async () => {
+    const captureScreen = vi.fn()
+    ;(globalThis as any).window = { desktopAPI: { captureScreen } }
+
+    const result = await executeFunction(
+      'capture_desktop_screen',
+      {},
+      {
+        assistantTools: ['capture_desktop_screen'],
+        aiProvider: 'deepseek',
+        assistantModel: 'deepseek-v4-flash',
+      }
+    )
+
+    expect(result).toContain('当前模型不支持视觉输入')
+    expect(captureScreen).not.toHaveBeenCalled()
+  })
+
+  it('allows screen capture for a configured vision model', async () => {
+    const captureScreen = vi.fn().mockResolvedValue({
+      success: true,
+      data: {
+        imageDataUrl: 'data:image/jpeg;base64,abc',
+        width: 1,
+        height: 1,
+      },
+    })
+    ;(globalThis as any).window = { desktopAPI: { captureScreen } }
+
+    const result = await executeFunction(
+      'capture_desktop_screen',
+      {},
+      {
+        assistantTools: ['capture_desktop_screen'],
+        aiProvider: 'deepseek',
+        assistantModel: 'deepseek-v4-flash-vision-exp',
+      }
+    )
+
+    expect(result).toContain('供视觉模型分析')
+    expect(captureScreen).toHaveBeenCalledTimes(1)
+  })
+
   it('falls back to the active settings store when no snapshot is supplied', async () => {
     const { useSettingsStore } = await import('../stores/settingsStore')
     const settingsStore = useSettingsStore()

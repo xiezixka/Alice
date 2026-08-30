@@ -29,12 +29,37 @@ import {
   send_email,
 } from './functions/gmail'
 import { isAssistantToolEnabled } from './assistantTools'
+import { isVisionCapableModel } from '../services/llmProviders/providerCatalog'
 import axios from 'axios'
 
 interface FunctionResult {
   success: boolean
   data?: any
   error?: string
+}
+
+function isScreenCaptureAllowedForModel(
+  toolName: string,
+  settings: any
+): boolean {
+  if (toolName !== 'capture_desktop_screen') return true
+
+  // Keep legacy/direct callers compatible when no provider snapshot is
+  // available. Normal conversation and Codex bridges always pass these two
+  // fields, in which case a text-only model must not receive a screenshot.
+  if (
+    !settings ||
+    !Object.prototype.hasOwnProperty.call(settings, 'aiProvider') ||
+    !Object.prototype.hasOwnProperty.call(settings, 'assistantModel')
+  ) {
+    return true
+  }
+
+  return (
+    typeof settings.aiProvider === 'string' &&
+    typeof settings.assistantModel === 'string' &&
+    isVisionCapableModel(settings.aiProvider, settings.assistantModel)
+  )
 }
 
 interface SaveMemoryArgs {
@@ -844,6 +869,9 @@ export async function executeFunction(
   }
   if (!isAssistantToolEnabled(name, effectiveSettings)) {
     return `Error executing ${name}: 工具当前未启用，请先在助手设置中启用后重试。`
+  }
+  if (!isScreenCaptureAllowedForModel(name, effectiveSettings)) {
+    return `Error executing ${name}: 当前模型不支持视觉输入，已拒绝读取屏幕。请切换到视觉模型后重试。`
   }
 
   const func = functionRegistry[name]
