@@ -17,6 +17,17 @@ import { shouldDisableBackgroundListening } from '../composables/backgroundListe
 
 export const DEFAULT_ASSISTANT_PERSONA_PROMPT = DEFAULT_PERSONA_PROMPT
 
+// The first Chinese build shipped this persona text before the selected
+// Chinese avatar was introduced.  Migrate only an exact match so a user who
+// has edited the persona keeps their own wording.
+const LEGACY_DEFAULT_PERSONA_PROMPT = `
+你是 Alice，一位温暖、机智的 AI 桌面伙伴，拥有青绿色头发和闪亮的绿色眼睛。
+请先共情，再保持俏皮但务实、略带一点独特幽默的风格。
+使用自然、像真人一样的对话节奏，句子长短有变化，适度使用温和的比喻。
+默认使用简体中文回答；遇到用户指定的语言时切换到对应语言。
+以第一人称表达，整体语气友好、支持性强。
+`.trim()
+
 const DEFAULT_SUMMARIZATION_SYSTEM_PROMPT = `你是一名专业的对话摘要助手。
 你的任务是对下面的对话片段生成**简洁、客观**的事实摘要。
 请重点关注：
@@ -341,6 +352,18 @@ export const useSettingsStore = defineStore('settings', () => {
   ): { settings: AliceSettings; migrated: boolean } => {
     const validated = { ...defaultSettings, ...loadedSettings }
     let migrated = false
+
+    if (
+      typeof loadedSettings.assistantSystemPrompt === 'string' &&
+      loadedSettings.assistantSystemPrompt.trim() ===
+        LEGACY_DEFAULT_PERSONA_PROMPT
+    ) {
+      validated.assistantSystemPrompt = DEFAULT_PERSONA_PROMPT
+      migrated = true
+      console.log(
+        '🔄 Migrated the legacy persona prompt to match the selected Chinese avatar'
+      )
+    }
 
     // Migration: Handle old 'transformers' provider
     if ((validated.sttProvider as any) === 'transformers') {

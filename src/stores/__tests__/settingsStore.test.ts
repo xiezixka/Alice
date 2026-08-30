@@ -132,4 +132,47 @@ describe('useSettingsStore boolean settings', () => {
       vi.unstubAllGlobals()
     }
   })
+
+  it('migrates the old avatar persona without overwriting custom wording', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({
+          assistantSystemPrompt: `
+你是 Alice，一位温暖、机智的 AI 桌面伙伴，拥有青绿色头发和闪亮的绿色眼睛。
+请先共情，再保持俏皮但务实、略带一点独特幽默的风格。
+使用自然、像真人一样的对话节奏，句子长短有变化，适度使用温和的比喻。
+默认使用简体中文回答；遇到用户指定的语言时切换到对应语言。
+以第一人称表达，整体语气友好、支持性强。
+`.trim(),
+        })),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+
+      expect(store.settings.assistantSystemPrompt).toContain('中国年轻女性')
+      expect(saveSettings).toHaveBeenCalled()
+
+      setActivePinia(createPinia())
+      const customStore = useSettingsStore()
+      vi.stubGlobal('window', {
+        settingsAPI: {
+          loadSettings: vi.fn(async () => ({
+            assistantSystemPrompt: '这是我自己写的角色设定。',
+          })),
+          saveSettings,
+        },
+      })
+      await customStore.loadSettings()
+      expect(customStore.settings.assistantSystemPrompt).toBe(
+        '这是我自己写的角色设定。'
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })
