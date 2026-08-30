@@ -28,6 +28,43 @@ type AssetManager struct {
 	cache   map[string]string // asset -> extracted path
 }
 
+// archiveTargetPath resolves an archive entry inside targetDir without
+// allowing path traversal.  Native voice archives are downloaded at build
+// time (and may also be downloaded by the backend at runtime), so treating
+// their file names as trusted paths could overwrite files outside Alice's
+// asset directory when an archive is tampered with.
+func archiveTargetPath(targetDir, entryName string) (string, error) {
+	if entryName == "" {
+		return "", fmt.Errorf("archive entry has an empty name")
+	}
+
+	baseDir, err := filepath.Abs(targetDir)
+	if err != nil {
+		return "", fmt.Errorf("resolve archive target directory: %w", err)
+	}
+
+	// ZIP/TAR headers use '/' even on Windows.  Convert before cleaning so
+	// traversal checks use the host platform's separator consistently.
+	cleanName := filepath.Clean(filepath.FromSlash(entryName))
+	if filepath.IsAbs(cleanName) {
+		return "", fmt.Errorf("archive entry uses an absolute path: %q", entryName)
+	}
+
+	targetPath, err := filepath.Abs(filepath.Join(baseDir, cleanName))
+	if err != nil {
+		return "", fmt.Errorf("resolve archive entry %q: %w", entryName, err)
+	}
+	relative, err := filepath.Rel(baseDir, targetPath)
+	if err != nil {
+		return "", fmt.Errorf("check archive entry %q: %w", entryName, err)
+	}
+	if relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("archive entry escapes target directory: %q", entryName)
+	}
+
+	return targetPath, nil
+}
+
 // PlatformInfo holds platform-specific asset information
 type PlatformInfo struct {
 	OS           string
@@ -350,7 +387,10 @@ func (am *AssetManager) extractZipFiles(reader *zip.Reader, targetDir string) er
 // extractZipFile extracts a single file from ZIP
 func (am *AssetManager) extractZipFile(file *zip.File, targetDir string) error {
 	// Determine target path, handling nested directories
-	targetPath := filepath.Join(targetDir, file.Name)
+	targetPath, err := archiveTargetPath(targetDir, file.Name)
+	if err != nil {
+		return err
+	}
 
 	// Handle directory entries
 	if file.FileInfo().IsDir() {
@@ -408,7 +448,10 @@ func (am *AssetManager) extractTarFiles(reader *tar.Reader, targetDir string) er
 
 // extractTarFile extracts a single file from TAR
 func (am *AssetManager) extractTarFile(reader *tar.Reader, header *tar.Header, targetDir string) error {
-	targetPath := filepath.Join(targetDir, header.Name)
+	targetPath, err := archiveTargetPath(targetDir, header.Name)
+	if err != nil {
+		return err
+	}
 
 	switch header.Typeflag {
 	case tar.TypeDir:
