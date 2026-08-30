@@ -176,6 +176,32 @@ function normalizeDesktopObservationData(
   const directScreenshot =
     data.screenshot ||
     (typeof data.imageDataUrl === 'string' ? { ...data } : null)
+  const hasObservationMetadata =
+    Boolean(data.observationId) ||
+    Boolean(data.observedAt) ||
+    Boolean(data.expiresAt) ||
+    Boolean(data.context) ||
+    Boolean(data.displayBounds) ||
+    Boolean(data.imageWidth) ||
+    Boolean(data.imageHeight)
+
+  // Preserve the historical `{ message, screenshot }` shape for an old
+  // bridge that only returns image dimensions.  New bridges retain all
+  // observation metadata while still nesting the pixels under screenshot.
+  if (
+    !hasObservationMetadata &&
+    !data.screenshot &&
+    typeof data.imageDataUrl === 'string'
+  ) {
+    return {
+      message:
+        typeof data.message === 'string' && data.message.trim()
+          ? data.message
+          : fallbackMessage,
+      screenshot: directScreenshot,
+    }
+  }
+
   // Never leave a direct imageDataUrl at the top level.  The conversation
   // visual extractor removes pixels from `screenshot`; keeping a duplicate
   // top-level field would otherwise persist the screenshot in history.
