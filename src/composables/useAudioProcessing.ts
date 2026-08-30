@@ -61,6 +61,16 @@ export function useAudioProcessing() {
     wakeSessionResetTimer = setTimeout(resetWakeSession, 8000)
   }
 
+  const clearWakeSession = () => {
+    wakeSessionExpiresAt = 0
+    awaitingWakeWord.value = false
+    wakeWordDetected.value = false
+    if (wakeSessionResetTimer) {
+      clearTimeout(wakeSessionResetTimer)
+      wakeSessionResetTimer = null
+    }
+  }
+
   const handleGlobalMicToggle = () => {
     toggleRecordingRequest()
   }
@@ -223,9 +233,30 @@ export function useAudioProcessing() {
     } catch (error) {
       console.error('[VAD Manager] VAD initialization failed:', error)
       await destroyVAD()
+
+      // The user may have stopped listening while MicVAD was loading. Do not
+      // overwrite that intentional stop with a stale initialization error.
+      if (!isRecordingRequested.value) {
+        if (audioState.value === 'LISTENING') setAudioState('IDLE')
+        isSpeechDetected.value = false
+        return
+      }
+
       if (stopAfterMicrophonePermissionFailure(error)) return
+
+      // A failed VAD startup must not leave the recording request enabled: no
+      // stream exists in this state, yet the avatar and tray would otherwise
+      // report an active microphone and block a clean retry.
+      const backgroundWasActive =
+        backgroundSessionActive ||
+        settingsStore.config.backgroundListeningEnabled === true
+      backgroundSessionActive = false
+      isRecordingRequested.value = false
+      clearWakeSession()
       setAudioState('IDLE')
-      generalStore.statusMessage = '错误：麦克风/语音检测初始化失败'
+      generalStore.statusMessage = backgroundWasActive
+        ? '后台监听启动失败，麦克风已停止。请检查输入设备和本地语音服务后重试。'
+        : '错误：麦克风/语音检测初始化失败'
       isSpeechDetected.value = false
     } finally {
       isVadInitializing.value = false
@@ -271,16 +302,20 @@ export function useAudioProcessing() {
   const stopAfterMicrophonePermissionFailure = (reason?: unknown) => {
     if (!isMicrophonePermissionError(reason)) return false
 
+    const backgroundWasActive =
+      backgroundSessionActive ||
+      settingsStore.config.backgroundListeningEnabled === true
+
     // Do not let the background watcher immediately restart a session that
     // the OS has just rejected. The user can re-enable it after granting the
     // permission in system settings.
     backgroundSessionActive = false
     if (isRecordingRequested.value) isRecordingRequested.value = false
     setAudioState('IDLE')
-    awaitingWakeWord.value = false
-    wakeWordDetected.value = false
-    generalStore.statusMessage =
-      '麦克风权限未开启，后台唤醒已暂停。请在系统设置中允许 Alice 使用麦克风后重试。'
+    clearWakeSession()
+    generalStore.statusMessage = backgroundWasActive
+      ? '麦克风权限未开启，后台唤醒已暂停。请在系统设置中允许 Alice 使用麦克风后重试。'
+      : '麦克风权限未开启，语音监听已停止。请在系统设置中允许 Alice 使用麦克风后重试。'
     return true
   }
 
@@ -383,11 +418,7 @@ export function useAudioProcessing() {
 
       awaitingWakeWord.value = false
       wakeWordDetected.value = false
-      wakeSessionExpiresAt = 0
-      if (wakeSessionResetTimer) {
-        clearTimeout(wakeSessionResetTimer)
-        wakeSessionResetTimer = null
-      }
+      clearWakeSession()
     }
   })
 
@@ -459,10 +490,7 @@ export function useAudioProcessing() {
 
   onUnmounted(() => {
     destroyVAD()
-    if (wakeSessionResetTimer) {
-      clearTimeout(wakeSessionResetTimer)
-      wakeSessionResetTimer = null
-    }
+    clearWakeSession()
     if (window.aliceIPC && ownsIpcListeners) {
       window.aliceIPC.off('global-hotkey-mic-toggle', handleGlobalMicToggle)
       window.aliceIPC.off(

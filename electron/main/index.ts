@@ -32,7 +32,12 @@ import {
   registerCustomProtocol,
   getMainWindow,
   focusMainWindow,
+  getRendererDist,
 } from './windowManager'
+import {
+  shouldAllowMicrophonePermissionCheck,
+  shouldAllowMicrophonePermissionRequest,
+} from './mediaPermissions'
 import { createTray, destroyTray } from './trayManager'
 import { getCustomAvatarsRootPath } from './customAvatarsManager'
 import { registerIPCHandlers, registerGoogleIPCHandlers } from './ipcManager'
@@ -365,15 +370,43 @@ export function restartWebSocketServer() {
 app.on('ready', () => {
   console.log(`[Main Index ${initId}] App 'ready' event fired`)
   session.defaultSession.setPermissionCheckHandler(
-    (_webContents, permission) => permission === 'media'
+    (webContents, permission, requestingOrigin, details) => {
+      if (!webContents || webContents.isDestroyed()) return false
+      return shouldAllowMicrophonePermissionCheck({
+        permission,
+        mediaType: details.mediaType,
+        isMainFrame: details.isMainFrame,
+        requestingOrigin,
+        requestingUrl: details.requestingUrl,
+        currentUrl: webContents.getURL(),
+        rendererIndexPath: path.join(getRendererDist(), 'index.html'),
+      })
+    }
   )
   session.defaultSession.setPermissionRequestHandler(
-    (webContents, permission, callback) => {
-      if (permission === 'media') {
-        callback(true)
-      } else {
+    (webContents, permission, callback, details) => {
+      if (!webContents || webContents.isDestroyed()) {
         callback(false)
+        return
       }
+
+      const mediaDetails = details as {
+        mediaTypes?: string[]
+        isMainFrame?: boolean
+        requestingUrl?: string
+        securityOrigin?: string
+      }
+      callback(
+        shouldAllowMicrophonePermissionRequest({
+          permission,
+          mediaTypes: mediaDetails.mediaTypes,
+          isMainFrame: mediaDetails.isMainFrame,
+          requestingOrigin: mediaDetails.securityOrigin,
+          requestingUrl: mediaDetails.requestingUrl,
+          currentUrl: webContents.getURL(),
+          rendererIndexPath: path.join(getRendererDist(), 'index.html'),
+        })
+      )
     }
   )
 })
