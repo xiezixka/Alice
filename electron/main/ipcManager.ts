@@ -172,7 +172,9 @@ export function registerIPCHandlers(): void {
     if (
       arg &&
       typeof arg.width === 'number' &&
-      typeof arg.height === 'number'
+      typeof arg.height === 'number' &&
+      Number.isFinite(arg.width) &&
+      Number.isFinite(arg.height)
     ) {
       resizeMainWindow(arg.width, arg.height)
     }
@@ -182,6 +184,19 @@ export function registerIPCHandlers(): void {
     if (arg && typeof arg.minimize === 'boolean') {
       minimizeMainWindow(arg.minimize)
     }
+  })
+
+  ipcMain.on('settings:ui-mode-changed', (event, mode) => {
+    if (mode !== 'capsule' && mode !== 'glass') return
+
+    BrowserWindow.getAllWindows().forEach(window => {
+      if (window.isDestroyed() || window.webContents.id === event.sender.id) {
+        return
+      }
+      window.webContents.send('settings:ui-mode-changed', {
+        assistantUiMode: mode,
+      })
+    })
   })
 
   ipcMain.on('close-app', event => {
@@ -1729,8 +1744,7 @@ export function registerGoogleIPCHandlers(): void {
       `即将发送邮件给 ${to}`,
       `主题：${subject}\n\n${body}`
     )
-    if (!confirmed)
-      return { success: false, error: '用户取消了发送邮件。' }
+    if (!confirmed) return { success: false, error: '用户取消了发送邮件。' }
     return withAuthenticatedClient(
       authClient =>
         googleGmailManager.sendMessage({
@@ -1753,8 +1767,7 @@ export function registerGoogleIPCHandlers(): void {
     if (!messageId || !body)
       return { success: false, error: '邮件 ID 和回复正文不能为空。' }
     const confirmed = await confirmGmailWrite(event, '即将回复邮件', body)
-    if (!confirmed)
-      return { success: false, error: '用户取消了回复邮件。' }
+    if (!confirmed) return { success: false, error: '用户取消了回复邮件。' }
     return withAuthenticatedClient(
       authClient =>
         googleGmailManager.replyToMessage({

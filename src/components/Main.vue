@@ -1,5 +1,98 @@
 <template>
-  <div class="h-screen flex w-full items-center justify-start relative">
+  <div
+    class="assistant-shell h-screen flex w-full items-center justify-start relative"
+    :class="[
+      `assistant-shell--${uiMode}`,
+      {
+        'assistant-shell--mini': isMinimized,
+        'assistant-shell--sidebar-open': openSidebar,
+        'assistant-shell--electron': isElectron,
+      },
+    ]"
+  >
+    <div
+      v-if="uiMode === 'glass' && !isMinimized"
+      class="glass-surface"
+      aria-hidden="true"
+    />
+
+    <div
+      v-if="uiMode === 'capsule' && !isMinimized"
+      class="capsule-brand dragable select-none"
+      aria-hidden="true"
+    >
+      <span class="capsule-brand-mark">ALICE</span>
+      <span class="capsule-brand-caption">桌面伙伴</span>
+    </div>
+
+    <header
+      v-if="uiMode === 'glass' && !isMinimized"
+      class="glass-header dragable select-none"
+    >
+      <div class="glass-brand">
+        <span class="glass-brand-mark">ALICE</span>
+        <span class="glass-brand-caption">桌面伙伴</span>
+      </div>
+      <div class="glass-live-state">
+        <span
+          class="glass-live-dot"
+          :class="{ active: audioState !== 'IDLE' }"
+          aria-hidden="true"
+        />
+        <span>{{ statusMessage }}</span>
+      </div>
+    </header>
+
+    <div
+      v-if="!isMinimized"
+      class="assistant-mode-switch no-drag"
+      role="group"
+      aria-label="切换主界面样式"
+    >
+      <button
+        type="button"
+        :class="{ active: uiMode === 'capsule' }"
+        :aria-pressed="uiMode === 'capsule'"
+        :disabled="uiModeSaving || !settingsReady"
+        @click="setUiMode('capsule')"
+      >
+        胶囊
+      </button>
+      <button
+        type="button"
+        :class="{ active: uiMode === 'glass' }"
+        :aria-pressed="uiMode === 'glass'"
+        :disabled="uiModeSaving || !settingsReady"
+        @click="setUiMode('glass')"
+      >
+        卡片
+      </button>
+    </div>
+
+    <div
+      v-if="uiMode === 'glass' && !isMinimized"
+      class="glass-insight"
+      aria-live="polite"
+    >
+      <div class="glass-insight-heading">
+        <span class="glass-insight-kicker">当前状态</span>
+        <span class="glass-insight-state">{{ glassStateLabel }}</span>
+      </div>
+      <p v-if="recognizedText" class="glass-recognized-text">
+        “{{ recognizedText }}”
+      </p>
+      <p v-else class="glass-recognized-text muted">
+        说一句话，Alice 会在这里显示识别内容
+      </p>
+      <div
+        class="glass-wave"
+        :class="{ active: glassWaveActive }"
+        aria-hidden="true"
+      >
+        <span v-for="bar in 9" :key="bar" />
+      </div>
+    </div>
+
     <div
       class="avatar-wrapper flex container h-full items-center justify-center relative z-2"
       :class="{ mini: isMinimized }"
@@ -17,12 +110,14 @@
             'w-[200px] h-[200px]': isMinimized,
             'w-[480px] h-[480px]': !isMinimized && isElectron,
             'w-[430px] h-[430px]': !isElectron,
+            'avatar-ring--glass': uiMode === 'glass' && !isMinimized,
           }"
         >
           <audio ref="audioPlayerElement" class="hidden"></audio>
           <video
             class="max-w-screen-md rounded-full"
             :class="{
+              'avatar-video': true,
               'avatar-video-standby':
                 isBuiltInAvatar &&
                 (audioState === 'IDLE' || audioState === 'LISTENING'),
@@ -59,6 +154,7 @@
             :isElectron="isElectron"
             :isTTSEnabled="isTTSEnabled"
             :audioState="audioState"
+            :uiMode="uiMode"
           />
         </div>
       </div>
@@ -68,13 +164,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref as vueRef } from 'vue'
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref as vueRef,
+  watch,
+} from 'vue'
 import type { CSSProperties } from 'vue'
 import { storeToRefs } from 'pinia'
 import Actions from './Actions.vue'
 import Sidebar from './Sidebar.vue'
 
 import { useGeneralStore } from '../stores/generalStore'
+import { useSettingsStore } from '../stores/settingsStore'
 import { useCustomAvatarsStore } from '../stores/customAvatarsStore'
 import { useConversationStore } from '../stores/conversationStore'
 import {
@@ -100,6 +204,7 @@ const {
 } = useScreenshot()
 
 const generalStore = useGeneralStore()
+const settingsStore = useSettingsStore()
 const customAvatarsStore = useCustomAvatarsStore()
 const conversationStore = useConversationStore()
 
@@ -115,11 +220,21 @@ const {
   isRecordingRequested,
   takingScreenShot,
   avatarFallbackImage,
+  recognizedText,
+  statusMessage,
 } = storeToRefs(generalStore)
 const { setAudioState } = generalStore
 
 const isElectron =
   typeof window !== 'undefined' && Boolean((window as any).electron)
+const uiMode = computed<'capsule' | 'glass'>(() =>
+  settingsStore.config.assistantUiMode === 'glass' ? 'glass' : 'capsule'
+)
+const uiModeSaving = vueRef(false)
+const settingsReady = computed(
+  () => settingsStore.settingsLoadSucceeded && !settingsStore.isLoading
+)
+const SIDEBAR_WINDOW_WIDTH = 1340
 const audioPlayerElement = vueRef<HTMLAudioElement | null>(null)
 const aiVideoElement = vueRef<HTMLVideoElement | null>(null)
 
@@ -131,7 +246,94 @@ const isBuiltInAvatar = computed(
 let isProcessingRequest = false
 let blinkTimer: ReturnType<typeof setTimeout> | null = null
 let blinkEndTimer: ReturnType<typeof setTimeout> | null = null
+let modeNoticeTimer: ReturnType<typeof setTimeout> | null = null
+let modeNoticeRestoreStatus: string | null = null
 const isBlinking = vueRef(false)
+
+const baseWindowSize = computed(() =>
+  uiMode.value === 'glass'
+    ? { width: 640, height: 560 }
+    : { width: 500, height: 500 }
+)
+
+const glassStateLabel = computed(() => {
+  const labels: Record<string, string> = {
+    IDLE: '待命',
+    LISTENING: '聆听中',
+    PROCESSING_AUDIO: '识别中',
+    WAITING_FOR_RESPONSE: '思考中',
+    SPEAKING: '播报中',
+    GENERATING_IMAGE: '生成中',
+    CONFIG: '待配置',
+  }
+  return labels[audioState.value] || '准备中'
+})
+
+const glassWaveActive = computed(() =>
+  [
+    'LISTENING',
+    'PROCESSING_AUDIO',
+    'WAITING_FOR_RESPONSE',
+    'SPEAKING',
+    'GENERATING_IMAGE',
+  ].includes(audioState.value)
+)
+
+const resizeForUiMode = () => {
+  if (!isElectron || isMinimized.value || !settingsReady.value) return
+  // Sidebar starts 380px from the left and can be 960px wide.
+  const width = openSidebar.value
+    ? SIDEBAR_WINDOW_WIDTH
+    : baseWindowSize.value.width
+  ;(window as any).electron.resize({
+    width,
+    height: baseWindowSize.value.height,
+  })
+}
+
+const setUiMode = async (nextMode: 'capsule' | 'glass') => {
+  if (nextMode === uiMode.value || uiModeSaving.value || !settingsReady.value) {
+    return
+  }
+
+  const previousMode = uiMode.value
+  // Preserve the status from before the first notice when the user switches
+  // again before the transient message expires (A → B → A).
+  const previousStatus = modeNoticeRestoreStatus ?? statusMessage.value
+  if (modeNoticeTimer) {
+    clearTimeout(modeNoticeTimer)
+    modeNoticeTimer = null
+  }
+  modeNoticeRestoreStatus = previousStatus
+  settingsStore.updateSetting('assistantUiMode', nextMode)
+  uiModeSaving.value = true
+  await nextTick()
+  const saved = await settingsStore.saveSettingsToFile()
+  uiModeSaving.value = false
+
+  if (!saved) {
+    settingsStore.updateSetting('assistantUiMode', previousMode)
+    modeNoticeRestoreStatus = null
+    generalStore.statusMessage = '界面样式保存失败，请在设置中重试。'
+    return
+  }
+
+  resizeForUiMode()
+  generalStore.statusMessage =
+    nextMode === 'glass' ? '已切换到玻璃对话卡片' : '已切换到悬浮胶囊'
+  const modeNotice = generalStore.statusMessage
+  modeNoticeTimer = setTimeout(() => {
+    modeNoticeTimer = null
+    const restoreStatus = modeNoticeRestoreStatus ?? previousStatus
+    modeNoticeRestoreStatus = null
+    if (generalStore.statusMessage === modeNotice) {
+      generalStore.statusMessage = restoreStatus
+    }
+  }, 2600)
+  if (window.aliceIPC) {
+    window.aliceIPC.send('settings:ui-mode-changed', nextMode)
+  }
+}
 
 const avatarRingStyle = computed<CSSProperties>(() => {
   const style: CSSProperties = {
@@ -213,10 +415,18 @@ onMounted(async () => {
     setupScreenshotListeners()
   }
 
+  await nextTick()
+  resizeForUiMode()
+
   eventBus.on('processing-complete', handleProcessingComplete)
   eventBus.on('mute-playback-toggle', handleToggleTTS)
   eventBus.on('take-screenshot', handleTakeScreenshot)
   scheduleBlink()
+})
+
+watch([uiMode, settingsReady], async () => {
+  await nextTick()
+  resizeForUiMode()
 })
 
 onUnmounted(() => {
@@ -225,6 +435,11 @@ onUnmounted(() => {
   }
   aiVideo.value = null
   clearBlinkTimers()
+  if (modeNoticeTimer) {
+    clearTimeout(modeNoticeTimer)
+    modeNoticeTimer = null
+  }
+  modeNoticeRestoreStatus = null
   eventBus.off('processing-complete', handleProcessingComplete)
   eventBus.off('mute-playback-toggle', handleToggleTTS)
   eventBus.off('take-screenshot', handleTakeScreenshot)

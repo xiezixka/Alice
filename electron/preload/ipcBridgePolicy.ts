@@ -99,6 +99,7 @@ export const SEND_CHANNELS = new Set([
   'mini',
   'close-app',
   'restart-and-install-update',
+  'settings:ui-mode-changed',
 ])
 
 export const EVENT_CHANNELS = new Set([
@@ -107,6 +108,7 @@ export const EVENT_CHANNELS = new Set([
   'overlay-closed',
   'screenshot-captured',
   'settings-changed',
+  'settings:ui-mode-changed',
   'custom-tools:updated',
   'context-action',
   'websocket:response',

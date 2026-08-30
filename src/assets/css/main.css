@@ -18,3 +18,422 @@
 .avatar:hover .inside-actions {
   opacity: 1;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Switchable main-window surfaces                                            */
+/* -------------------------------------------------------------------------- */
+
+.assistant-shell {
+  --assistant-ink: #f6f8ff;
+  --assistant-muted: rgba(220, 230, 248, 0.68);
+  --assistant-cyan: #76e7ff;
+  --assistant-violet: #9b9cff;
+  color: var(--assistant-ink);
+  isolation: isolate;
+}
+
+.assistant-shell:not(.assistant-shell--mini) {
+  min-width: 500px;
+  min-height: 500px;
+}
+
+.assistant-shell--glass:not(.assistant-shell--mini) {
+  min-width: 640px;
+  min-height: 560px;
+}
+
+.assistant-shell--mini {
+  width: 210px;
+  height: 210px;
+  min-width: 210px;
+  min-height: 210px;
+}
+
+.assistant-shell .no-drag {
+  -webkit-app-region: no-drag;
+}
+
+.capsule-brand {
+  position: absolute;
+  top: 18px;
+  left: 24px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 9px;
+  border: 1px solid rgba(214, 237, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(7, 14, 28, 0.34);
+  box-shadow: 0 8px 20px rgba(1, 5, 18, 0.16);
+  backdrop-filter: blur(10px);
+  letter-spacing: 0.08em;
+  pointer-events: auto;
+}
+
+.capsule-brand-mark,
+.glass-brand-mark {
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 760;
+  letter-spacing: 0.2em;
+}
+
+.capsule-brand-caption,
+.glass-brand-caption {
+  color: var(--assistant-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
+
+.assistant-mode-switch {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 50;
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  background: rgba(10, 15, 28, 0.56);
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.24);
+  backdrop-filter: blur(12px);
+}
+
+.assistant-mode-switch button {
+  min-width: 42px;
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 999px;
+  color: rgba(229, 237, 255, 0.68);
+  background: transparent;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.assistant-mode-switch button:hover:not(:disabled) {
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.assistant-mode-switch button.active {
+  color: #081221;
+  background: linear-gradient(120deg, #b7f6ff, #a6b5ff);
+  font-weight: 700;
+}
+
+.assistant-mode-switch button:focus-visible {
+  outline: 2px solid var(--assistant-cyan);
+  outline-offset: 2px;
+}
+
+.assistant-mode-switch button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.glass-surface {
+  position: absolute;
+  inset: 14px;
+  z-index: -1;
+  overflow: hidden;
+  border: 1px solid rgba(214, 237, 255, 0.24);
+  border-radius: 30px;
+  background:
+    radial-gradient(
+      circle at 15% 15%,
+      rgba(118, 231, 255, 0.18),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 86% 80%,
+      rgba(155, 156, 255, 0.2),
+      transparent 44%
+    ),
+    rgba(8, 15, 29, 0.82);
+  box-shadow:
+    0 22px 70px rgba(1, 5, 18, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(22px) saturate(125%);
+}
+
+.glass-surface::after {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: inherit;
+  content: '';
+  pointer-events: none;
+}
+
+.glass-header {
+  position: absolute;
+  top: 30px;
+  right: 32px;
+  left: 32px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 128px;
+}
+
+.glass-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.glass-live-state {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 45%;
+  color: var(--assistant-muted);
+  font-size: 0.69rem;
+  letter-spacing: 0.03em;
+}
+
+.glass-live-state > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glass-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(220, 230, 248, 0.45);
+  box-shadow: 0 0 0 3px rgba(220, 230, 248, 0.08);
+  transition:
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.glass-live-dot.active {
+  background: var(--assistant-cyan);
+  box-shadow:
+    0 0 0 3px rgba(118, 231, 255, 0.14),
+    0 0 16px rgba(118, 231, 255, 0.8);
+}
+
+.glass-insight {
+  position: absolute;
+  top: 150px;
+  right: 24px;
+  z-index: 25;
+  width: 250px;
+  padding: 18px 17px 15px;
+  border: 1px solid rgba(214, 237, 255, 0.16);
+  border-radius: 18px;
+  background: rgba(9, 18, 34, 0.54);
+  box-shadow: 0 14px 34px rgba(3, 8, 22, 0.2);
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+
+.glass-insight-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.glass-insight-kicker {
+  color: rgba(195, 213, 238, 0.6);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+}
+
+.glass-insight-state {
+  min-width: 0;
+  max-width: 62%;
+  overflow: hidden;
+  color: var(--assistant-cyan);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glass-recognized-text {
+  min-height: 3.6em;
+  margin: 14px 0 13px;
+  color: rgba(245, 249, 255, 0.92);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.glass-recognized-text.muted {
+  color: rgba(205, 219, 240, 0.56);
+}
+
+.glass-wave {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+}
+
+.glass-wave span {
+  width: 3px;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(#76e7ff, #9b9cff);
+  opacity: 0.42;
+  transform-origin: center;
+}
+
+.glass-wave.active span {
+  opacity: 0.68;
+  animation: glass-wave-idle 1.9s ease-in-out infinite;
+}
+
+.glass-wave.active span:nth-child(2n) {
+  animation-delay: -0.45s;
+}
+
+.glass-wave.active span:nth-child(3n) {
+  animation-delay: -0.9s;
+}
+
+.glass-wave.active span:nth-child(4n) {
+  animation-delay: -1.2s;
+}
+
+.assistant-shell--glass .avatar-wrapper {
+  width: 100%;
+  max-width: none;
+  height: 100% !important;
+  justify-content: flex-start;
+  padding-top: 34px;
+  padding-left: 34px;
+}
+
+.assistant-shell--glass.assistant-shell--mini .avatar-wrapper {
+  width: 210px;
+  height: 200px !important;
+  justify-content: center;
+  padding: 0;
+}
+
+.assistant-shell--glass .avatar-ring--glass {
+  width: 320px !important;
+  height: 320px !important;
+  box-shadow:
+    var(--tw-inset-shadow, 0 0 #0000),
+    var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow, 0 0 #0000),
+    0 18px 44px rgba(0, 3, 14, 0.46),
+    0 0 0 1px rgba(214, 237, 255, 0.16);
+}
+
+.assistant-shell--glass.assistant-shell--mini .avatar-ring {
+  width: 200px !important;
+  height: 200px !important;
+}
+
+.assistant-shell--glass .avatar-video {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  object-fit: cover;
+}
+
+.assistant-shell--glass.assistant-shell--mini .avatar-video {
+  width: 200px !important;
+  height: 200px !important;
+}
+
+.assistant-shell--glass .avatar {
+  margin-top: 24px;
+}
+
+.assistant-shell--glass.assistant-shell--mini .avatar {
+  margin-top: 0;
+}
+
+.assistant-shell--glass.assistant-shell--sidebar-open .glass-insight {
+  display: none;
+}
+
+.assistant-shell--capsule .avatar-ring {
+  box-shadow:
+    var(--tw-inset-shadow, 0 0 #0000),
+    var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow, 0 0 #0000),
+    0 18px 50px rgba(0, 2, 15, 0.38),
+    0 0 0 1px rgba(126, 183, 255, 0.12);
+}
+
+/* Keep the utility controls discoverable for keyboard users as well as
+ * pointer users. The avatar overlay is intentionally hidden at rest, but a
+ * focused control should always reveal its hit area and focus ring. */
+.assistant-shell .inside-actions:focus-within {
+  opacity: 1;
+}
+
+@keyframes glass-wave-idle {
+  0%,
+  100% {
+    height: 5px;
+    opacity: 0.42;
+  }
+  45% {
+    height: 15px;
+    opacity: 0.92;
+  }
+}
+
+@media (max-width: 600px) {
+  .assistant-shell--glass:not(.assistant-shell--mini) {
+    min-width: 100%;
+  }
+
+  .assistant-shell--glass .glass-insight {
+    right: 18px;
+    left: 18px;
+    top: auto;
+    bottom: 18px;
+    width: auto;
+  }
+
+  .assistant-shell--glass .avatar-wrapper {
+    justify-content: center;
+    padding-left: 0;
+  }
+
+  .assistant-shell--glass .glass-header {
+    right: 18px;
+    left: 18px;
+    padding-right: 92px;
+  }
+
+  .assistant-shell--glass .glass-live-state {
+    max-width: 52%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-mode-switch button,
+  .glass-wave span,
+  .glass-live-dot {
+    animation: none;
+    transition: none;
+  }
+}

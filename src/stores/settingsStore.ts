@@ -75,6 +75,8 @@ export interface AliceSettings {
   assistantTopP: number
   assistantReasoningEffort: 'minimal' | 'low' | 'medium' | 'high'
   assistantVerbosity: 'low' | 'medium' | 'high'
+  /** Main-window presentation: compact floating capsule or glass card. */
+  assistantUiMode: 'capsule' | 'glass'
   assistantTools: string[]
   assistantAvatar: string
   mcpServersConfig?: string
@@ -196,6 +198,7 @@ const defaultSettings: AliceSettings = {
   assistantTopP: 1.0,
   assistantReasoningEffort: 'medium',
   assistantVerbosity: 'medium',
+  assistantUiMode: 'capsule',
   assistantTools: [
     'get_current_datetime',
     'perform_web_search',
@@ -286,6 +289,7 @@ const settingKeyToLabelMap: Record<keyof AliceSettings, string> = {
   assistantVerbosity: '回复详细度',
   assistantTools: '已启用的助手工具',
   assistantAvatar: '助手形象',
+  assistantUiMode: '主界面样式',
   MAX_HISTORY_MESSAGES_FOR_API: 'API 最大历史消息数',
   SUMMARIZATION_MESSAGE_COUNT: '摘要消息数量',
   SUMMARIZATION_MODEL: '摘要模型',
@@ -344,6 +348,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const error = ref<string | null>(null)
   const successMessage = ref<string | null>(null)
   const initialLoadAttempted = ref(false)
+  const settingsLoadSucceeded = ref(false)
   const coreOpenAISettingsValid = ref(false)
   const sessionApprovedCommands = ref<string[]>([])
 
@@ -447,6 +452,14 @@ export const useSettingsStore = defineStore('settings', () => {
 
     if (!Array.isArray(validated.ragPaths)) {
       validated.ragPaths = []
+      migrated = true
+    }
+
+    if (
+      validated.assistantUiMode !== 'capsule' &&
+      validated.assistantUiMode !== 'glass'
+    ) {
+      validated.assistantUiMode = defaultSettings.assistantUiMode
       migrated = true
     }
 
@@ -658,6 +671,7 @@ export const useSettingsStore = defineStore('settings', () => {
     }
 
     initialLoadAttempted.value = true
+    settingsLoadSucceeded.value = false
     isLoading.value = true
     error.value = null
     successMessage.value = null
@@ -773,10 +787,12 @@ export const useSettingsStore = defineStore('settings', () => {
           coreOpenAISettingsValid.value = false
         }
       }
+      settingsLoadSucceeded.value = true
     } catch (e: any) {
       error.value = `加载设置失败：${e.message}`
       settings.value = { ...defaultSettings }
       coreOpenAISettingsValid.value = false
+      settingsLoadSucceeded.value = false
     } finally {
       isLoading.value = false
     }
@@ -970,6 +986,7 @@ export const useSettingsStore = defineStore('settings', () => {
         assistantTopP: settings.value.assistantTopP,
         assistantReasoningEffort: settings.value.assistantReasoningEffort,
         assistantVerbosity: settings.value.assistantVerbosity,
+        assistantUiMode: settings.value.assistantUiMode,
         assistantTools: Array.from(settings.value.assistantTools || []),
         assistantAvatar: settings.value.assistantAvatar,
         mcpServersConfig: settings.value.mcpServersConfig,
@@ -1345,6 +1362,7 @@ export const useSettingsStore = defineStore('settings', () => {
     error,
     successMessage,
     initialLoadAttempted,
+    settingsLoadSucceeded,
     coreOpenAISettingsValid,
     sessionApprovedCommands,
     isProduction,

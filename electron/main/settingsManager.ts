@@ -65,6 +65,7 @@ export interface AppSettings {
   assistantTopP?: number
   assistantReasoningEffort?: 'minimal' | 'low' | 'medium' | 'high'
   assistantVerbosity?: 'low' | 'medium' | 'high'
+  assistantUiMode?: 'capsule' | 'glass'
   assistantTools?: string[]
   assistantAvatar?: string
   mcpServersConfig?: string

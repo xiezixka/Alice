@@ -209,7 +209,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed, nextTick } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSettingsStore, type AliceSettings } from '../stores/settingsStore'
 import { useConversationStore } from '../stores/conversationStore'
@@ -443,11 +443,25 @@ function isToolConfigured(toolName: string): boolean {
   })
 }
 
+const handleExternalUiModeChange = (data: {
+  assistantUiMode?: 'capsule' | 'glass'
+}) => {
+  if (
+    data?.assistantUiMode === 'capsule' ||
+    data?.assistantUiMode === 'glass'
+  ) {
+    currentSettings.value.assistantUiMode = data.assistantUiMode
+  }
+}
+
 onMounted(async () => {
   if (!settingsStore.initialLoadAttempted) {
     await settingsStore.loadSettings()
   }
   currentSettings.value = { ...settings.value }
+  if (window.aliceIPC) {
+    window.aliceIPC.on('settings:ui-mode-changed', handleExternalUiModeChange)
+  }
 
   if (
     settingsStore.coreOpenAISettingsValid &&
@@ -506,10 +520,7 @@ const handleSaveAndTestSettings = async () => {
     }
   }
 
-  if (
-    settingsStore.error &&
-    settingsStore.error.startsWith('MCP 服务器配置')
-  ) {
+  if (settingsStore.error && settingsStore.error.startsWith('MCP 服务器配置')) {
     settingsStore.error = null
   }
 
@@ -592,4 +603,10 @@ const persistAssistantSettings = async () => {
 const removeCommand = async (command: string) => {
   await settingsStore.removeApprovedCommand(command)
 }
+
+onUnmounted(() => {
+  if (window.aliceIPC) {
+    window.aliceIPC.off('settings:ui-mode-changed', handleExternalUiModeChange)
+  }
+})
 </script>

@@ -114,6 +114,7 @@ Fully customizable settings interface:
 - Model choice & parameters (temperature, top\_p, history, etc)
 - Prompt and summarization tuning
 - Audio/mic toggles & hotkeys
+- Switchable main-window styles: **悬浮胶囊** (A) and **玻璃对话卡片** (B); use the toggle in the top-right corner or **Settings → AI 助手 → 主界面样式**.
 - Available tools & MCP configuration
 - Google integrations
 

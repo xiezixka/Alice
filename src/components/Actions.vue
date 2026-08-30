@@ -1,29 +1,62 @@
 <template>
-  <div class="absolute bottom-0 py-2 z-20 flex flex-col w-full bg-black/60">
+  <div
+    class="actions-bar absolute bottom-0 py-2 z-20 flex flex-col w-full bg-black/60"
+    :class="[
+      `actions-bar--${props.uiMode}`,
+      { 'actions-bar--mini': isMinimized },
+    ]"
+  >
     <div class="pb-2 rounded-lg flex items-center justify-center gap-8">
       <img
         :src="micIconSrc"
         class="indicator"
         :class="{ mini: isMinimized }"
         @click="!isConfigState ? emit('toggleRecording') : null"
+        @keydown.enter.prevent="!isConfigState ? emit('toggleRecording') : null"
+        @keydown.space.prevent="!isConfigState ? emit('toggleRecording') : null"
         data-tip="切换麦克风"
         :aria-label="micAriaLabel"
+        :aria-pressed="isRecordingRequested"
+        role="button"
+        tabindex="0"
+        :aria-disabled="isConfigState"
+        draggable="false"
+        alt=""
       />
       <img
         :src="props.isTTSEnabled ? speakerIcon : speakerIconInactive"
         class="indicator"
         :class="{ mini: isMinimized }"
         @click="!isConfigState ? emit('togglePlaying') : null"
+        @keydown.enter.prevent="!isConfigState ? emit('togglePlaying') : null"
+        @keydown.space.prevent="!isConfigState ? emit('togglePlaying') : null"
         data-tip="切换语音播报"
         aria-label="切换语音播报"
+        :aria-pressed="isTTSEnabled"
+        role="button"
+        tabindex="0"
+        :aria-disabled="isConfigState"
+        draggable="false"
+        alt=""
       />
       <img
         v-if="!isMinimized"
         :src="chatIcon"
         class="indicator"
         @click="!isConfigState ? changeSidebarView('chat') : null"
+        @keydown.enter.prevent="
+          !isConfigState ? changeSidebarView('chat') : null
+        "
+        @keydown.space.prevent="
+          !isConfigState ? changeSidebarView('chat') : null
+        "
         data-tip="切换聊天面板"
         aria-label="切换聊天面板"
+        role="button"
+        tabindex="0"
+        :aria-disabled="isConfigState"
+        draggable="false"
+        alt=""
       />
     </div>
     <div
@@ -142,6 +175,10 @@ const props = defineProps({
     type: Boolean,
     required: true,
   },
+  uiMode: {
+    type: String as () => 'capsule' | 'glass',
+    default: 'capsule',
+  },
   audioState: {
     type: String as () => AudioState,
     required: true,
@@ -161,6 +198,13 @@ const {
   isRecordingRequested,
   audioState: storeAudioState,
 } = storeToRefs(generalStore)
+
+const baseWindowSize = computed(() =>
+  props.uiMode === 'glass'
+    ? { width: 640, height: 560 }
+    : { width: 500, height: 500 }
+)
+const SIDEBAR_WINDOW_WIDTH = 1340
 
 const statusMessageId = ref(
   `status-msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
@@ -260,8 +304,10 @@ const toggleSidebar = async () => {
   openSidebar.value = !openSidebar.value
   if (props.isElectron) {
     await nextTick()
-    const targetWidth = openSidebar.value ? 1200 : 500
-    const targetHeight = 500
+    const targetWidth = openSidebar.value
+      ? SIDEBAR_WINDOW_WIDTH
+      : baseWindowSize.value.width
+    const targetHeight = baseWindowSize.value.height
     ;(window as any).electron.resize({
       width: targetWidth,
       height: targetHeight,
@@ -286,6 +332,15 @@ const toggleMinimize = async () => {
     } else {
       console.log(`Toggling minimize state: ${willMinimize}`)
       ;(window as any).electron.mini({ minimize: willMinimize })
+      if (!willMinimize) {
+        await nextTick()
+        ;(window as any).electron.resize({
+          width: openSidebar.value
+            ? SIDEBAR_WINDOW_WIDTH
+            : baseWindowSize.value.width,
+          height: baseWindowSize.value.height,
+        })
+      }
     }
   }
 }

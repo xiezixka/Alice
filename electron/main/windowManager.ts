@@ -41,6 +41,29 @@ function getIndexHtmlPath(): string {
 let win: BrowserWindow | null = null
 let overlayWindow: BrowserWindow | null = null
 let settingsWindow: BrowserWindow | null = null
+const DEFAULT_MAIN_WINDOW_SIZE = { width: 500, height: 500 }
+const MINI_MAIN_WINDOW_SIZE = { width: 210, height: 210 }
+let mainWindowRestoreSize = { ...DEFAULT_MAIN_WINDOW_SIZE }
+
+function fitMainWindowSize(width: number, height: number) {
+  const workArea = screen.getPrimaryDisplay().workArea
+  const requestedWidth = Number.isFinite(width)
+    ? width
+    : DEFAULT_MAIN_WINDOW_SIZE.width
+  const requestedHeight = Number.isFinite(height)
+    ? height
+    : DEFAULT_MAIN_WINDOW_SIZE.height
+  return {
+    width: Math.min(
+      Math.max(MINI_MAIN_WINDOW_SIZE.width, Math.round(requestedWidth)),
+      Math.max(MINI_MAIN_WINDOW_SIZE.width, workArea.width - 20)
+    ),
+    height: Math.min(
+      Math.max(MINI_MAIN_WINDOW_SIZE.height, Math.round(requestedHeight)),
+      Math.max(MINI_MAIN_WINDOW_SIZE.height, workArea.height - 20)
+    ),
+  }
+}
 
 function installNavigationGuards(window: BrowserWindow): void {
   const openExternal = (url: string) => {
@@ -92,13 +115,16 @@ export function getSettingsWindow(): BrowserWindow | null {
 }
 
 export async function createMainWindow(show = true): Promise<BrowserWindow> {
+  mainWindowRestoreSize = { ...DEFAULT_MAIN_WINDOW_SIZE }
   win = new BrowserWindow({
     title: 'Alice',
     icon: path.join(getVitePublic(), 'app_logo.png'),
     transparent: true,
     frame: false,
-    width: 500,
-    height: 500,
+    width: DEFAULT_MAIN_WINDOW_SIZE.width,
+    height: DEFAULT_MAIN_WINDOW_SIZE.height,
+    minWidth: MINI_MAIN_WINDOW_SIZE.width,
+    minHeight: MINI_MAIN_WINDOW_SIZE.height,
     resizable: true,
     alwaysOnTop: true,
     hasShadow: false,
@@ -214,7 +240,14 @@ export function setOverlayOpacity(opacity: number): boolean {
 
 export function resizeMainWindow(width: number, height: number): void {
   if (win) {
-    win.setSize(width, height)
+    const fittedSize = fitMainWindowSize(width, height)
+    if (
+      fittedSize.width !== MINI_MAIN_WINDOW_SIZE.width ||
+      fittedSize.height !== MINI_MAIN_WINDOW_SIZE.height
+    ) {
+      mainWindowRestoreSize = fittedSize
+    }
+    win.setSize(fittedSize.width, fittedSize.height)
   }
 }
 
@@ -222,16 +255,21 @@ export function minimizeMainWindow(minimize: boolean): void {
   if (!win) return
 
   const display = screen.getPrimaryDisplay()
+  const workArea = display.workArea
   if (minimize) {
-    const x = display.bounds.width - 230
-    const y = display.bounds.height - 260
+    const x = workArea.x + workArea.width - MINI_MAIN_WINDOW_SIZE.width - 20
+    const y = workArea.y + workArea.height - MINI_MAIN_WINDOW_SIZE.height - 20
     win.setPosition(x, y)
-    win.setSize(210, 210)
+    win.setSize(MINI_MAIN_WINDOW_SIZE.width, MINI_MAIN_WINDOW_SIZE.height)
   } else {
-    const x = Math.round(display.bounds.width / 2 - 250)
-    const y = Math.round(display.bounds.height / 2 - 250)
+    const { width, height } = fitMainWindowSize(
+      mainWindowRestoreSize.width,
+      mainWindowRestoreSize.height
+    )
+    const x = Math.round(workArea.x + workArea.width / 2 - width / 2)
+    const y = Math.round(workArea.y + workArea.height / 2 - height / 2)
     win.setPosition(x, y)
-    win.setSize(500, 500)
+    win.setSize(width, height)
   }
 }
 

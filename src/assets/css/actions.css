@@ -16,6 +16,64 @@
   @apply bg-primary/0;
 }
 
+/* The two assistant layouts share the same controls but use different
+ * surfaces. Keep this styling here so the action dock remains reusable when
+ * the avatar is embedded in another shell. */
+.actions-bar {
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.actions-bar--capsule {
+  right: 14px;
+  bottom: 14px;
+  left: 14px;
+  width: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(3, 8, 18, 0.68);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px) saturate(120%);
+}
+
+.actions-bar--glass {
+  right: 18px;
+  bottom: 16px;
+  left: 18px;
+  width: auto;
+  border-top: 1px solid rgba(214, 237, 255, 0.14);
+  border-radius: 14px;
+  background: linear-gradient(180deg, transparent, rgba(3, 8, 22, 0.8));
+}
+
+.actions-bar--glass .indicator {
+  width: 3.25rem;
+  border-radius: 14px;
+}
+
+.actions-bar--mini {
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  border-radius: 12px;
+}
+
+.actions-bar--mini .indicator {
+  width: 1.25rem;
+}
+
+.actions-bar--mini .pb-2 {
+  gap: 0.75rem;
+}
+
+.actions-bar .indicator:focus-visible,
+.actions-bar button:focus-visible {
+  outline: 2px solid rgba(118, 231, 255, 0.9);
+  outline-offset: 2px;
+}
+
 .btn-indicator-side {
   transition: all 0.3s ease-in-out;
   @apply bg-black/20 outline-none;

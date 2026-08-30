@@ -29,6 +29,7 @@ describe('useSettingsStore boolean settings', () => {
     store.updateSetting('backgroundListeningEnabled', false)
 
     expect(store.settings.backgroundListeningEnabled).toBe(false)
+    expect(store.settings.assistantUiMode).toBe('capsule')
     expect(Boolean(store.settings.backgroundListeningEnabled)).toBe(false)
   })
 
@@ -171,6 +172,50 @@ describe('useSettingsStore boolean settings', () => {
       expect(customStore.settings.assistantSystemPrompt).toBe(
         '这是我自己写的角色设定。'
       )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('falls back to the capsule UI when a persisted mode is invalid', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({ assistantUiMode: 'floating' })),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+      expect(store.settings.assistantUiMode).toBe('capsule')
+      expect(saveSettings).toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('persists the selected UI mode in the settings payload', async () => {
+    const saveSettings = vi.fn(async () => ({ success: true }))
+    vi.stubGlobal('window', {
+      settingsAPI: {
+        loadSettings: vi.fn(async () => ({ assistantUiMode: 'glass' })),
+        saveSettings,
+      },
+    })
+
+    try {
+      const store = useSettingsStore()
+      await store.loadSettings()
+      expect(store.settings.assistantUiMode).toBe('glass')
+
+      await store.saveSettingsToFile()
+      expect(
+        (
+          saveSettings.mock.calls as unknown as Array<[Record<string, any>]>
+        ).some(([payload]) => payload.assistantUiMode === 'glass')
+      ).toBe(true)
     } finally {
       vi.unstubAllGlobals()
     }

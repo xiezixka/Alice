@@ -122,6 +122,56 @@
           ></textarea>
         </div>
 
+        <div class="rounded-box border border-cyan-400/30 bg-cyan-950/20 p-3">
+          <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+            <span
+              id="assistant-ui-mode-label"
+              class="block text-sm font-semibold"
+              >主界面样式</span
+            >
+            <span class="text-xs text-gray-400"
+              >也可在主窗口右上角即时切换</span
+            >
+          </div>
+          <div
+            id="assistant-ui-mode"
+            class="grid grid-cols-1 sm:grid-cols-2 gap-3"
+            role="radiogroup"
+            aria-label="主界面样式"
+            aria-labelledby="assistant-ui-mode-label"
+          >
+            <label
+              v-for="option in uiModeOptions"
+              :key="option.value"
+              class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors"
+              :class="
+                currentSettings.assistantUiMode === option.value
+                  ? 'border-cyan-300 bg-cyan-400/15'
+                  : 'border-gray-700 bg-gray-800/60 hover:border-gray-500'
+              "
+            >
+              <input
+                v-model="currentSettings.assistantUiMode"
+                type="radio"
+                name="assistant-ui-mode"
+                :value="option.value"
+                class="radio radio-info radio-sm mt-0.5"
+              />
+              <span>
+                <span class="block text-sm font-semibold text-white">{{
+                  option.label
+                }}</span>
+                <span class="mt-1 block text-xs leading-5 text-gray-300">{{
+                  option.description
+                }}</span>
+              </span>
+            </label>
+          </div>
+          <p class="mt-2 text-xs text-gray-400">
+            胶囊模式更轻量；玻璃卡片模式会展示更多状态和上下文。保存后下次启动继续使用你的选择。
+          </p>
+        </div>
+
         <div
           v-if="currentSettings.assistantModel.startsWith('gpt-5')"
           class="grid grid-cols-1 md:grid-cols-2 gap-4"
@@ -560,6 +610,19 @@ const emit = defineEmits<{
 
 const settingsStore = useSettingsStore()
 const customToolsStore = useCustomToolsStore()
+
+const uiModeOptions = [
+  {
+    value: 'capsule' as const,
+    label: '悬浮胶囊',
+    description: '轻量待机，突出头像和语音入口。',
+  },
+  {
+    value: 'glass' as const,
+    label: '玻璃对话卡片',
+    description: '显示状态、识别内容和快捷上下文。',
+  },
+]
 
 const desktopAgentToolPreset = [
   'open_path',

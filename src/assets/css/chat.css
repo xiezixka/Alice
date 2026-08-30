@@ -6,6 +6,11 @@
 }
 .sidebar-wrapper.open {
   @apply w-full max-w-[960px] py-4 pl-[300px] opacity-100 border-blue-500/50 shadow-md;
+  /* The main window expands for the sidebar, but on a narrow display the
+   * available width can be smaller than 960px. Keep the panel inside the
+   * native window instead of letting its right edge be clipped. */
+  width: min(960px, calc(100vw - 380px));
+  max-width: min(960px, calc(100vw - 380px));
 }
 .gradient-border-wrapper {
   position: relative;
