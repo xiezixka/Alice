@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import process from 'node:process'
 import { resolveFFmpegPaths } from '../../scripts/setup-dependencies.js'
-import packageJson from '../../package.json'
 
-const packageScripts = (
-  packageJson as unknown as {
-    scripts: Record<string, string>
-  }
-).scripts
+// Read package.json as data instead of relying on Vite's JSON module transform.
+// The latter emits invalid syntax on the Windows Vitest runner for this file.
+const packageJson = JSON.parse(
+  readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
+) as { scripts: Record<string, string> }
+const packageScripts = packageJson.scripts
 
 describe('resolveFFmpegPaths', () => {
   it('uses packaged resources first and the Windows executable name', () => {
