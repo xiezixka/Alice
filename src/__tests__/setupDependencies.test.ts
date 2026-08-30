@@ -23,9 +23,11 @@ describe('resolveFFmpegPaths', () => {
     })
 
     expect(paths.binaryName).toBe('ffmpeg.exe')
-    expect(paths.sourceCandidates[0]).toContain('Program Files/Alice/resources')
+    expect(paths.sourceCandidates[0]).toContain(
+      path.join('Program Files', 'Alice', 'resources')
+    )
     expect(paths.sourceCandidates[0]).toMatch(/ffmpeg\.exe$/)
-    expect(paths.targetPath).toContain('AppData/Local')
+    expect(paths.targetPath).toContain(path.join('AppData', 'Local'))
     expect(paths.targetPath).toMatch(/ffmpeg\.exe$/)
   })
 
@@ -39,9 +41,11 @@ describe('resolveFFmpegPaths', () => {
 
     expect(paths.binaryName).toBe('ffmpeg')
     expect(paths.sourceCandidates).toEqual([
-      '/workspace/Alice/resources/backend/bin/ffmpeg',
+      path.join('/workspace/Alice', 'resources', 'backend', 'bin', 'ffmpeg'),
     ])
-    expect(paths.targetPath).toBe('/Users/tester/.local/bin/ffmpeg')
+    expect(paths.targetPath).toBe(
+      path.join('/Users/tester', '.local', 'bin', 'ffmpeg')
+    )
   })
 
   it('accepts the current platform and architecture in the native-build guard', () => {
