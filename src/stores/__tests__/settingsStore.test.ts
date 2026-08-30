@@ -100,6 +100,7 @@ describe('useSettingsStore boolean settings', () => {
         'desktop_observe',
         'capture_desktop_screen',
         'desktop_action',
+        'desktop_reply_message',
         'organize_files',
         'plan_itinerary',
         'create_email_draft',
