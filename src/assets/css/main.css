@@ -510,12 +510,25 @@
   overflow: visible;
 }
 
+/* Glass mode has a more specific 210×200 mini override.  The silent island
+ * is a separate presentation, so give it an explicit flex basis and minimum
+ * size as well as the visual dimensions; otherwise the wrapper can shrink
+ * back to 210×200 and clip the capsule contents before the next paint. */
+.assistant-shell--mac-silent.assistant-shell--mini .avatar-wrapper {
+  width: 240px !important;
+  height: 44px !important;
+  min-width: 240px !important;
+  min-height: 44px !important;
+  flex: 0 0 240px;
+}
+
 .assistant-shell--mac-silent .avatar {
   box-sizing: border-box;
   display: flex;
   width: 232px;
   height: 36px;
   min-height: 36px;
+  min-width: 0;
   align-items: center;
   gap: 7px;
   padding: 2px 7px 2px 2px;
@@ -539,6 +552,12 @@
   user-select: none;
   touch-action: none;
   -webkit-app-region: no-drag;
+}
+
+.assistant-shell--mac-silent.assistant-shell--mini .avatar {
+  width: 232px !important;
+  min-width: 232px !important;
+  flex: 0 0 232px;
 }
 
 /* Extend the drag hit area to the native window's transparent 4px inset.
@@ -572,6 +591,11 @@
   flex: 0 0 30px;
   width: 30px !important;
   height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  max-width: 30px !important;
+  max-height: 30px !important;
+  aspect-ratio: 1 / 1;
   margin: 0;
   border-width: 1px;
   --tw-ring-offset-width: 0px;
@@ -583,11 +607,35 @@
   -webkit-app-region: no-drag;
 }
 
+/* Glass mode's mini selector is equally specific and sets a 200px media
+ * surface.  Override both ring and media dimensions in the combined state so
+ * the 240×44 island cannot expose a tall cropped strip. */
+.assistant-shell--mac-silent.assistant-shell--mini .avatar-ring {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  max-width: 30px !important;
+  max-height: 30px !important;
+}
+
 .assistant-shell--mac-silent .avatar-video {
   width: 100% !important;
   height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   max-width: none !important;
+  max-height: none !important;
   object-fit: cover;
+}
+
+.assistant-shell--mac-silent.assistant-shell--mini .avatar-video {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
 }
 
 .assistant-shell--mac-silent .sidebar-wrapper,

@@ -130,7 +130,7 @@
               audioState === 'PROCESSING_AUDIO' ||
               audioState === 'WAITING_FOR_RESPONSE',
             'ring-blue-500!': audioState === 'LISTENING',
-            'w-[200px] h-[200px]': isMinimized,
+            'w-[200px] h-[200px]': isMinimized && !isMacSilent,
             'w-[480px] h-[480px]': !isMinimized && isElectron,
             'w-[430px] h-[430px]': !isElectron,
             'avatar-ring--glass': uiMode === 'glass' && !isMinimized,
@@ -150,7 +150,7 @@
                 isBuiltInAvatar &&
                 (audioState === 'PROCESSING_AUDIO' ||
                   audioState === 'WAITING_FOR_RESPONSE'),
-              'h-[200px]': isMinimized,
+              'h-[200px]': isMinimized && !isMacSilent,
               'h-[480px]': !isMinimized && isElectron,
               'h-[430px]': !isElectron,
             }"
