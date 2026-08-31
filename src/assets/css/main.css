@@ -89,8 +89,6 @@
     ),
     linear-gradient(110deg, rgba(17, 34, 65, 0.92), rgba(15, 29, 57, 0.74));
   box-shadow:
-    0 24px 64px rgba(2, 10, 30, 0.38),
-    0 0 0 1px rgba(118, 174, 255, 0.13),
     inset 0 1px 0 rgba(255, 255, 255, 0.24),
     inset 0 -1px 0 rgba(80, 136, 220, 0.18);
   backdrop-filter: blur(22px) saturate(132%);
@@ -114,11 +112,12 @@
   margin-left: -1px;
   border: 1px solid rgba(159, 217, 255, 0.92);
   --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: transparent;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
   --tw-ring-color: rgba(104, 177, 255, 0.95);
   box-shadow:
-    0 0 0 1px rgba(107, 181, 255, 0.4),
-    0 0 22px rgba(76, 157, 255, 0.34),
-    0 14px 30px rgba(1, 7, 20, 0.34);
+    0 0 0 1px rgba(126, 194, 255, 0.3);
 }
 
 .assistant-shell--capsule:not(.assistant-shell--mini) .avatar-video {
@@ -438,14 +437,15 @@
 .assistant-shell--glass .avatar-ring--glass {
   width: 320px !important;
   height: 320px !important;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: transparent;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
   box-shadow:
     var(--tw-inset-shadow, 0 0 #0000),
     var(--tw-inset-ring-shadow, 0 0 #0000),
-    var(--tw-ring-offset-shadow, 0 0 #0000),
     var(--tw-ring-shadow, 0 0 #0000),
-    var(--tw-shadow, 0 0 #0000),
-    0 18px 44px rgba(0, 3, 14, 0.46),
-    0 0 0 1px rgba(214, 237, 255, 0.16);
+    0 0 0 1px rgba(183, 222, 255, 0.24);
 }
 
 .assistant-shell--glass.assistant-shell--mini .avatar-ring {
@@ -564,9 +564,8 @@
     ),
     linear-gradient(110deg, rgba(7, 13, 28, 0.98), rgba(18, 26, 48, 0.94));
   box-shadow:
-    0 8px 26px rgba(0, 0, 0, 0.42),
-    0 0 0 1px rgba(108, 170, 255, 0.17),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(72, 126, 194, 0.22);
   backdrop-filter: blur(22px) saturate(140%);
   isolation: isolate;
   cursor: grab;
@@ -583,7 +582,7 @@
 
 /* Extend the drag hit area to the native window's transparent 4px inset.
  * Users can grab the capsule by its edge without accidentally missing the
- * renderer surface; the visible pill remains inset for its soft shadow. */
+ * renderer surface; the visible pill keeps a clean one-pixel edge. */
 .assistant-shell--mac-silent .mac-silent-drag-hitbox {
   position: absolute;
   inset: -4px;
@@ -620,11 +619,10 @@
   margin: 0;
   border-width: 1px;
   --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: transparent;
   --tw-ring-color: rgba(106, 185, 255, 0.96);
   box-shadow:
-    0 0 0 1px rgba(102, 182, 255, 0.48),
-    0 0 16px rgba(76, 157, 255, 0.36),
-    0 5px 14px rgba(1, 7, 20, 0.42);
+    0 0 0 1px rgba(126, 194, 255, 0.34);
   -webkit-app-region: no-drag;
 }
 
@@ -687,15 +685,16 @@
   -webkit-app-region: no-drag;
 }
 
-.assistant-shell--capsule .avatar-ring {
+.assistant-shell--capsule:not(.assistant-shell--mini) .avatar-ring {
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: transparent;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
   box-shadow:
     var(--tw-inset-shadow, 0 0 #0000),
     var(--tw-inset-ring-shadow, 0 0 #0000),
-    var(--tw-ring-offset-shadow, 0 0 #0000),
     var(--tw-ring-shadow, 0 0 #0000),
-    var(--tw-shadow, 0 0 #0000),
-    0 18px 50px rgba(0, 2, 15, 0.38),
-    0 0 0 1px rgba(126, 183, 255, 0.12);
+    0 0 0 1px rgba(126, 194, 255, 0.3);
 }
 
 /* Keep the utility controls discoverable for keyboard users as well as
