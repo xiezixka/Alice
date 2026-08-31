@@ -56,6 +56,10 @@ let mainWindowCompact = false
 let mainWindowRestoreBounds: Electron.Rectangle | null = null
 let mainWindowSilentX: number | null = null
 let mainWindowSilentDisplayId: number | null = null
+// Monotonic presentation revisions let the renderer discard a delayed
+// compact/expand notification when two native transitions happen back to
+// back (for example a wake event racing a user click).
+let mainWindowPresentationRevision = 0
 // A user choosing “隐藏到后台” must not be overridden by the first
 // background-launch reveal.  Keep this native guard in addition to the
 // renderer timer so a close-to-tray action remains deterministic even when
@@ -152,6 +156,18 @@ function installNavigationGuards(window: BrowserWindow): void {
 
 export function getMainWindow(): BrowserWindow | null {
   return win
+}
+
+function notifyMainWindowPresentation(
+  channel: 'main-window:expanded' | 'main-window:compacted',
+  payload: { userInitiated?: boolean; silent?: boolean; compact?: boolean } = {}
+): void {
+  if (!win || win.isDestroyed() || win.webContents.isDestroyed()) return
+  mainWindowPresentationRevision += 1
+  win.webContents.send(channel, {
+    ...payload,
+    revision: mainWindowPresentationRevision,
+  })
 }
 
 export function getOverlayWindow(): BrowserWindow | null {
@@ -412,6 +428,10 @@ export function minimizeMainWindow(
       mainWindowSilentDisplayId = display.id
       mainWindowSilent = true
       mainWindowCompact = true
+      notifyMainWindowPresentation('main-window:compacted', {
+        silent: true,
+        compact: true,
+      })
       if (shouldRevealHiddenWindow && typeof win.showInactive === 'function') {
         // Background login launches remain non-activating: the island becomes
         // visible without stealing focus from the user's current app.
@@ -442,6 +462,10 @@ export function minimizeMainWindow(
     win.setSize(MINI_MAIN_WINDOW_SIZE.width, MINI_MAIN_WINDOW_SIZE.height)
     mainWindowSilent = false
     mainWindowCompact = true
+    notifyMainWindowPresentation('main-window:compacted', {
+      silent: false,
+      compact: true,
+    })
   } else {
     // Any explicit expansion (island click, tray/Dock activation, or a
     // renderer request) means the user is interacting with Alice again. Keep
@@ -484,6 +508,15 @@ export function minimizeMainWindow(
     mainWindowSilent = false
     mainWindowCompact = false
     mainWindowRestoreBounds = null
+    // Renderer-initiated expansion already updates its own state, but this
+    // notification repairs a stale renderer after a native/OS transition.
+    // `userInitiated: false` prevents it from suppressing the idle-collapse
+    // timer; the explicit tray/Dock path below still sends `true`.
+    notifyMainWindowPresentation('main-window:expanded', {
+      userInitiated: false,
+      silent: false,
+      compact: false,
+    })
     if (!wasHiddenByUser) {
       mainWindowHiddenByUser = false
       mainWindowInitiallyHidden = false
@@ -542,10 +575,13 @@ export function moveMainWindowHorizontally(deltaX: number): boolean {
 
 export interface MainWindowPresentationState {
   silent: boolean
+  compact: boolean
   hiddenByUser: boolean
   initiallyHidden: boolean
   /** Whether Chromium/Electron currently exposes the native window. */
   visible: boolean
+  /** Monotonic native presentation revision for renderer reconciliation. */
+  revision: number
 }
 
 /**
@@ -556,9 +592,11 @@ export interface MainWindowPresentationState {
 export function getMainWindowPresentationState(): MainWindowPresentationState {
   return {
     silent: mainWindowSilent,
+    compact: mainWindowCompact,
     hiddenByUser: mainWindowHiddenByUser,
     initiallyHidden: mainWindowInitiallyHidden,
     visible: Boolean(win && !win.isDestroyed() && win.isVisible()),
+    revision: mainWindowPresentationRevision,
   }
 }
 
@@ -594,7 +632,9 @@ export function focusMainWindow(): boolean {
       (wasSilent || wasInitiallyHidden || wasHiddenByUser) &&
       !win.webContents.isDestroyed()
     ) {
-      win.webContents.send('main-window:expanded', { userInitiated: true })
+      notifyMainWindowPresentation('main-window:expanded', {
+        userInitiated: true,
+      })
     }
     console.log('[WindowManager] Main window focused')
     return true

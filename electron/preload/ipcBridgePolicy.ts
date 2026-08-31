@@ -114,6 +114,10 @@ export const EVENT_CHANNELS = new Set([
   // Sent by the native window manager when a tray/Dock activation expands a
   // compact (including macOS silent-island) window without a renderer click.
   'main-window:expanded',
+  // Sent whenever the native window enters a compact presentation. This keeps
+  // the renderer layout safe if a native minimize arrives before Vue's own
+  // reactive state update (for example after a relaunch or a stale IPC call).
+  'main-window:compacted',
   'overlay-shown',
   'overlay-closed',
   'screenshot-captured',

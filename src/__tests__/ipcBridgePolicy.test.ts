@@ -33,5 +33,6 @@ describe('renderer IPC bridge policy', () => {
 
   it('allows the native compact-window expansion notification', () => {
     expect(isAllowedEventChannel('main-window:expanded')).toBe(true)
+    expect(isAllowedEventChannel('main-window:compacted')).toBe(true)
   })
 })

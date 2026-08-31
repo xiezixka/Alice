@@ -295,6 +295,7 @@ let macSilentTransitionIntent = 0
 // transition.  Increment this token whenever presentation changes so an old
 // response can never put the DOM back into the compact layout.
 let nativePresentationSyncGeneration = 0
+let lastNativePresentationRevision = 0
 let modeNoticeRestoreStatus: string | null = null
 let backgroundSilentRevealSent = false
 const isBlinking = vueRef(false)
@@ -484,12 +485,12 @@ const scheduleMacSilentCollapse = () => {
   }, delay)
 }
 
-const reconcileNativeExpansion = (showWhenHidden = false) => {
+const reconcileNativeExpansion = (showWhenHidden = false, force = false) => {
   if (
     !isMacPlatform.value ||
     !macSilentModeEnabled.value ||
     isMinimized.value ||
-    !isActiveAudioState(audioState.value)
+    (!force && !isActiveAudioState(audioState.value))
   ) {
     return false
   }
@@ -517,8 +518,8 @@ const expandMacSilentForActivity = async (manual = false) => {
     // awaiting Vue's next tick.  Reconcile the native window even when the
     // renderer flag already says “expanded”, otherwise a stale token can
     // leave full DOM content inside the 240×44 native island.
-    if (isActiveAudioState(audioState.value)) {
-      reconcileNativeExpansion()
+    if (manual || isActiveAudioState(audioState.value)) {
+      reconcileNativeExpansion(false, manual)
     }
     return
   }
@@ -536,12 +537,12 @@ const expandMacSilentForActivity = async (manual = false) => {
     syncGeneration !== nativePresentationSyncGeneration ||
     isMinimized.value
   ) {
-    if (isActiveAudioState(audioState.value)) {
-      reconcileNativeExpansion(revealBackgroundWindow)
+    if (manual || isActiveAudioState(audioState.value)) {
+      reconcileNativeExpansion(revealBackgroundWindow, manual)
     }
     return
   }
-  reconcileNativeExpansion(revealBackgroundWindow)
+  reconcileNativeExpansion(revealBackgroundWindow, manual)
 }
 
 const isWindowDragInteractiveTarget = (
@@ -899,7 +900,18 @@ const resizeForUiMode = () => {
   })
 }
 
-const handleNativeWindowExpanded = (payload?: { userInitiated?: boolean }) => {
+const acceptNativePresentationRevision = (revision?: unknown): boolean => {
+  if (typeof revision !== 'number' || !Number.isFinite(revision)) return true
+  if (revision < lastNativePresentationRevision) return false
+  lastNativePresentationRevision = revision
+  return true
+}
+
+const handleNativeWindowExpanded = (payload?: {
+  userInitiated?: boolean
+  revision?: number
+}) => {
+  if (!acceptNativePresentationRevision(payload?.revision)) return
   // The tray/Dock can expand the native island without going through the
   // renderer's Actions component. Mirror that transition before resizing so
   // the DOM never remains in the 240×44 layout inside a full-size window.
@@ -911,6 +923,21 @@ const handleNativeWindowExpanded = (payload?: { userInitiated?: boolean }) => {
     macSilentManuallyExpanded.value = true
   }
   void nextTick().then(() => resizeForUiMode())
+}
+
+const handleNativeWindowCompacted = (payload?: {
+  silent?: boolean
+  compact?: boolean
+  revision?: number
+}) => {
+  if (!acceptNativePresentationRevision(payload?.revision)) return
+  // A native resize can complete before the renderer receives the IPC send
+  // that requested it (or after a renderer remount). Mirror the native
+  // compact state immediately so full-size controls never remain painted
+  // inside the 240×44 silent island. The watcher below will expand again if a
+  // real foreground voice turn is already active.
+  invalidatePresentationIntent()
+  if (payload?.compact !== false) isMinimized.value = true
 }
 
 const syncNativeWindowPresentation = async () => {
@@ -926,16 +953,19 @@ const syncNativeWindowPresentation = async () => {
       return
     }
     if (!state || typeof state !== 'object') return
+    if (!acceptNativePresentationRevision(state.revision)) return
+
+    const nativeCompact = state.compact === true || state.silent === true
 
     if (state.hiddenByUser === true) {
       clearMacSilentCollapseTimer()
       backgroundSilentRevealSent = true
       macSilentManuallyExpanded.value = false
-      if (state.silent === true) isMinimized.value = true
+      if (nativeCompact) isMinimized.value = true
       return
     }
 
-    if (state.silent === true) {
+    if (nativeCompact) {
       if (isActiveAudioState(audioState.value)) {
         // The native window can already be compact when a renderer remounts
         // during an active turn. Expand it explicitly; merely leaving the
@@ -971,6 +1001,15 @@ const syncNativeWindowPresentation = async () => {
         isMinimized.value = true
       }
       return
+    }
+
+    if (state.compact === false && isMinimized.value) {
+      // A remounted renderer can retain the compact reactive flag after a
+      // tray/Dock expansion that happened before its listener was attached.
+      // Restore the full DOM before issuing the regular size request.
+      isMinimized.value = false
+      await nextTick()
+      resizeForUiMode()
     }
 
     // If a background launch was explicitly opened from the tray before this
@@ -1117,6 +1156,19 @@ onMounted(async () => {
     setupScreenshotListeners()
   }
 
+  // Register native presentation listeners before the first layout tick. A
+  // background launch can compact the BrowserWindow while Vue is mounting;
+  // registering late leaves the full DOM (including the mode switch) painted
+  // inside the 240×44 island until the next manual interaction.
+  if (window.aliceIPC) {
+    window.aliceIPC.on('main-window:expanded', handleNativeWindowExpanded)
+    window.aliceIPC.on('main-window:compacted', handleNativeWindowCompacted)
+  }
+
+  await nextTick()
+  if (window.aliceIPC) {
+    await syncNativeWindowPresentation()
+  }
   await nextTick()
   resizeForUiMode()
 
@@ -1126,10 +1178,6 @@ onMounted(async () => {
   eventBus.on('assistant-attention', handleAssistantAttention)
   eventBus.on('assistant-hidden', handleAssistantHidden)
   scheduleBlink()
-  if (window.aliceIPC) {
-    window.aliceIPC.on('main-window:expanded', handleNativeWindowExpanded)
-    await syncNativeWindowPresentation()
-  }
   scheduleMacSilentCollapse()
 })
 
@@ -1166,6 +1214,7 @@ onUnmounted(() => {
   eventBus.off('assistant-hidden', handleAssistantHidden)
   if (window.aliceIPC) {
     window.aliceIPC.off('main-window:expanded', handleNativeWindowExpanded)
+    window.aliceIPC.off('main-window:compacted', handleNativeWindowCompacted)
   }
 })
 
