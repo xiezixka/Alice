@@ -276,6 +276,94 @@
   border-radius: 14px;
 }
 
+/* In the card layout the controls belong to the portrait, not to a second
+ * rectangular card. Keep one shallow gradient clipped to the same 320px
+ * circular silhouette; utility buttons remain outside this rail so their hit
+ * areas are never clipped. */
+.assistant-shell--glass:not(.assistant-shell--mini) .actions-bar--glass {
+  top: auto !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 104px !important;
+  min-height: 104px !important;
+  max-height: 104px !important;
+  padding: 8px 0 10px;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(3, 8, 22, 0),
+    rgba(3, 8, 22, 0.28) 35%,
+    rgba(3, 8, 22, 0.82) 100%
+  );
+  box-shadow: none;
+  overflow: hidden;
+  clip-path: ellipse(160px 160px at 50% -56px);
+}
+
+.assistant-shell--glass:not(.assistant-shell--mini)
+  .actions-bar--glass
+  > .pb-2 {
+  flex: 0 0 60px;
+  height: 60px;
+  min-height: 60px;
+  padding-bottom: 8px;
+}
+
+/* Bring the utility controls inward and slightly upward so both 36px hit
+ * circles stay within the portrait's widest lower arc. */
+.assistant-shell--glass:not(.assistant-shell--mini) .inside-actions--utility {
+  top: 176px !important;
+  right: 0;
+  bottom: auto;
+  left: 0;
+  width: 320px !important;
+  padding: 0 24px;
+  justify-content: space-between;
+}
+
+.assistant-shell--glass:not(.assistant-shell--mini)
+  .inside-actions--utility
+  > button {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 7px;
+  border: 1px solid rgba(214, 237, 255, 0.22);
+  background: rgba(7, 16, 32, 0.34);
+  box-shadow: 0 6px 14px rgba(2, 8, 22, 0.18);
+}
+
+.assistant-shell--glass:not(.assistant-shell--mini)
+  .inside-actions--utility
+  > button
+  .indicator-side {
+  width: 20px;
+  height: 20px;
+}
+
+/* In the card view these are primary affordances, not hover-only chrome.
+ * Keep them quietly visible at rest so the screenshot/minimize actions are
+ * discoverable and their hit targets are obvious; hover and keyboard focus
+ * lift the contrast without changing the layout. */
+.assistant-shell--glass:not(.assistant-shell--mini) .inside-actions--utility,
+.assistant-shell--glass:not(.assistant-shell--mini) .inside-actions--menu {
+  opacity: 0.78;
+  pointer-events: auto;
+}
+
+.assistant-shell--glass:not(.assistant-shell--mini)
+  .inside-actions--utility:hover,
+.assistant-shell--glass:not(.assistant-shell--mini)
+  .inside-actions--utility:focus-within,
+.assistant-shell--glass:not(.assistant-shell--mini) .inside-actions--menu:hover,
+.assistant-shell--glass:not(.assistant-shell--mini)
+  .inside-actions--menu:focus-within {
+  opacity: 1;
+}
+
 .actions-bar--mini {
   right: 8px;
   bottom: 8px;
@@ -405,6 +493,7 @@
   justify-content: center;
   padding: 0;
   opacity: 0.56;
+  pointer-events: auto;
 }
 
 .assistant-shell--mac-silent .inside-actions--utility > button:first-child,
@@ -453,6 +542,12 @@
 .inside-actions {
   @apply opacity-0;
   transition: all 0.3s ease-in-out;
+  pointer-events: none;
+}
+
+.assistant-shell .avatar:hover .inside-actions,
+.assistant-shell .inside-actions:focus-within {
+  pointer-events: auto;
 }
 
 .dragable {

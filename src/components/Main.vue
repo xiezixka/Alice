@@ -937,7 +937,48 @@ const handleNativeWindowCompacted = (payload?: {
   // inside the 240×44 silent island. The watcher below will expand again if a
   // real foreground voice turn is already active.
   invalidatePresentationIntent()
-  if (payload?.compact !== false) isMinimized.value = true
+  if (payload?.compact === false) return
+
+  // A stale native compact event can arrive after the user disabled the
+  // macOS island or opened the sidebar. Rendering the regular 210px mini card
+  // inside a native 240×44 silent window produces the cropped strip that is
+  // especially noticeable during startup. Fail open: restore the full native
+  // window and keep the renderer in its matching layout.
+  const desiredSilentPresentation =
+    settingsReady.value &&
+    isMacPlatform.value &&
+    macSilentModeEnabled.value &&
+    !openSidebar.value
+  const silentPresentationRejected =
+    payload?.silent === true && !desiredSilentPresentation
+  if (silentPresentationRejected) {
+    isMinimized.value = false
+    void nextTick().then(() => {
+      if (!isMinimized.value) {
+        window.electron?.mini({
+          minimize: false,
+          silent: false,
+        })
+        resizeForUiMode()
+      }
+    })
+    return
+  }
+
+  // Conversely, an older renderer or an OS-level mini transition can report
+  // a 210px legacy mini window while the current settings require the silent
+  // island. Re-apply the native silent geometry immediately so a 240×44 DOM
+  // is never left inside the square mini surface.
+  if (payload?.silent === false && desiredSilentPresentation) {
+    isMinimized.value = true
+    window.electron?.mini({
+      minimize: true,
+      silent: true,
+    })
+    return
+  }
+
+  isMinimized.value = true
 }
 
 const syncNativeWindowPresentation = async () => {

@@ -1,5 +1,32 @@
 <template>
   <div class="flex-1 pr-2">
+    <div
+      v-if="isConversationReady && chatHistoryDisplay.length === 0"
+      class="chat-empty-state"
+      aria-label="开始与 Alice 对话"
+    >
+      <div class="chat-empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="m12 3 1.35 4.65L18 9l-4.65 1.35L12 15l-1.35-4.65L6 9l4.65-1.35L12 3Z"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+          />
+          <path
+            d="m19 14 .62 2.38L22 17l-2.38.62L19 20l-.62-2.38L16 17l2.38-.62L19 14Z"
+            stroke-width="1.35"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+      <p class="chat-empty-title">今天想让我帮你做什么？</p>
+      <p class="chat-empty-copy">直接输入任务，或说出你的想法。</p>
+      <div class="chat-empty-chips" aria-hidden="true">
+        <span>整理文件</span>
+        <span>规划行程</span>
+        <span>回复消息</span>
+      </div>
+    </div>
     <transition-group name="list" tag="div">
       <div
         class="chat mb-2"
@@ -34,12 +61,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useGeneralStore } from '../stores/generalStore'
+import { useConversationStore } from '../stores/conversationStore'
 import type { ChatMessage, AppChatMessageContentPart } from '../types/chat'
 import { messageMarkdown } from '../utils/markdown'
 import { storeToRefs } from 'pinia'
 
 const generalStore = useGeneralStore()
+const conversationStore = useConversationStore()
 const { chatHistory } = storeToRefs(generalStore)
+
+const isConversationReady = computed(() => conversationStore.isInitialized)
 
 const chatHistoryDisplay = computed(() => {
   return [...chatHistory.value].reverse().filter(message => {
@@ -313,6 +344,78 @@ const handleChatClick = (event: MouseEvent) => {
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: break-word;
+}
+
+.chat-empty-state {
+  display: flex;
+  min-height: 258px;
+  margin: 12px 0 16px;
+  padding: 28px 24px 24px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(168, 207, 255, 0.14);
+  border-radius: 20px;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(118, 231, 255, 0.12),
+      transparent 48%
+    ),
+    linear-gradient(160deg, rgba(31, 52, 86, 0.5), rgba(7, 15, 32, 0.36));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 26px rgba(2, 8, 22, 0.12);
+  text-align: center;
+}
+
+.chat-empty-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
+  place-items: center;
+  border: 1px solid rgba(118, 231, 255, 0.26);
+  border-radius: 14px;
+  color: #a8f0ff;
+  background: rgba(118, 231, 255, 0.09);
+  box-shadow: 0 0 24px rgba(118, 231, 255, 0.12);
+}
+
+.chat-empty-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.chat-empty-title {
+  margin: 0;
+  color: rgba(245, 249, 255, 0.94);
+  font-size: 0.98rem;
+  font-weight: 650;
+}
+
+.chat-empty-copy {
+  max-width: 260px;
+  margin: 8px 0 18px;
+  color: rgba(205, 219, 240, 0.62);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.chat-empty-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+}
+
+.chat-empty-chips span {
+  padding: 5px 9px;
+  border: 1px solid rgba(168, 207, 255, 0.16);
+  border-radius: 999px;
+  color: rgba(220, 232, 251, 0.68);
+  background: rgba(8, 16, 34, 0.32);
+  font-size: 0.68rem;
 }
 
 :deep(.rag-citation) {

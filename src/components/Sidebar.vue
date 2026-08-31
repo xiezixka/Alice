@@ -58,7 +58,7 @@
     </div>
 
     <div
-      class="w-full pt-4 pr-4"
+      class="w-full px-4 pt-4"
       v-if="sideBarView === 'chat' && isConversationReady"
     >
       <div

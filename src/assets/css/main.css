@@ -13,7 +13,7 @@
   position: relative;
   transition: all 0.1s ease-in-out;
 }
-.avatar.open {
+.assistant-shell--capsule .avatar.open {
   @apply pr-[505px];
 }
 .avatar:hover .inside-actions {
@@ -41,6 +41,8 @@
 .assistant-shell--glass:not(.assistant-shell--mini) {
   min-width: 640px;
   min-height: 560px;
+  overflow: hidden;
+  border-radius: 30px;
 }
 
 .assistant-shell--mini {
@@ -244,11 +246,11 @@
 
 .glass-surface {
   position: absolute;
-  inset: 14px;
+  inset: 0;
   z-index: -1;
   overflow: hidden;
   border: 1px solid rgba(214, 237, 255, 0.24);
-  border-radius: 30px;
+  border-radius: inherit;
   background:
     radial-gradient(
       circle at 15% 15%,
@@ -262,8 +264,8 @@
     ),
     rgba(8, 15, 29, 0.82);
   box-shadow:
-    0 22px 70px rgba(1, 5, 18, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(73, 121, 192, 0.16);
   backdrop-filter: blur(22px) saturate(125%);
 }
 
@@ -467,6 +469,25 @@
   width: 320px;
   height: 320px;
   margin-top: 24px;
+}
+
+/* Keep the portrait's visual edge owned by .avatar-ring.  The ring already
+ * clips the media to a circle; leaving the outer container open lets the
+ * camera/minimize utility buttons sit safely inside that circle instead of
+ * being cut off by an ancestor's rectangular clipping box. */
+.assistant-shell--glass:not(.assistant-shell--mini) .avatar {
+  overflow: visible;
+  isolation: isolate;
+}
+
+/* The sidebar is a wider presentation, but the portrait remains a stable
+ * 320px anchor.  Do not let the legacy capsule padding rule squeeze it to
+ * zero when the chat panel is opened. */
+.assistant-shell--glass.assistant-shell--sidebar-open .avatar {
+  width: 320px;
+  min-width: 320px;
+  flex: 0 0 320px;
+  padding-right: 0;
 }
 
 .assistant-shell--glass.assistant-shell--mini .avatar {
